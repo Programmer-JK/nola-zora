@@ -115,8 +115,11 @@ export async function updateDrawnCards(
     votingOpen: false,
   }
   if (nextRound !== undefined) gameState.round = nextRound
-  await set(ref(db, `card-game/rooms/${roomId}/gameState`), gameState)
-  await set(ref(db, `card-game/rooms/${roomId}/votes`), {})
+  // gameState와 votes를 단일 원자적 write로 처리 → Firebase 이벤트 1번만 발생
+  await update(ref(db, `card-game/rooms/${roomId}`), {
+    gameState,
+    votes: {},
+  })
 }
 
 // ── 버즈인 ────────────────────────────────────────────

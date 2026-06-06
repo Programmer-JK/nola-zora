@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw, BookOpen, LogOut, Crown, Zap } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -31,8 +31,12 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
   const [decks, setDecks] = useState<DeckEntry[]>([])
   const [catCounts, setCatCounts] = useState<Map<number, number>>(new Map())
   const [totalGenreCards, setTotalGenreCards] = useState(0)
-  const [cardKeys, setCardKeys] = useState<number[]>([])
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+
+  // 카드 키: round가 바뀌거나 카드 수가 늘어날 때만 갱신 (Firebase 이벤트마다 재애니메이션 방지)
+  const prevRoundRef = useRef(-1)
+  const prevCardCountRef = useRef(0)
+  const cardKeysRef = useRef<number[]>([])
 
   useEffect(() => { setDecks(buildDecks()) }, [])
 
@@ -66,12 +70,6 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
     if (room?.gameState?.drawnCards) setMyVote(null)
   }, [room?.gameState?.drawnCards])
 
-  // 카드 키 생성
-  useEffect(() => {
-    const cards = room?.gameState?.drawnCards ?? []
-    setCardKeys(cards.map((_, i) => Date.now() + i))
-  }, [room?.gameState?.drawnCards])
-
   // 버즈인 타이머 카운트다운
   useEffect(() => {
     const buzzedAt = room?.gameState?.buzzedAt
@@ -103,10 +101,29 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
   const mode = room?.meta?.mode ?? 'basic'
   const round = gameState?.round ?? 0
 
-  // 타이머 만료 시 호스트가 자동 resolveVotes
+  // 카드 키 동기적 계산: round 바뀌면 전체 갱신, 카드 수 늘면 새 카드만 추가
+  // (Firebase 이벤트마다 ref가 달라져도 round/count가 같으면 재애니메이션 하지 않음)
+  if (round !== prevRoundRef.current) {
+    prevRoundRef.current = round
+    prevCardCountRef.current = drawnCards.length
+    cardKeysRef.current = drawnCards.map((_, i) => Date.now() + i)
+  } else if (drawnCards.length > prevCardCountRef.current) {
+    const addedCount = drawnCards.length - prevCardCountRef.current
+    prevCardCountRef.current = drawnCards.length
+    cardKeysRef.current = [
+      ...cardKeysRef.current,
+      ...Array.from({ length: addedCount }, (_, i) => Date.now() + cardKeysRef.current.length + i),
+    ]
+  }
+  const cardKeys = cardKeysRef.current
+
+  // 타이머 만료 시 호스트가 자동 resolveVotes → 다음 라운드
   useEffect(() => {
     if (timeLeft === 0 && isHost && buzzedUid) {
-      resolveVotes(roomId, buzzedUid, votes, members as Record<string, RoomMember>)
+      resolveVotes(roomId, buzzedUid, votes, members as Record<string, RoomMember>).then(() => {
+        if (mode === 'basic') handleDrawBasic()
+        else handleGenreReset()
+      })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft])
@@ -151,6 +168,9 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
   const handleResolve = async () => {
     if (!buzzedUid) return
     await resolveVotes(roomId, buzzedUid, votes, members as Record<string, RoomMember>)
+    // 투표 처리 후 자동으로 다음 라운드 카드 뽑기
+    if (mode === 'basic') await handleDrawBasic()
+    else await handleGenreReset()
   }
 
   const handleEndGame = async () => {
