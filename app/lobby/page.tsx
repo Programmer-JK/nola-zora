@@ -47,7 +47,7 @@ export default function LobbyPage() {
         <div className="flex items-center gap-3">
           <img src="/icon.png" alt="놀아조라" className="w-9 h-9 rounded-xl" />
           <div>
-            <h1 className="text-xl font-black text-amber-800" style={{ fontFamily: 'var(--font-jua)' }}>
+            <h1 className="text-xl font-black text-amber-800">
               놀아조라
             </h1>
             <p className="text-amber-700/50 text-xs mt-0.5">
@@ -65,7 +65,7 @@ export default function LobbyPage() {
 
       {/* Game Cards */}
       <div className="max-w-2xl mx-auto space-y-4">
-        <p className="text-amber-700/40 text-xs uppercase tracking-widest font-bold mb-6">게임 선택</p>
+        <p className="text-amber-700 text-xs uppercase tracking-widest font-bold mb-6">게임 선택</p>
         {GAMES.map(game => (
           <button
             key={game.id}
@@ -84,7 +84,7 @@ export default function LobbyPage() {
                   </span>
                 </div>
                 <p className="text-amber-800/60 text-sm">{game.subtitle}</p>
-                <p className="text-amber-700/40 text-xs mt-2 whitespace-pre-line">{game.desc}</p>
+                <p className="text-amber-700 text-xs mt-2 whitespace-pre-line">{game.desc}</p>
               </div>
               <span className={`${game.arrow} text-2xl transition-colors`}>→</span>
             </div>

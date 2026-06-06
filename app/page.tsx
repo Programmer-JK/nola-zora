@@ -38,7 +38,7 @@ export default function LoginPage() {
         {/* Hero */}
         <div className="text-center mb-8">
           <img src="/icon.png" alt="놀아조라" className="w-36 h-36 mx-auto mb-4" />
-          <p className="text-amber-700/60 text-xs tracking-widest uppercase">Board Game Hub</p>
+          <p className="text-amber-700 text-xs tracking-widest uppercase">보드게임 놀아조라</p>
         </div>
 
         {/* Form */}
@@ -69,7 +69,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-amber-700/40 text-xs mt-6 tracking-widest">보드게임 하즈아~</p>
+        <p className="text-center text-amber-700 text-xs mt-6 tracking-widest">보드게임 하즈아~</p>
       </div>
     </main>
   )
