@@ -357,7 +357,13 @@ export default function LasVegasSetupPage() {
       <div className="text-center mb-8">
         <div className="text-7xl mb-3">🎲</div>
         <h1 className="text-5xl font-black tracking-widest text-amber-400 mb-2">LAS VEGAS</h1>
-        <p className="text-amber-300/60 text-sm tracking-widest uppercase">The Dice Game</p>
+        <p className="text-amber-300/60 text-sm tracking-widest uppercase mb-3">The Dice Game</p>
+        <Link
+          href="/las-vegas/rules"
+          className="text-white/40 hover:text-amber-300 text-xs border border-white/15 hover:border-amber-400/40 px-3 py-1 rounded-lg transition-all"
+        >
+          게임 방법 ?
+        </Link>
       </div>
 
       <div className="flex rounded-2xl bg-white/5 border border-white/10 p-1 mb-6 w-full max-w-lg">
@@ -384,6 +390,7 @@ export default function LasVegasSetupPage() {
         <p>🏨 6개의 카지노 | 🎲 인원수별 주사위 4–8개 | 💰 4라운드</p>
         <p className="mt-1">같은 숫자 주사위를 골라 카지노에 배치하고 가장 많은 돈을 모아 우승하세요!</p>
       </div>
+
     </main>
   );
 }

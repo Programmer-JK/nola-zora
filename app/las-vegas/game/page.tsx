@@ -16,6 +16,7 @@ import CasinoCard from '@/components/las-vegas/CasinoCard';
 import PlayerPanel from '@/components/las-vegas/PlayerPanel';
 import DiceRollModal from '@/components/las-vegas/DiceRollModal';
 import RoundStartModal from '@/components/las-vegas/RoundStartModal';
+import ScoringAnimationModal from '@/components/las-vegas/ScoringAnimationModal';
 
 function GameContent() {
   const router = useRouter();
@@ -24,7 +25,6 @@ function GameContent() {
   const [showRoundStart, setShowRoundStart] = useState(true);
   const [showRollModal, setShowRollModal] = useState(false);
   const [showScoringModal, setShowScoringModal] = useState(false);
-  const [scoredState, setScoredState] = useState<GameState | null>(null);
   const [musicOn, setMusicOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -76,19 +76,13 @@ function GameContent() {
     [gameState]
   );
 
-  const handleCalculate = useCallback(() => {
+  const handleProceedScoring = useCallback(() => {
     if (!gameState) return;
     const next = scoreRound(gameState);
-    setScoredState(next);
-  }, [gameState]);
-
-  const handleProceed = useCallback(() => {
-    if (!scoredState) return;
-    setGameState(scoredState);
-    setScoredState(null);
+    setGameState(next);
     setShowScoringModal(false);
-    if (scoredState.phase !== 'gameOver') setShowRoundStart(true);
-  }, [scoredState]);
+    if (next.phase !== 'gameOver') setShowRoundStart(true);
+  }, [gameState]);
 
   if (!gameState) {
     return (
@@ -242,59 +236,11 @@ function GameContent() {
         <DiceRollModal dice={gameState.rolledDice} whiteDice={gameState.rolledWhiteDice} playerColor={currentPlayer.color} playerName={currentPlayer.name} onClose={() => setShowRollModal(false)} />
       )}
       {showScoringModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-[#1a1a2e] border border-amber-400/30 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
-            {!scoredState ? (
-              <>
-                <div className="text-5xl mb-4">🏛️</div>
-                <h2 className="text-2xl font-black text-amber-400 mb-2">라운드 종료!</h2>
-                <p className="text-white/60 text-sm mb-6">모든 플레이어의 주사위 배치가 완료되었습니다.</p>
-                <div className="bg-white/5 rounded-2xl p-4 mb-6 text-left">
-                  <p className="text-amber-300 text-xs font-bold mb-2">이번 라운드 주사위 배치</p>
-                  {gameState.casinos.map((casino) => {
-                    if (casino.placedDice.length === 0) return null;
-                    const sorted = [...casino.placedDice].sort((a, b) => b.count - a.count);
-                    return (
-                      <div key={casino.id} className="flex items-center gap-2 text-xs text-white/70 mb-1">
-                        <span className="font-bold text-white">카지노 {casino.id}</span><span>—</span>
-                        {sorted.map((pd) => {
-                          const p = gameState.players.find((pl) => pl.id === pd.playerId);
-                          const pcc = p ? getColorClasses(p.color) : null;
-                          return <span key={pd.playerId} className={pcc?.text}>{p?.name ?? '중립'} {pd.count}개</span>;
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-                <button onClick={handleCalculate} className="w-full py-3 rounded-2xl font-black text-black bg-amber-400 hover:bg-amber-300 transition-all hover:scale-105">점수 계산하기 →</button>
-              </>
-            ) : (
-              <>
-                <div className="text-5xl mb-4">💰</div>
-                <h2 className="text-2xl font-black text-amber-400 mb-2">이번 라운드 수익</h2>
-                <div className="space-y-2 mb-6">
-                  {gameState.players.map((p) => {
-                    const next = scoredState.players.find((np) => np.id === p.id)!;
-                    return { ...p, earned: next.totalMoney - p.totalMoney, totalMoney: next.totalMoney };
-                  }).sort((a, b) => b.earned - a.earned).map((p) => {
-                    const pcc = getColorClasses(p.color);
-                    return (
-                      <div key={p.id} className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-3">
-                        <span className={`w-3 h-3 rounded-full flex-shrink-0 ${pcc.bg}`} />
-                        <span className="flex-1 font-bold text-white/80 text-sm text-left truncate">{p.name}</span>
-                        <span className={`font-black text-sm ${p.earned > 0 ? 'text-emerald-400' : 'text-white/30'}`}>{p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}만원` : '−'}</span>
-                        <span className="text-amber-400 text-xs font-bold">합계 {(p.totalMoney / 10000).toFixed(0)}만</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <button onClick={handleProceed} className="w-full py-3 rounded-2xl font-black text-black bg-amber-400 hover:bg-amber-300 transition-all hover:scale-105">
-                  {scoredState.phase === 'gameOver' ? '최종 결과 보기 →' : '다음 라운드 →'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <ScoringAnimationModal
+          gameState={gameState}
+          onProceed={handleProceedScoring}
+          proceedLabel={gameState.round >= gameState.totalRounds ? '최종 결과 보기 →' : '다음 라운드 →'}
+        />
       )}
     </div>
   );

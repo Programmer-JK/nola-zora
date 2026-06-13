@@ -325,6 +325,56 @@ export function scoreRound(state: GameState): GameState {
   };
 }
 
+export interface CasinoAward {
+  type: 'win' | 'neutral' | 'tie';
+  playerIds: number[];
+  amount: number; // card value (0 for tie since no card is consumed)
+}
+
+export interface CasinoScoringResult {
+  casinoId: number;
+  totalPot: number;
+  placedDice: { playerId: number; count: number }[]; // sorted desc
+  awards: CasinoAward[];
+}
+
+export function getScoringBreakdown(state: GameState): CasinoScoringResult[] {
+  const results: CasinoScoringResult[] = [];
+
+  for (const casino of state.casinos) {
+    if (casino.placedDice.length === 0) continue;
+
+    const sorted = [...casino.placedDice].sort((a, b) => b.count - a.count);
+    const totalPot = casino.moneyCards.reduce((sum, c) => sum + c.value, 0);
+    const awards: CasinoAward[] = [];
+    let cardIndex = 0;
+    let i = 0;
+
+    while (i < sorted.length && cardIndex < casino.moneyCards.length) {
+      const currentCount = sorted[i].count;
+      const tiedGroup = sorted.filter((d) => d.count === currentCount);
+      const amount = casino.moneyCards[cardIndex].value;
+
+      if (tiedGroup.length === 1) {
+        if (tiedGroup[0].playerId === WHITE_PLAYER_ID) {
+          awards.push({ type: 'neutral', playerIds: [WHITE_PLAYER_ID], amount });
+        } else {
+          awards.push({ type: 'win', playerIds: [tiedGroup[0].playerId], amount });
+        }
+        cardIndex++;
+      } else {
+        awards.push({ type: 'tie', playerIds: tiedGroup.map((d) => d.playerId), amount: 0 });
+      }
+
+      i += tiedGroup.length;
+    }
+
+    results.push({ casinoId: casino.id, totalPot, placedDice: sorted, awards });
+  }
+
+  return results;
+}
+
 export function getColorClasses(color: string) {
   const map: Record<string, { bg: string; text: string; border: string; light: string }> = {
     red:    { bg: 'bg-red-500',    text: 'text-red-500',    border: 'border-red-500',    light: 'bg-red-100' },

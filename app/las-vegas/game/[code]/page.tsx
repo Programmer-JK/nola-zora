@@ -12,6 +12,7 @@ import CasinoCard from '@/components/las-vegas/CasinoCard';
 import PlayerPanel from '@/components/las-vegas/PlayerPanel';
 import DiceRollModal from '@/components/las-vegas/DiceRollModal';
 import RoundStartModal from '@/components/las-vegas/RoundStartModal';
+import ScoringAnimationModal from '@/components/las-vegas/ScoringAnimationModal';
 
 function toArr<T>(val: unknown): T[] {
   if (Array.isArray(val)) return val as T[];
@@ -49,8 +50,8 @@ export default function OnlineGamePage() {
   const [isScoringInProgress, setIsScoringInProgress] = useState(false);
   const [musicOn, setMusicOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const preScoringStateRef = useRef<GameState | null>(null);
-  const [roundEarnings, setRoundEarnings] = useState<{ name: string; color: string; earned: number; totalMoney: number }[] | null>(null);
+  const prevPhaseRef = useRef<GameState['phase'] | null>(null);
+  const prevRoundRef = useRef<number>(0);
 
   useEffect(() => {
     const audio = new Audio('/game.mp3');
@@ -73,34 +74,37 @@ export default function OnlineGamePage() {
       if (!room) { router.replace('/las-vegas'); return; }
       const gs = room.gameState ? sanitizeGameState(room.gameState) : null;
       if (!gs) return;
-
-      setGameState((prev) => {
-        if (prev && gs.round > prev.round && gs.phase !== 'gameOver') {
-          setShowRoundStart(true);
-          setShowScoringModal(false);
-          setIsScoringInProgress(false);
-        }
-        if (gs.phase === 'scoring' && prev?.phase !== 'scoring') {
-          preScoringStateRef.current = gs;
-          setShowScoringModal(true);
-        }
-        if (prev?.phase === 'scoring' && gs.phase !== 'scoring') {
-          setShowScoringModal(false);
-          setIsScoringInProgress(false);
-          if (preScoringStateRef.current) {
-            const earnings = preScoringStateRef.current.players.map((p) => {
-              const nextP = gs.players.find((np) => np.id === p.id)!;
-              return { name: p.name, color: p.color, earned: nextP.totalMoney - p.totalMoney, totalMoney: nextP.totalMoney };
-            });
-            setRoundEarnings(earnings);
-            preScoringStateRef.current = null;
-          }
-        }
-        return gs;
-      });
+      setGameState(gs);
     });
     return unsub;
   }, [code, router]);
+
+  // gameState 변화를 감지해 모달 상태 동기화 (로컬·Firebase 모두 처리)
+  useEffect(() => {
+    if (!gameState) return;
+    const prevPhase = prevPhaseRef.current;
+    const prevRound = prevRoundRef.current;
+    prevPhaseRef.current = gameState.phase;
+    prevRoundRef.current = gameState.round;
+
+    if (prevPhase === null) return; // 최초 로드
+
+    if (gameState.round > prevRound && gameState.phase !== 'gameOver') {
+      setShowRoundStart(true);
+      setShowScoringModal(false);
+      setIsScoringInProgress(false);
+    }
+    if (gameState.phase === 'scoring' && prevPhase !== 'scoring') {
+      setShowScoringModal(true);
+    }
+    if (prevPhase === 'scoring' && gameState.phase !== 'scoring') {
+      setShowScoringModal(false);
+      setIsScoringInProgress(false);
+    }
+    if (prevPhase === 'rolling' && gameState.phase === 'choosing') {
+      setShowRollModal(true);
+    }
+  }, [gameState]);
 
   const myPlayerIndex = gameState?.players.findIndex((p) => p.clientId === uid) ?? -1;
   const isMyTurn = myPlayerIndex >= 0 && gameState?.currentPlayerIndex === myPlayerIndex;
@@ -120,23 +124,15 @@ export default function OnlineGamePage() {
     if (!gameState || gameState.phase !== 'choosing' || !isMyTurn) return;
     const next = chooseCasino(gameState, casinoId);
     setGame(next);
-    if (next.phase === 'scoring') setShowScoringModal(true);
     await updateGameState(code, next);
   }, [gameState, isMyTurn, code]);
 
   const handleScoring = useCallback(async () => {
     if (!gameState || gameState.phase !== 'scoring' || isScoringInProgress) return;
     setIsScoringInProgress(true);
-    const preScoringGs = gameState;
     const next = scoreRound(gameState);
     setGame(next);
     setShowScoringModal(false);
-    const earnings = preScoringGs.players.map((p) => {
-      const nextP = next.players.find((np) => np.id === p.id)!;
-      return { name: p.name, color: p.color, earned: nextP.totalMoney - p.totalMoney, totalMoney: nextP.totalMoney };
-    });
-    setRoundEarnings(earnings);
-    preScoringStateRef.current = null;
     try {
       await updateGameState(code, next);
     } catch {
@@ -278,59 +274,19 @@ export default function OnlineGamePage() {
       </div>
 
       {showRoundStart && <RoundStartModal casinos={gameState.casinos} round={gameState.round} totalRounds={gameState.totalRounds} onStart={() => setShowRoundStart(false)} />}
-      {showRollModal && isMyTurn && <DiceRollModal dice={gameState.rolledDice} whiteDice={gameState.rolledWhiteDice} playerColor={currentPlayer.color} playerName={currentPlayer.name} onClose={() => setShowRollModal(false)} />}
-
-      {roundEarnings && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-[#1a1a2e] border border-amber-400/30 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
-            <div className="text-5xl mb-4">💰</div>
-            <h2 className="text-2xl font-black text-amber-400 mb-2">이번 라운드 수익</h2>
-            <div className="space-y-2 mb-6">
-              {[...roundEarnings].sort((a, b) => b.earned - a.earned).map((p) => {
-                const pcc = getColorClasses(p.color);
-                return (
-                  <div key={p.name} className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-3">
-                    <span className={`w-3 h-3 rounded-full flex-shrink-0 ${pcc.bg}`} />
-                    <span className="flex-1 font-bold text-white/80 text-sm text-left truncate">{p.name}</span>
-                    <span className={`font-black text-sm ${p.earned > 0 ? 'text-emerald-400' : 'text-white/30'}`}>{p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}만원` : '−'}</span>
-                    <span className="text-amber-400 text-xs font-bold">합계 {(p.totalMoney / 10000).toFixed(0)}만</span>
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={() => setRoundEarnings(null)} className="w-full py-3 rounded-2xl font-black text-black bg-amber-400 hover:bg-amber-300 transition-all hover:scale-105">확인</button>
-          </div>
-        </div>
-      )}
+      {showRollModal && <DiceRollModal dice={gameState.rolledDice} whiteDice={gameState.rolledWhiteDice} playerColor={currentPlayer.color} playerName={currentPlayer.name} onClose={() => setShowRollModal(false)} />}
 
       {showScoringModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-[#1a1a2e] border border-amber-400/30 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
-            <div className="text-5xl mb-4">🏛️</div>
-            <h2 className="text-2xl font-black text-amber-400 mb-2">라운드 종료!</h2>
-            <p className="text-white/60 text-sm mb-6">모든 플레이어의 주사위 배치가 완료되었습니다.</p>
-            <div className="bg-white/5 rounded-2xl p-4 mb-6 text-left">
-              <p className="text-amber-300 text-xs font-bold mb-2">이번 라운드 요약</p>
-              {gameState.casinos.map((casino) => {
-                if (casino.placedDice.length === 0) return null;
-                const sorted = [...casino.placedDice].sort((a, b) => b.count - a.count);
-                return (
-                  <div key={casino.id} className="flex items-center gap-2 text-xs text-white/70 mb-1">
-                    <span className="font-bold text-white">카지노 {casino.id}</span><span>—</span>
-                    {sorted.map((pd) => {
-                      const p = gameState.players.find((pl) => pl.id === pd.playerId);
-                      const pcc = p ? getColorClasses(p.color) : null;
-                      return <span key={pd.playerId} className={pcc?.text}>{p?.name} {pd.count}개</span>;
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={handleScoring} disabled={isScoringInProgress}
-              className="w-full py-3 rounded-2xl font-black text-black bg-amber-400 hover:bg-amber-300 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >{isScoringInProgress ? '계산 중...' : '점수 계산하기 →'}</button>
-          </div>
-        </div>
+        <ScoringAnimationModal
+          gameState={gameState}
+          onProceed={handleScoring}
+          proceedLabel={
+            !isMyTurn ? '상대방의 확인을 기다리는 중...' :
+            isScoringInProgress ? '계산 중...' :
+            '점수 계산하기 →'
+          }
+          proceedDisabled={isScoringInProgress || !isMyTurn}
+        />
       )}
     </div>
   );
