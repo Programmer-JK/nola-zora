@@ -120,8 +120,10 @@ export function createInitialState(
     startMsg = `게임 시작! 중립 주사위 사전 배치: [${extraDice.join(', ')}]`;
   }
 
+  const shuffledPlayers = shuffle(players);
+
   return {
-    players,
+    players: shuffledPlayers,
     casinos,
     currentPlayerIndex: 0,
     round: 1,
@@ -130,7 +132,7 @@ export function createInitialState(
     rolledDice: [],
     rolledWhiteDice: [],
     availableChoices: [],
-    lastAction: startMsg,
+    lastAction: startMsg + ` (순서: ${shuffledPlayers.map(p => p.name).join(' → ')})`,
   };
 }
 
@@ -272,7 +274,7 @@ export function scoreRound(state: GameState): GameState {
         } else {
           const winner = newPlayers.find((p) => p.id === tiedGroup[0].playerId)!;
           winner.totalMoney += card.value;
-          winSummary.push(`카지노${casino.id}: ${winner.name} +${(card.value / 10000).toFixed(0)}만원`);
+          winSummary.push(`카지노${casino.id}: ${winner.name} +${(card.value / 10000).toFixed(0)}억`);
         }
         cardIndex++;
       }

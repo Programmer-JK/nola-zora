@@ -49,6 +49,7 @@ export default function OnlineGamePage() {
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [isScoringInProgress, setIsScoringInProgress] = useState(false);
   const [musicOn, setMusicOn] = useState(true);
+  const [volume, setVolume] = useState(0.4);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevPhaseRef = useRef<GameState['phase'] | null>(null);
   const prevRoundRef = useRef<number>(0);
@@ -68,6 +69,19 @@ export default function OnlineGamePage() {
     if (!audio) return;
     if (musicOn) { audio.pause(); } else { audio.play().catch(() => {}); }
     setMusicOn((prev) => !prev);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value);
+    setVolume(v);
+    if (audioRef.current) audioRef.current.volume = v;
+    if (v === 0 && musicOn) {
+      audioRef.current?.pause();
+      setMusicOn(false);
+    } else if (v > 0 && !musicOn) {
+      audioRef.current?.play().catch(() => {});
+      setMusicOn(true);
+    }
   };
 
   useEffect(() => {
@@ -188,7 +202,7 @@ export default function OnlineGamePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-white/40 text-xs uppercase tracking-widest mb-0.5">Winner</p>
                 <p className={`text-xl font-black truncate ${wcc.text}`}>{winner.name}</p>
-                <p className="text-amber-400 font-bold text-base">{(winner.totalMoney / 10000).toFixed(0)}만원</p>
+                <p className="text-amber-400 font-bold text-base">{(winner.totalMoney / 10000).toFixed(0)}억</p>
               </div>
               <span className="text-4xl">🥇</span>
             </div>
@@ -203,7 +217,7 @@ export default function OnlineGamePage() {
                   <span className="text-xl w-7 text-center">{RANK_MEDALS[i + 1] ?? `${i + 2}`}</span>
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pcc.bg}`} />
                   <span className="flex-1 font-bold text-white/70 truncate">{p.name}</span>
-                  <span className={`font-black text-sm ${pcc.text}`}>{(p.totalMoney / 10000).toFixed(0)}만원</span>
+                  <span className={`font-black text-sm ${pcc.text}`}>{(p.totalMoney / 10000).toFixed(0)}억</span>
                 </div>
               );
             })}
@@ -226,6 +240,13 @@ export default function OnlineGamePage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-white/30 text-xs font-mono">{code}</span>
+          {musicOn && (
+            <input
+              type="range" min={0} max={1} step={0.05} value={volume}
+              onChange={handleVolumeChange}
+              className="w-16 h-1 accent-amber-400 cursor-pointer"
+            />
+          )}
           <button onClick={toggleMusic} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-base hover:bg-white/20 transition-all">{musicOn ? '🎵' : '🔇'}</button>
         </div>
       </header>

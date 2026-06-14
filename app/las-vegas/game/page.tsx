@@ -124,7 +124,7 @@ function GameContent() {
               <div className="flex-1 min-w-0">
                 <p className="text-white/40 text-xs uppercase tracking-widest mb-0.5">Winner</p>
                 <p className={`text-xl font-black truncate ${wcc.text}`}>{winner.name}</p>
-                <p className="text-amber-400 font-bold text-base">{(winner.totalMoney / 10000).toFixed(0)}만원</p>
+                <p className="text-amber-400 font-bold text-base">{(winner.totalMoney / 10000).toFixed(0)}억</p>
               </div>
               <span className="text-4xl">🥇</span>
             </div>
@@ -140,7 +140,7 @@ function GameContent() {
                   <span className="text-xl w-7 text-center">{RANK_MEDALS[rank - 1] ?? `${rank}`}</span>
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pcc.bg}`} />
                   <span className="flex-1 font-bold text-white/70 truncate">{p.name}</span>
-                  <span className={`font-black text-sm ${pcc.text}`}>{(p.totalMoney / 10000).toFixed(0)}만원</span>
+                  <span className={`font-black text-sm ${pcc.text}`}>{(p.totalMoney / 10000).toFixed(0)}억</span>
                 </div>
               );
             })}

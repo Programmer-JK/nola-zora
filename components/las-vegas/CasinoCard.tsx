@@ -63,7 +63,7 @@ export default function CasinoCard({
           <div className="flex flex-col">
             <span className="text-white/30 text-[9px] leading-none uppercase tracking-wider">Casino</span>
             <span className={`text-[10px] font-bold ${theme.num}`}>
-              {(totalMoney / 10000).toFixed(0)}만원
+              {(totalMoney / 10000).toFixed(0)}억
             </span>
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function CasinoCard({
               >
                 {/* Left symbol — prize rank */}
                 <span className="text-xs [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.7))]">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-                <span>{(card.value / 10000).toFixed(0)}만</span>
+                <span>{(card.value / 10000).toFixed(0)}억</span>
               </div>
             );
           })

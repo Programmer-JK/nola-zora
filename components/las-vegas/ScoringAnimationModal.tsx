@@ -112,10 +112,10 @@ export default function ScoringAnimationModal({
                             p.earned > 0 ? 'text-emerald-400' : 'text-white/30'
                           }`}
                         >
-                          {p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}만원` : '−'}
+                          {p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}억` : '−'}
                         </span>
                         <span className="text-amber-400/60 text-xs font-bold">
-                          합 {((p.totalMoney + p.earned) / 10000).toFixed(0)}만
+                          합 {((p.totalMoney + p.earned) / 10000).toFixed(0)}억
                         </span>
                       </div>
                     );
@@ -157,7 +157,7 @@ function CasinoCard({
       <div className="flex items-center justify-between mb-3">
         <span className="text-amber-400 font-black text-base">카지노 {result.casinoId}</span>
         <span className="text-white/35 text-xs">
-          총 {(result.totalPot / 10000).toFixed(0)}만원
+          총 {(result.totalPot / 10000).toFixed(0)}억
         </span>
       </div>
 
@@ -216,7 +216,7 @@ function AwardRow({
         <span className={`font-bold text-sm ${c.text}`}>{getName(award.playerIds[0])}</span>
         <span className="flex-1" />
         <span className="text-emerald-400 font-black text-sm">
-          +{(award.amount / 10000).toFixed(0)}만원
+          +{(award.amount / 10000).toFixed(0)}억
         </span>
         {isFirst && <span className="text-xs">🏆</span>}
       </div>
@@ -227,7 +227,7 @@ function AwardRow({
     return (
       <div className="flex items-center gap-2 text-xs text-white/40">
         <span className="w-3">✗</span>
-        <span>중립 승리 — {(award.amount / 10000).toFixed(0)}만원 소멸</span>
+        <span>중립 승리 — {(award.amount / 10000).toFixed(0)}억 소멸</span>
       </div>
     );
   }
