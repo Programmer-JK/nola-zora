@@ -1,6 +1,6 @@
 'use client'
 
-import { Crown, Copy, Check, Infinity as InfinityIcon, Link } from 'lucide-react'
+import { Crown, Copy, Check, Infinity as InfinityIcon, Link, Image } from 'lucide-react'
 import { useState } from 'react'
 import { RoomMeta, RoomMember } from '@/lib/card-game/firebase-game'
 
@@ -13,6 +13,7 @@ interface Props {
   onModeChange: (mode: 'basic' | 'genre') => void
   onInfiniteChange: (v: boolean) => void
   onTimerChange: (seconds: number) => void
+  onImageSearchChange: (v: boolean) => void
 }
 
 const TIMER_OPTIONS = [
@@ -22,7 +23,7 @@ const TIMER_OPTIONS = [
   { label: '90초', value: 90 },
 ]
 
-export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, onModeChange, onInfiniteChange, onTimerChange }: Props) {
+export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, onModeChange, onInfiniteChange, onTimerChange, onImageSearchChange }: Props) {
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
   const isHost = meta.host === myUid
@@ -156,6 +157,20 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
                 ))}
               </div>
             </div>
+
+            {/* 이미지 검색 모드 */}
+            <div>
+              <p className="text-amber-700 text-xs mb-2">버즈인 이미지 검색</p>
+              <button
+                onClick={() => onImageSearchChange(!meta.imageSearch)}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${meta.imageSearch ? 'border-violet-500 text-violet-600 bg-violet-50' : 'border-amber-300/50 text-amber-600/50 hover:text-amber-700'}`}
+              >
+                <Image size={12} /> 이미지 검색 {meta.imageSearch ? 'ON' : 'OFF'}
+              </button>
+              {meta.imageSearch && (
+                <p className="text-amber-600/50 text-xs mt-1.5">버즈인 시 캐릭터 이름을 입력하면 모든 참가자에게 구글 이미지 링크가 표시돼요</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -166,6 +181,7 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
               <span className="text-amber-800 font-medium">{meta.mode === 'basic' ? '기본 (6장 자동)' : '카테고리 선택'}</span>
               {meta.infiniteMode && <span className="text-sky-600 text-xs border border-sky-400/40 rounded-full px-2 py-0.5">∞ 무한</span>}
               {meta.timerSeconds > 0 && <span className="text-amber-600 text-xs border border-amber-400/40 rounded-full px-2 py-0.5">⏱ {meta.timerSeconds}초</span>}
+              {meta.imageSearch && <span className="text-violet-600 text-xs border border-violet-400/40 rounded-full px-2 py-0.5">🔍 이미지 검색</span>}
             </div>
           </div>
         )}

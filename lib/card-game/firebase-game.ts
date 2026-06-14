@@ -18,6 +18,8 @@ export interface GameState {
   buzzedAt: number | null
   votingOpen: boolean
   round: number
+  searchQuery: string | null    // 버즈인 시 입력한 캐릭터 이름 (imageSearch 모드)
+  searchImages: string[] | null // 이미지 검색 결과 URL 배열 (빈 배열 = 로딩 중)
 }
 
 export interface ChatMessage {
@@ -34,6 +36,7 @@ export interface RoomMeta {
   mode: 'basic' | 'genre'
   infiniteMode: boolean
   timerSeconds: number   // 0 = 타이머 없음
+  imageSearch: boolean   // 버즈인 시 캐릭터 이름 입력 → 구글 이미지 검색
   status: 'waiting' | 'playing' | 'finished'
   createdAt: number
 }
@@ -61,6 +64,7 @@ export async function createRoom(
     mode,
     infiniteMode,
     timerSeconds: 60,
+    imageSearch: false,
     status: 'waiting',
     createdAt: Date.now(),
   }
@@ -115,6 +119,8 @@ export async function updateDrawnCards(
     votingOpen: false,
   }
   if (nextRound !== undefined) gameState.round = nextRound
+  gameState.searchQuery = null
+  gameState.searchImages = null
   // gameState와 votes를 단일 원자적 write로 처리 → Firebase 이벤트 1번만 발생
   await update(ref(db, `card-game/rooms/${roomId}`), {
     gameState,
@@ -170,6 +176,19 @@ export async function openVoting(roomId: string): Promise<void> {
   await set(ref(db, `card-game/rooms/${roomId}/gameState/votingOpen`), true)
 }
 
+// ── 이미지 검색 데이터 저장 ───────────────────────────
+export async function setSearchData(
+  roomId: string,
+  query: string | null,
+  images: string[] | null,
+): Promise<void> {
+  const db = getDb()
+  await update(ref(db, `card-game/rooms/${roomId}/gameState`), {
+    searchQuery: query,
+    searchImages: images,
+  })
+}
+
 // ── 점수 수동 조정 ────────────────────────────────────
 export async function adjustScore(roomId: string, uid: string, delta: number, members: Record<string, RoomMember>): Promise<void> {
   const db = getDb()
@@ -220,7 +239,7 @@ export function subscribeChatAdded(
 // ── 호스트 설정 변경 ──────────────────────────────────
 export async function updateRoomMeta(
   roomId: string,
-  updates: Partial<Pick<RoomMeta, 'mode' | 'infiniteMode' | 'timerSeconds'>>,
+  updates: Partial<Pick<RoomMeta, 'mode' | 'infiniteMode' | 'timerSeconds' | 'imageSearch'>>,
 ): Promise<void> {
   const db = getDb()
   for (const [key, value] of Object.entries(updates)) {

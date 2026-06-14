@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, BookOpen, LogOut, Crown, Zap } from 'lucide-react'
+import { RefreshCw, BookOpen, LogOut, Crown, Zap, Search } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import CardItem from '@/components/card-game/game/CardItem'
 import CategorySelector from '@/components/card-game/game/CategorySelector'
@@ -13,7 +13,7 @@ import VotePanel from '@/components/card-game/online/VotePanel'
 import ChatPanel from '@/components/card-game/online/ChatPanel'
 import {
   subscribeRoom, startGame, updateDrawnCards, buzzIn, castVote, resolveVotes, openVoting,
-  endOnlineGame, updateRoomMeta, joinRoom, Room, RoomMember,
+  endOnlineGame, updateRoomMeta, joinRoom, adjustScore, setSearchData, Room, RoomMember,
 } from '@/lib/card-game/firebase-game'
 import { buildDecks, pickRandom6, nextItem, toDrawnCard, DeckEntry, DrawnCard } from '@/lib/card-game/game-logic'
 
@@ -32,6 +32,7 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
   const [catCounts, setCatCounts] = useState<Map<number, number>>(new Map())
   const [totalGenreCards, setTotalGenreCards] = useState(0)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [reSearchInput, setReSearchInput] = useState('')
 
   // 카드 키: round가 바뀌거나 카드 수가 늘어날 때만 갱신 (Firebase 이벤트마다 재애니메이션 방지)
   const prevRoundRef = useRef(-1)
@@ -100,6 +101,9 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
   const votingOpen = gameState?.votingOpen ?? false
   const mode = room?.meta?.mode ?? 'basic'
   const round = gameState?.round ?? 0
+  const imageSearchMode = room?.meta?.imageSearch ?? false
+  const searchQuery = gameState?.searchQuery ?? null
+  const searchImages = gameState?.searchImages ?? null
 
   // 카드 키 동기적 계산: round 바뀌면 전체 갱신, 카드 수 늘면 새 카드만 추가
   // (Firebase 이벤트마다 ref가 달라져도 round/count가 같으면 재애니메이션 하지 않음)
@@ -160,6 +164,31 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
     if (ok) await openVoting(roomId)
   }
 
+  const handleReSearch = (name: string) => {
+    if (!name.trim()) return
+    setSearchData(roomId, name.trim(), [])
+    setReSearchInput('')
+    fetch(`/api/img-proxy?q=${encodeURIComponent(name.trim())}`)
+      .then(r => r.json())
+      .then(({ images }) => { if (images?.length) setSearchData(roomId, name.trim(), images) })
+      .catch(() => {})
+  }
+
+  const handleBuzzInWithName = async (name: string) => {
+    if (!myUid || buzzedUid) return
+    const ok = await buzzIn(roomId, myUid)
+    if (ok) {
+      // 이름만 먼저 저장해서 모든 플레이어에게 즉시 표시 (로딩 상태)
+      await setSearchData(roomId, name, [])
+      await openVoting(roomId)
+      // 백그라운드에서 이미지 가져와 업데이트
+      fetch(`/api/img-proxy?q=${encodeURIComponent(name)}`)
+        .then(r => r.json())
+        .then(({ images }) => { if (images?.length) setSearchData(roomId, name, images) })
+        .catch(() => {})
+    }
+  }
+
   const handleVote = async (v: 'yes' | 'no') => {
     setMyVote(v)
     await castVote(roomId, myUid, v)
@@ -193,6 +222,7 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
         onModeChange={m => updateRoomMeta(roomId, { mode: m })}
         onInfiniteChange={v => updateRoomMeta(roomId, { infiniteMode: v })}
         onTimerChange={s => updateRoomMeta(roomId, { timerSeconds: s })}
+        onImageSearchChange={v => updateRoomMeta(roomId, { imageSearch: v })}
       />
     )
   }
@@ -225,7 +255,13 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
                 {isTop && !isBuzzed && <Crown size={11} color="var(--accent1)" />}
                 {isBuzzed && <Zap size={11} color="var(--accent1)" />}
                 <span style={{ flex: 1, fontSize: 13, color: uid === myUid ? 'var(--accent3)' : 'var(--text)' }}>{m.name}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: isBuzzed ? 'var(--accent1)' : 'var(--text)' }}>{m.score}점</span>
+                {isHost && (
+                  <button onClick={() => adjustScore(roomId, uid, -1, members as Record<string, RoomMember>)} style={scoreAdjBtnStyle}>−</button>
+                )}
+                <span style={{ fontSize: 14, fontWeight: 700, color: isBuzzed ? 'var(--accent1)' : 'var(--text)', minWidth: 32, textAlign: 'center' }}>{m.score}점</span>
+                {isHost && (
+                  <button onClick={() => adjustScore(roomId, uid, +1, members as Record<string, RoomMember>)} style={scoreAdjBtnStyle}>+</button>
+                )}
               </div>
             )
           })}
@@ -236,7 +272,7 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
       {drawnCards.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {TimerDisplay}
-          <BuzzInButton buzzedBy={buzzedUid} buzzedName={buzzedName} myUid={myUid} disabled={false} onBuzz={handleBuzzIn} />
+          <BuzzInButton buzzedBy={buzzedUid} buzzedName={buzzedName} myUid={myUid} disabled={false} onBuzz={handleBuzzIn} imageSearchMode={imageSearchMode} onBuzzWithName={handleBuzzInWithName} />
           <VotePanel
             votingOpen={votingOpen}
             myUid={myUid}
@@ -291,6 +327,40 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
             </div>
           )}
 
+          {/* 이미지 검색 결과 (모든 플레이어에게 동시 표시) */}
+          {searchQuery && (
+            <div style={{ marginBottom: 14, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(139,92,246,0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'rgba(139,92,246,0.12)' }}>
+                <Search size={13} color="#8b5cf6" />
+                <span style={{ fontSize: 13, fontFamily: 'var(--font-jua), sans-serif', color: '#8b5cf6', flex: 1 }}>{searchQuery}</span>
+                {buzzedUid === myUid && (
+                  <form onSubmit={e => { e.preventDefault(); handleReSearch(reSearchInput) }} style={{ display: 'flex', gap: 4 }}>
+                    <input
+                      value={reSearchInput}
+                      onChange={e => setReSearchInput(e.target.value)}
+                      placeholder="재검색..."
+                      style={{ width: 90, padding: '3px 7px', borderRadius: 6, border: '1px solid rgba(139,92,246,0.4)', background: 'rgba(139,92,246,0.08)', color: 'var(--text)', fontSize: 12, outline: 'none' }}
+                    />
+                    <button type="submit" style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 11, cursor: 'pointer' }}>
+                      검색
+                    </button>
+                  </form>
+                )}
+              </div>
+              {!searchImages || searchImages.length === 0 ? (
+                <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--text-dim)' }}>
+                  이미지 불러오는 중...
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, background: 'var(--surface)' }}>
+                  {searchImages.map((url, i) => (
+                    <img key={i} src={url} alt={searchQuery} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {drawnCards.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, justifyItems: 'center' }}>
               {drawnCards.map((card, i) => (
@@ -307,7 +377,7 @@ export default function OnlineRoomPage({ params }: { params: Promise<{ roomId: s
           {drawnCards.length > 0 && (
             <div className="buzz-mobile" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {TimerDisplay}
-              <BuzzInButton buzzedBy={buzzedUid} buzzedName={buzzedName} myUid={myUid} disabled={false} onBuzz={handleBuzzIn} />
+              <BuzzInButton buzzedBy={buzzedUid} buzzedName={buzzedName} myUid={myUid} disabled={false} onBuzz={handleBuzzIn} imageSearchMode={imageSearchMode} onBuzzWithName={handleBuzzInWithName} />
               <VotePanel
                 votingOpen={votingOpen}
                 myUid={myUid}
@@ -348,6 +418,12 @@ const fabStyle: React.CSSProperties = {
   width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)',
   background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+
+const scoreAdjBtnStyle: React.CSSProperties = {
+  width: 22, height: 22, borderRadius: 6, border: '1px solid var(--border)',
+  background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer',
+  fontSize: 14, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 }
 
 const drawBtnStyle: React.CSSProperties = {
