@@ -104,6 +104,9 @@ export default function OnlineGamePage() {
     if (prevPhase === 'rolling' && gameState.phase === 'choosing') {
       setShowRollModal(true);
     }
+    if (prevPhase === 'choosing' && gameState.phase !== 'choosing') {
+      setShowRollModal(false);
+    }
   }, [gameState]);
 
   const myPlayerIndex = gameState?.players.findIndex((p) => p.clientId === uid) ?? -1;
