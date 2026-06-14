@@ -155,6 +155,7 @@ export function rollDice(state: GameState): GameState {
     rolledWhiteDice: rolledWhite,
     availableChoices: uniqueValues,
     phase: 'choosing',
+    diceModalOpen: true,
     lastAction: `${player.name}이(가) 주사위 ${player.diceCount}개${whitePart}를 굴렸습니다.`,
   };
 }
@@ -226,6 +227,7 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
     rolledDice: [],
     rolledWhiteDice: [],
     availableChoices: [],
+    diceModalOpen: false,
     lastAction: `${player.name}이(가) 카지노 ${casinoId}에 ${coloredPart}${whitePart}를 놓았습니다.`,
   };
 
@@ -311,9 +313,12 @@ export function scoreRound(state: GameState): GameState {
 
   const summaryMsg = winSummary.length > 0 ? winSummary.join(' | ') : '이번 라운드 수익 없음';
 
+  const orderedPlayers = isGameOver ? newPlayers : shuffle(resetPlayers);
+  const firstPlayerName = orderedPlayers[0]?.name ?? '';
+
   return {
     ...state,
-    players: isGameOver ? newPlayers : resetPlayers,
+    players: orderedPlayers,
     casinos: isGameOver ? newCasinos : resetCasinos,
     round: nextRound,
     currentPlayerIndex: 0,
@@ -321,7 +326,7 @@ export function scoreRound(state: GameState): GameState {
     rolledDice: [],
     rolledWhiteDice: [],
     availableChoices: [],
-    lastAction: summaryMsg + neutralMsg,
+    lastAction: summaryMsg + neutralMsg + (isGameOver ? '' : ` | 다음 라운드 순서: ${orderedPlayers.map(p => p.name).join(' → ')}`),
   };
 }
 

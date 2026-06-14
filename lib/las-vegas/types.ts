@@ -52,6 +52,7 @@ export interface GameState {
   rolledWhiteDice: number[]; // current white dice roll result
   availableChoices: number[]; // casino numbers the player can choose (based on colored dice)
   lastAction: string;
+  diceModalOpen?: boolean;
 }
 
 export const PLAYER_COLORS: { color: PlayerColor; label: string; bg: string; text: string; border: string; shadow: string }[] = [
