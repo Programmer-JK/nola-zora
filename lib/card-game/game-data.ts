@@ -83,6 +83,7 @@ export const CATEGORIES: Category[] = [
       { name: '츤데레', desc: '숨겨진 진심', icon: 'smile' },
       { name: '열혈', desc: '뜨거운 열정', icon: 'activity' },
       { name: '사차원', desc: '독특한 세계관', icon: 'shuffle' },
+      { name: '거만한', desc: '우월한 자신감', icon: 'crown' },
     ],
   },
   {
