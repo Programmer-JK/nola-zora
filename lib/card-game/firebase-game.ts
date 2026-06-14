@@ -19,7 +19,6 @@ export interface GameState {
   votingOpen: boolean
   round: number
   searchQuery: string | null    // 버즈인 시 입력한 캐릭터 이름 (imageSearch 모드)
-  searchImages: string[] | null // 이미지 검색 결과 URL 배열 (빈 배열 = 로딩 중)
 }
 
 export interface ChatMessage {
@@ -120,7 +119,6 @@ export async function updateDrawnCards(
   }
   if (nextRound !== undefined) gameState.round = nextRound
   gameState.searchQuery = null
-  gameState.searchImages = null
   // gameState와 votes를 단일 원자적 write로 처리 → Firebase 이벤트 1번만 발생
   await update(ref(db, `card-game/rooms/${roomId}`), {
     gameState,
@@ -176,17 +174,10 @@ export async function openVoting(roomId: string): Promise<void> {
   await set(ref(db, `card-game/rooms/${roomId}/gameState/votingOpen`), true)
 }
 
-// ── 이미지 검색 데이터 저장 ───────────────────────────
-export async function setSearchData(
-  roomId: string,
-  query: string | null,
-  images: string[] | null,
-): Promise<void> {
+// ── 이미지 검색 쿼리 저장 ────────────────────────────
+export async function setSearchQuery(roomId: string, query: string | null): Promise<void> {
   const db = getDb()
-  await update(ref(db, `card-game/rooms/${roomId}/gameState`), {
-    searchQuery: query,
-    searchImages: images,
-  })
+  await set(ref(db, `card-game/rooms/${roomId}/gameState/searchQuery`), query)
 }
 
 // ── 점수 수동 조정 ────────────────────────────────────

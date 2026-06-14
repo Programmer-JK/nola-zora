@@ -14,10 +14,19 @@ export interface DeckEntry {
   remaining: CardItem[]
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 export function buildDecks(): DeckEntry[] {
   return CATEGORIES.map(cat => ({
     cat,
-    remaining: [...cat.items].sort(() => Math.random() - 0.5),
+    remaining: shuffle(cat.items),
   }))
 }
 
@@ -30,7 +39,7 @@ export function nextItem(deckEntry: DeckEntry, infiniteActive: boolean, usedName
     return src[Math.floor(Math.random() * src.length)]
   }
   if (deckEntry.remaining.length === 0) {
-    deckEntry.remaining = [...deckEntry.cat.items].sort(() => Math.random() - 0.5)
+    deckEntry.remaining = shuffle(deckEntry.cat.items)
   }
   return deckEntry.remaining.pop()!
 }
