@@ -286,8 +286,8 @@ export default function OnlineGamePage() {
                       isMyTurn ? (isWhiteOnly ? 'bg-white/10 border-white/30 hover:scale-105 active:scale-95' : `${cc.light} ${cc.border} border hover:scale-105 active:scale-95`) : 'bg-white/5 border-white/10 opacity-40',
                     ].join(' ')}
                   >
-                    {!isWhiteOnly && (<><Dice value={val} color={currentPlayer.color} size="sm" /><span className="text-black font-bold text-sm">×{count}</span></>)}
-                    {whiteCount > 0 && (<>{!isWhiteOnly && <span className="text-white/40 text-xs">+</span>}<Dice value={val} color="white" size="sm" /><span className={`font-bold text-sm ${isWhiteOnly ? 'text-white' : 'text-black'}`}>×{whiteCount}</span></>)}
+                    {!isWhiteOnly && (<><Dice value={val} color={currentPlayer.color} size="sm" /><span className={`font-bold text-sm ${isMyTurn ? 'text-black' : 'text-white'}`}>×{count}</span></>)}
+                    {whiteCount > 0 && (<>{!isWhiteOnly && <span className="text-white/40 text-xs">+</span>}<Dice value={val} color="white" size="sm" /><span className={`font-bold text-sm ${isWhiteOnly || !isMyTurn ? 'text-white' : 'text-black'}`}>×{whiteCount}</span></>)}
                   </button>
                 );
               })}
