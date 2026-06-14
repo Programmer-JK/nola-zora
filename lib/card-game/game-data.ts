@@ -63,12 +63,11 @@ export const CATEGORIES: Category[] = [
       { name: '작은 체형', desc: '앙증맞은 귀여움', icon: 'minimize-2' },
       { name: '흑발', desc: '신비로운 매력', icon: 'droplet' },
       { name: '금발', desc: '눈부신 빛깔', icon: 'sparkle' },
-      { name: '흰 머리카락', desc: '초월적 분위기', icon: 'circle' },
+      { name: '백(은)발', desc: '초월적 분위기', icon: 'circle' },
       { name: '붉은 눈', desc: '강렬한 시선', icon: 'eye' },
       { name: '트윈테일', desc: '생기 넘치는 활기', icon: 'git-fork' },
       { name: '짧은 머리', desc: '시원한 인상', icon: 'arrow-up' },
       { name: '긴 생 머리', desc: '우아하게 흐르는', icon: 'arrow-down' },
-      { name: '은발', desc: '차갑고 우아한 빛', icon: 'moon' },
     ],
   },
   {
