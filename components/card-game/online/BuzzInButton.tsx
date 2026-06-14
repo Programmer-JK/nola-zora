@@ -59,7 +59,7 @@ export default function BuzzInButton({ buzzedBy, buzzedName, myUid, disabled, on
       }}
     >
       <Zap size={20} />
-      준비됐어!
+      저요! 저요!
     </button>
   )
 }

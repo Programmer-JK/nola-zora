@@ -170,6 +170,13 @@ export async function openVoting(roomId: string): Promise<void> {
   await set(ref(db, `card-game/rooms/${roomId}/gameState/votingOpen`), true)
 }
 
+// ── 점수 수동 조정 ────────────────────────────────────
+export async function adjustScore(roomId: string, uid: string, delta: number, members: Record<string, RoomMember>): Promise<void> {
+  const db = getDb()
+  const current = members[uid]?.score ?? 0
+  await set(ref(db, `card-game/rooms/${roomId}/members/${uid}/score`), current + delta)
+}
+
 // ── 게임 종료 ─────────────────────────────────────────
 export async function endOnlineGame(roomId: string): Promise<void> {
   const db = getDb()
