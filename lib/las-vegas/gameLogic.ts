@@ -314,7 +314,6 @@ export function scoreRound(state: GameState): GameState {
   const summaryMsg = winSummary.length > 0 ? winSummary.join(' | ') : '이번 라운드 수익 없음';
 
   const orderedPlayers = isGameOver ? newPlayers : shuffle(resetPlayers);
-  const firstPlayerName = orderedPlayers[0]?.name ?? '';
 
   return {
     ...state,

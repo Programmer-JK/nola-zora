@@ -52,6 +52,7 @@ export default function OnlineGamePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevPhaseRef = useRef<GameState['phase'] | null>(null);
   const prevRoundRef = useRef<number>(0);
+  const prevDiceModalOpenRef = useRef<boolean | undefined>(undefined);
 
   useEffect(() => {
     const audio = new Audio('/game.mp3');
@@ -87,6 +88,9 @@ export default function OnlineGamePage() {
     prevPhaseRef.current = gameState.phase;
     prevRoundRef.current = gameState.round;
 
+    const prevDiceModalOpen = prevDiceModalOpenRef.current;
+    prevDiceModalOpenRef.current = gameState.diceModalOpen;
+
     if (prevPhase === null) return; // 최초 로드
 
     if (gameState.round > prevRound && gameState.phase !== 'gameOver') {
@@ -107,7 +111,7 @@ export default function OnlineGamePage() {
     if (prevPhase === 'choosing' && gameState.phase !== 'choosing') {
       setShowRollModal(false);
     }
-    if (gameState.diceModalOpen === false) {
+    if (prevDiceModalOpen !== false && gameState.diceModalOpen === false) {
       setShowRollModal(false);
     }
   }, [gameState]);
