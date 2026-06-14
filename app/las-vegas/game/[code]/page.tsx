@@ -107,6 +107,9 @@ export default function OnlineGamePage() {
     if (prevPhase === 'choosing' && gameState.phase !== 'choosing') {
       setShowRollModal(false);
     }
+    if (gameState.diceModalOpen === false) {
+      setShowRollModal(false);
+    }
   }, [gameState]);
 
   const myPlayerIndex = gameState?.players.findIndex((p) => p.clientId === uid) ?? -1;
@@ -121,6 +124,13 @@ export default function OnlineGamePage() {
     setGame(next);
     setShowRollModal(true);
     await updateGameState(code, next);
+  }, [gameState, isMyTurn, code]);
+
+  const handleDiceModalClose = useCallback(async () => {
+    setShowRollModal(false);
+    if (gameState && isMyTurn) {
+      await updateGameState(code, { ...gameState, diceModalOpen: false });
+    }
   }, [gameState, isMyTurn, code]);
 
   const handleChoose = useCallback(async (casinoId: number) => {
@@ -277,7 +287,7 @@ export default function OnlineGamePage() {
       </div>
 
       {showRoundStart && <RoundStartModal casinos={gameState.casinos} round={gameState.round} totalRounds={gameState.totalRounds} onStart={() => setShowRoundStart(false)} />}
-      {showRollModal && <DiceRollModal dice={gameState.rolledDice} whiteDice={gameState.rolledWhiteDice} playerColor={currentPlayer.color} playerName={currentPlayer.name} onClose={() => setShowRollModal(false)} />}
+      {showRollModal && <DiceRollModal dice={gameState.rolledDice} whiteDice={gameState.rolledWhiteDice} playerColor={currentPlayer.color} playerName={currentPlayer.name} onClose={handleDiceModalClose} />}
 
       {showScoringModal && (
         <ScoringAnimationModal
