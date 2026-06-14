@@ -6,11 +6,11 @@ import {
   getScoringBreakdown,
   CasinoScoringResult,
   CasinoAward,
-  getColorClasses,
+  getColorHex,
 } from '@/lib/las-vegas/gameLogic';
 
 interface Props {
-  gameState: GameState; // phase='scoring' 상태
+  gameState: GameState;
   onProceed: () => void;
   proceedLabel?: string;
   proceedDisabled?: boolean;
@@ -19,17 +19,12 @@ interface Props {
 const STEP_DELAY_MS = 750;
 
 export default function ScoringAnimationModal({
-  gameState,
-  onProceed,
-  proceedLabel = '다음 라운드 →',
-  proceedDisabled = false,
+  gameState, onProceed, proceedLabel = '다음 라운드 →', proceedDisabled = false,
 }: Props) {
   const breakdown = getScoringBreakdown(gameState);
-
   const [visibleCount, setVisibleCount] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
 
-  // 플레이어별 이번 라운드 획득 금액
   const playerEarnings = gameState.players.map((player) => {
     const earned = breakdown
       .flatMap((c) => c.awards)
@@ -48,136 +43,115 @@ export default function ScoringAnimationModal({
   }, [visibleCount, breakdown.length]);
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-50 backdrop-blur-sm overflow-y-auto">
-      <div className="min-h-full flex items-start justify-center py-6 px-4">
-        <div className="w-full max-w-sm">
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      background: 'rgba(12,10,18,0.9)', backdropFilter: 'blur(10px)',
+      overflowY: 'auto',
+    }}>
+      <div style={{ minHeight: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px' }}>
+        <div style={{ width: '100%', maxWidth: 380 }}>
           {/* 헤더 */}
-          <div className="text-center py-5">
-            <span className="text-5xl">🏛️</span>
-            <h2 className="text-2xl font-black text-amber-400 mt-2 tracking-wide">
+          <div style={{ textAlign: 'center', padding: '16px 0 20px' }}>
+            <div style={{ fontSize: 44, marginBottom: 6 }}>🏛️</div>
+            <h2 className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 24, letterSpacing: 1, margin: 0 }}>
               라운드 {gameState.round} 결산
             </h2>
           </div>
 
-          {/* 카지노별 결과 — 하나씩 등장 */}
-          <div className="space-y-2.5">
+          {/* 카지노별 결과 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {breakdown.map((result, idx) => (
               <div
                 key={result.casinoId}
-                className="transition-all duration-500 ease-out"
                 style={{
                   opacity: idx < visibleCount ? 1 : 0,
                   transform: idx < visibleCount ? 'translateY(0)' : 'translateY(16px)',
+                  transition: 'opacity .5s ease-out, transform .5s ease-out',
                   pointerEvents: idx < visibleCount ? 'auto' : 'none',
                 }}
               >
-                <CasinoCard result={result} players={gameState.players} />
+                <ScoringCasinoCard result={result} players={gameState.players} />
               </div>
             ))}
           </div>
 
           {breakdown.length === 0 && (
-            <p className="text-center text-white/30 text-sm py-4">이번 라운드 배치 없음</p>
+            <p className="pix" style={{ textAlign: 'center', color: 'var(--faint)', fontSize: 9, padding: '16px 0' }}>
+              이번 라운드 배치 없음
+            </p>
           )}
 
-          {/* 총 수익 요약 + 진행 버튼 */}
-          <div
-            className="mt-3 transition-all duration-500 ease-out"
-            style={{
-              opacity: showSummary ? 1 : 0,
-              transform: showSummary ? 'translateY(0)' : 'translateY(16px)',
-              pointerEvents: showSummary ? 'auto' : 'none',
-            }}
-          >
-            <div className="bg-black/40 border border-amber-400/20 rounded-2xl p-4">
-              <p className="text-amber-300 text-xs font-bold uppercase tracking-widest mb-3">
+          {/* 요약 + 진행 버튼 */}
+          <div style={{
+            marginTop: 12,
+            opacity: showSummary ? 1 : 0,
+            transform: showSummary ? 'translateY(0)' : 'translateY(16px)',
+            transition: 'opacity .5s ease-out, transform .5s ease-out',
+            pointerEvents: showSummary ? 'auto' : 'none',
+          }}>
+            <div className="arc-panel ticks" style={{ padding: '16px' }}>
+              <span className="arc-lbl" style={{ color: 'var(--gold)', display: 'block', marginBottom: 12 }}>
                 💰 이번 라운드 수익
-              </p>
-              <div className="space-y-2 mb-4">
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
                 {[...playerEarnings]
                   .sort((a, b) => b.earned - a.earned)
                   .map((p) => {
-                    const cc = getColorClasses(p.color);
+                    const hex = getColorHex(p.color);
                     return (
-                      <div
-                        key={p.id}
-                        className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2"
-                      >
-                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${cc.bg}`} />
-                        <span className="flex-1 font-bold text-white/80 text-sm truncate">
+                      <div key={p.id} className="arc-panel-inset" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px' }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: hex, boxShadow: `0 0 6px ${hex}`, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontFamily: 'var(--f-body)', fontWeight: 700, color: 'var(--text-2)', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.name}
                         </span>
-                        <span
-                          className={`font-black text-sm ${
-                            p.earned > 0 ? 'text-emerald-400' : 'text-white/30'
-                          }`}
-                        >
-                          {p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}억` : '−'}
+                        <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: p.earned > 0 ? 'var(--green)' : 'var(--faint)', fontWeight: 900 }}>
+                          {p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}억` : '—'}
                         </span>
-                        <span className="text-amber-400/60 text-xs font-bold">
+                        <span style={{ fontFamily: 'var(--f-disp)', fontSize: 11, color: 'var(--coin)' }}>
                           합 {((p.totalMoney + p.earned) / 10000).toFixed(0)}억
                         </span>
                       </div>
                     );
                   })}
               </div>
-              <button
-                onClick={onProceed}
-                disabled={proceedDisabled}
-                className="w-full py-3 rounded-2xl font-black text-black bg-amber-400 hover:bg-amber-300 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              >
+              <button onClick={onProceed} disabled={proceedDisabled} className="arc-btn" style={{ fontSize: 16 }}>
                 {proceedLabel}
               </button>
             </div>
           </div>
-
-          <div className="h-6" />
+          <div style={{ height: 24 }} />
         </div>
       </div>
     </div>
   );
 }
 
-function CasinoCard({
-  result,
-  players,
-}: {
-  result: CasinoScoringResult;
-  players: GameState['players'];
-}) {
+function ScoringCasinoCard({ result, players }: { result: CasinoScoringResult; players: GameState['players'] }) {
   const getName = (id: number) =>
     id === WHITE_PLAYER_ID ? '중립' : (players.find((p) => p.id === id)?.name ?? '?');
-  const getColor = (id: number) => players.find((p) => p.id === id)?.color ?? 'red';
-  const cc = (id: number) =>
-    getColorClasses(id === WHITE_PLAYER_ID ? 'red' : getColor(id));
+  const getHex = (id: number) =>
+    id === WHITE_PLAYER_ID ? 'rgba(255,255,255,0.4)' : getColorHex(players.find((p) => p.id === id)?.color ?? 'red');
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-      {/* 카지노 헤더 */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-amber-400 font-black text-base">카지노 {result.casinoId}</span>
-        <span className="text-white/35 text-xs">
-          총 {(result.totalPot / 10000).toFixed(0)}억
-        </span>
+    <div className="arc-panel-inset" style={{ padding: '12px 14px' }}>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontFamily: 'var(--f-disp)', fontSize: 14, color: 'var(--gold)' }}>카지노 {result.casinoId}</span>
+        <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>총 {(result.totalPot / 10000).toFixed(0)}억</span>
       </div>
 
       {/* 배치된 주사위 */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {result.placedDice.map((pd, i) => {
+          const hex = getHex(pd.playerId);
           const isNeutral = pd.playerId === WHITE_PLAYER_ID;
-          const c = cc(pd.playerId);
           return (
-            <span
-              key={i}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold ${
-                isNeutral ? 'bg-white/10 text-white/50' : `${c.light} ${c.text}`
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full inline-block ${
-                  isNeutral ? 'bg-white/40' : c.bg
-                }`}
-              />
+            <span key={i} className="arc-chip" style={{
+              fontSize: 11, padding: '3px 8px', gap: 4,
+              background: hex + '20', color: isNeutral ? 'var(--faint)' : hex,
+              borderColor: hex + '50',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: hex, display: 'inline-block' }} />
               {getName(pd.playerId)} ×{pd.count}
             </span>
           );
@@ -185,65 +159,52 @@ function CasinoCard({
       </div>
 
       {/* 결과 */}
-      <div className="space-y-1 border-t border-white/10 pt-2.5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
         {result.awards.map((award, i) => (
-          <AwardRow key={i} award={award} isFirst={i === 0} getName={getName} cc={cc} />
+          <AwardRow key={i} award={award} isFirst={i === 0} getName={getName} getHex={getHex} />
         ))}
         {result.awards.length === 0 && (
-          <p className="text-white/25 text-xs">배당 없음</p>
+          <p className="pix" style={{ color: 'var(--faint)', fontSize: 8 }}>배당 없음</p>
         )}
       </div>
     </div>
   );
 }
 
-function AwardRow({
-  award,
-  isFirst,
-  getName,
-  cc,
-}: {
+function AwardRow({ award, isFirst, getName, getHex }: {
   award: CasinoAward;
   isFirst: boolean;
   getName: (id: number) => string;
-  cc: (id: number) => ReturnType<typeof getColorClasses>;
+  getHex: (id: number) => string;
 }) {
   if (award.type === 'win') {
-    const c = cc(award.playerIds[0]);
+    const hex = getHex(award.playerIds[0]);
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-emerald-400 text-xs w-3">✓</span>
-        <span className={`font-bold text-sm ${c.text}`}>{getName(award.playerIds[0])}</span>
-        <span className="flex-1" />
-        <span className="text-emerald-400 font-black text-sm">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ color: 'var(--green)', fontSize: 12, width: 12 }}>✓</span>
+        <span style={{ fontFamily: 'var(--f-body)', fontWeight: 700, fontSize: 13, color: hex }}>{getName(award.playerIds[0])}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: 'var(--green)', fontWeight: 900 }}>
           +{(award.amount / 10000).toFixed(0)}억
         </span>
-        {isFirst && <span className="text-xs">🏆</span>}
+        {isFirst && <span style={{ fontSize: 12 }}>🏆</span>}
       </div>
     );
   }
-
   if (award.type === 'neutral') {
     return (
-      <div className="flex items-center gap-2 text-xs text-white/40">
-        <span className="w-3">✗</span>
+      <div className="pix" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 8, color: 'var(--faint)' }}>
+        <span style={{ width: 12 }}>✗</span>
         <span>중립 승리 — {(award.amount / 10000).toFixed(0)}억 소멸</span>
       </div>
     );
   }
-
-  // tie
-  const names = award.playerIds
-    .filter((id) => id !== WHITE_PLAYER_ID)
-    .map(getName)
-    .join(', ');
+  const names = award.playerIds.filter((id) => id !== WHITE_PLAYER_ID).map(getName).join(', ');
   const hasNeutral = award.playerIds.includes(WHITE_PLAYER_ID);
-  const tieNames = [names, hasNeutral ? '중립' : ''].filter(Boolean).join(', ');
-
   return (
-    <div className="flex items-center gap-2 text-xs text-white/40">
-      <span className="w-3">≈</span>
-      <span>동점 ({tieNames}) — 건너뜀</span>
+    <div className="pix" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 8, color: 'var(--faint)' }}>
+      <span style={{ width: 12 }}>≈</span>
+      <span>동점 ({[names, hasNeutral ? '중립' : ''].filter(Boolean).join(', ')}) — 건너뜀</span>
     </div>
   );
 }

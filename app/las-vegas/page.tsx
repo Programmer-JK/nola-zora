@@ -22,7 +22,49 @@ interface PlayerSetup {
 }
 
 const DEFAULT_NAMES = ['플레이어 1', '플레이어 2', '플레이어 3', '플레이어 4', '플레이어 5', '플레이어 6'];
-const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+const COLOR_HEX: Record<PlayerColor, string> = {
+  red: '#ef4444', blue: '#3b82f6', green: '#22c55e',
+  yellow: '#facc15', purple: '#a855f7', orange: '#f97316',
+};
+
+// ── Inline pip dice for player count selector ──────────────────────────────
+const PIP_MAP: Record<number, number[]> = {
+  1: [4], 2: [0, 8], 3: [0, 4, 8],
+  4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
+};
+function DicePip({ value, selected, accentHex }: { value: number; selected: boolean; accentHex?: string }) {
+  const pips = PIP_MAP[value] || [];
+  const size = 44;
+  const activeHex = accentHex ?? '#ffb72b';
+  const bg = selected
+    ? `linear-gradient(150deg, ${activeHex}cc 0%, ${activeHex} 100%)`
+    : 'rgba(0,0,0,.3)';
+  const shadow = selected
+    ? `inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 5px rgba(0,0,0,.25), 0 0 18px -2px ${activeHex}99`
+    : 'inset 0 1px 2px rgba(255,255,255,.05)';
+  return (
+    <div style={{
+      width: size, height: size,
+      background: bg,
+      borderRadius: Math.round(size * 0.22),
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gridTemplateRows: 'repeat(3,1fr)',
+      padding: size * 0.13,
+      gap: size * 0.04,
+      boxShadow: shadow,
+      transition: 'background .2s, box-shadow .2s',
+    }}>
+      {Array.from({ length: 9 }).map((_, i) => (
+        <span key={i} style={{
+          borderRadius: '50%',
+          background: pips.includes(i) ? (selected ? '#1a1206' : 'var(--dim)') : 'transparent',
+        }} />
+      ))}
+    </div>
+  );
+}
 
 // ─── Local Play ───────────────────────────────────────────────────────────────
 
@@ -66,56 +108,65 @@ function LocalPlayTab({ myNickname }: { myNickname: string }) {
   const usedColors = players.map((p) => p.color);
 
   return (
-    <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm shadow-2xl">
-      <div className="mb-8">
-        <h2 className="text-amber-300 text-xs font-bold tracking-widest uppercase mb-4">인원 선택</h2>
-        <div className="flex gap-3 justify-center">
-          {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => (
-            <button
-              key={n}
-              onClick={() => handlePlayerCountChange(n)}
-              className={`w-12 h-12 rounded-xl font-bold text-lg transition-all duration-200 ${playerCount === n
-                ? 'bg-amber-400 text-black scale-110 shadow-lg shadow-amber-400/40'
-                : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
-                }`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+    <div className="arc-panel ticks" style={{ padding: 22 }}>
+      {/* Player count */}
+      <span className="arc-lbl" style={{ color: 'var(--gold)' }}>PLAYERS</span>
+      <div style={{ display: 'flex', gap: 9, marginTop: 12, marginBottom: 22, justifyContent: 'space-between' }}>
+        {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => (
+          <button
+            key={n}
+            onClick={() => handlePlayerCountChange(n)}
+            style={{
+              flex: 1, aspectRatio: '1', borderRadius: 13, cursor: 'pointer',
+              border: 'none', background: 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'transform .12s',
+              transform: playerCount === n ? 'scale(1.08)' : 'none',
+              padding: playerCount === n ? 0 : 6,
+            }}
+          >
+            <DicePip value={n} selected={playerCount === n} />
+          </button>
+        ))}
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-amber-300 text-xs font-bold tracking-widest uppercase">플레이어 설정</h2>
+      {/* Player setup */}
+      <span className="arc-lbl" style={{ color: 'var(--gold)' }}>PLAYER SETUP</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
         {players.slice(0, playerCount).map((player, index) => {
-          const colorInfo = PLAYER_COLORS.find((c) => c.color === player.color)!;
+          const hex = COLOR_HEX[player.color] ?? '#888';
           return (
-            <div key={index} className="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
-              <div className="flex items-center gap-3">
-                <span className={`text-2xl ${colorInfo.text}`}>{DICE_FACES[index]}</span>
+            <div key={index} className="arc-panel-inset arc-rise" style={{ padding: 12, animationDelay: `${index * 0.05}s` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <DicePip value={index + 1} selected accentHex={hex} />
                 <input
                   type="text"
+                  className="arc-field"
+                  style={{ padding: '8px 12px', fontSize: 15, background: 'transparent', border: 'none', borderBottom: '1.5px solid var(--line-2)', borderRadius: 0 }}
                   value={player.name}
-                  onChange={(e) => handleNameChange(index, e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-white text-sm font-medium outline-none border-b border-white/20 pb-1 focus:border-amber-400 transition-colors"
                   maxLength={12}
+                  onChange={(e) => handleNameChange(index, e.target.value)}
                 />
               </div>
-              <div className="flex gap-2.5 flex-wrap pl-1">
+              <div style={{ display: 'flex', gap: 9, marginTop: 11, paddingLeft: 2 }}>
                 {PLAYER_COLORS.map((c) => {
                   const isUsedByOther = usedColors.includes(c.color) && c.color !== player.color;
+                  const cHex = COLOR_HEX[c.color] ?? '#888';
                   return (
                     <button
                       key={c.color}
-                      onClick={() => !isUsedByOther && handleColorChange(index, c.color)}
                       disabled={isUsedByOther}
+                      onClick={() => !isUsedByOther && handleColorChange(index, c.color)}
                       title={c.label}
-                      className={`w-6 h-6 rounded-full transition-all duration-150 ${c.bg} ${player.color === c.color
-                        ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent scale-125'
-                        : isUsedByOther
-                          ? 'opacity-20 cursor-not-allowed'
-                          : 'opacity-60 hover:opacity-100 hover:scale-110'
-                        }`}
+                      style={{
+                        width: 24, height: 24, borderRadius: '50%', border: 'none',
+                        cursor: isUsedByOther ? 'not-allowed' : 'pointer',
+                        background: cHex,
+                        opacity: isUsedByOther ? 0.18 : player.color === c.color ? 1 : 0.55,
+                        transform: player.color === c.color ? 'scale(1.25)' : 'none',
+                        boxShadow: player.color === c.color ? `0 0 0 2px var(--bg), 0 0 0 4px ${cHex}, 0 0 14px ${cHex}` : 'none',
+                        transition: 'all .15s',
+                      }}
                     />
                   );
                 })}
@@ -125,10 +176,7 @@ function LocalPlayTab({ myNickname }: { myNickname: string }) {
         })}
       </div>
 
-      <button
-        onClick={handleStart}
-        className="mt-8 w-full py-4 rounded-2xl font-black text-lg tracking-widest uppercase bg-gradient-to-r from-amber-500 to-yellow-400 text-black hover:from-amber-400 hover:to-yellow-300 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/30"
-      >
+      <button className="arc-btn" style={{ marginTop: 20, fontSize: 20 }} onClick={handleStart}>
         게임 시작 🎲
       </button>
     </div>
@@ -151,161 +199,111 @@ function OnlinePlayTab({ myNickname, myUid }: { myNickname: string; myUid: strin
     const code = val.toUpperCase().slice(0, 6);
     setJoinCode(code);
     setError('');
-    if (code.length < 6) {
-      setRoomPlayers([]);
-      setRoomStatus('idle');
-      return;
-    }
+    if (code.length < 6) { setRoomPlayers([]); setRoomStatus('idle'); return; }
     setRoomStatus('checking');
     try {
       const room = await getRoom(code);
       if (!room || room.status !== 'waiting') {
-        setRoomPlayers([]);
-        setRoomStatus('notfound');
+        setRoomPlayers([]); setRoomStatus('notfound');
         setError(room?.status === 'playing' ? '이미 게임이 시작된 방입니다.' : '방을 찾을 수 없습니다.');
       } else {
-        setRoomPlayers(room.players);
-        setRoomStatus('found');
+        setRoomPlayers(room.players); setRoomStatus('found');
         const takenColors = room.players.map((p) => p.color);
         if (takenColors.includes(color)) {
           const available = PLAYER_COLORS.find((c) => !takenColors.includes(c.color));
           if (available) setColor(available.color);
         }
       }
-    } catch {
-      setRoomStatus('idle');
-    }
+    } catch { setRoomStatus('idle'); }
   };
 
   const handleCreate = async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const code = generateRoomCode();
       await createRoom(code, myUid, { clientId: myUid, name: myNickname, color });
       router.push(`/las-vegas/room/${code}`);
-    } catch {
-      setError('방 생성에 실패했습니다. 다시 시도해주세요.');
-      setLoading(false);
-    }
+    } catch { setError('방 생성에 실패했습니다. 다시 시도해주세요.'); setLoading(false); }
   };
 
   const handleJoin = async () => {
     if (joinCode.trim().length < 6) { setError('방 코드 6자리를 입력해주세요.'); return; }
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
-      const result = await joinRoom(joinCode.trim().toUpperCase(), {
-        clientId: myUid,
-        name: myNickname,
-        color,
-      });
-      if (!result.success) {
-        setError(result.error ?? '참가에 실패했습니다.');
-        setLoading(false);
-        return;
-      }
+      const result = await joinRoom(joinCode.trim().toUpperCase(), { clientId: myUid, name: myNickname, color });
+      if (!result.success) { setError(result.error ?? '참가에 실패했습니다.'); setLoading(false); return; }
       router.push(`/las-vegas/room/${joinCode.trim().toUpperCase()}`);
-    } catch {
-      setError('참가에 실패했습니다. 다시 시도해주세요.');
-      setLoading(false);
-    }
+    } catch { setError('참가에 실패했습니다. 다시 시도해주세요.'); setLoading(false); }
   };
 
   return (
-    <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm shadow-2xl">
-      <div className="flex rounded-2xl bg-white/5 p-1 mb-8">
-        {(['create', 'join'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => { setSubTab(t); setError(''); }}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${subTab === t
-              ? 'bg-amber-400 text-black shadow'
-              : 'text-white/50 hover:text-white'
-              }`}
-          >
-            {t === 'create' ? '방 만들기' : '방 참가하기'}
-          </button>
-        ))}
+    <div className="arc-panel ticks" style={{ padding: 22 }}>
+      <div className="arc-seg" style={{ marginBottom: 20 }}>
+        <button className={subTab === 'create' ? 'on' : ''} onClick={() => { setSubTab('create'); setError(''); }}>방 만들기</button>
+        <button className={subTab === 'join' ? 'on' : ''} onClick={() => { setSubTab('join'); setError(''); }}>방 참가하기</button>
       </div>
 
       {subTab === 'join' && (
-        <div className="mb-6">
-          <label className="text-amber-300 text-xs font-bold tracking-widest uppercase block mb-2">방 코드</label>
+        <div style={{ marginBottom: 18 }}>
+          <span className="arc-lbl" style={{ color: 'var(--gold)' }}>ROOM CODE</span>
           <input
             type="text"
+            className="arc-field"
+            style={{ textAlign: 'center', fontFamily: 'var(--f-disp)', fontSize: 26, letterSpacing: 8, marginTop: 10,
+              borderColor: roomStatus === 'found' ? 'var(--green)' : roomStatus === 'notfound' ? 'var(--red)' : undefined }}
             value={joinCode}
             onChange={(e) => handleJoinCodeChange(e.target.value)}
             placeholder="XXXXXX"
-            className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white text-lg font-black tracking-[0.3em] text-center outline-none transition-colors placeholder:text-white/20 ${roomStatus === 'found' ? 'border-green-500' :
-              roomStatus === 'notfound' ? 'border-red-500' :
-                'border-white/20 focus:border-amber-400'
-              }`}
             maxLength={6}
           />
-          {roomStatus === 'checking' && <p className="text-white/40 text-xs text-center mt-2">방 확인 중...</p>}
+          {roomStatus === 'checking' && <p style={{ color: 'var(--dim)', fontSize: 12, textAlign: 'center', marginTop: 6 }}>방 확인 중...</p>}
           {roomStatus === 'found' && roomPlayers.length > 0 && (
-            <div className="mt-2 flex items-center gap-2 justify-center">
-              <span className="text-green-400 text-xs">✓ 방 발견</span>
-              <span className="text-white/30 text-xs">|</span>
-              <div className="flex gap-1.5 items-center">
-                {roomPlayers.map((p) => {
-                  const cc = PLAYER_COLORS.find((c) => c.color === p.color);
-                  return (
-                    <span key={p.clientId} className="flex items-center gap-1 text-white/50 text-xs">
-                      <span className={`w-2 h-2 rounded-full inline-block ${cc?.bg}`} />
-                      {p.name}
-                    </span>
-                  );
-                })}
-              </div>
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+              <span style={{ color: 'var(--green)', fontSize: 12 }}>✓ 방 발견</span>
+              {roomPlayers.map((p) => {
+                const hex = COLOR_HEX[p.color as PlayerColor] ?? '#888';
+                return (
+                  <span key={p.clientId} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--dim)', fontSize: 12 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: hex, display: 'inline-block' }} />
+                    {p.name}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      <div className="mb-6">
-        <label className="text-amber-300 text-xs font-bold tracking-widest uppercase block mb-2">내 닉네임</label>
-        <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white/60 text-sm">
-          {myNickname}
-        </div>
+      <span className="arc-lbl" style={{ color: 'var(--gold)', marginBottom: 8, display: 'block' }}>MY NAME</span>
+      <div className="arc-panel-inset" style={{ padding: '12px 16px', marginBottom: 18, fontFamily: 'var(--f-body)', fontWeight: 600, fontSize: 16 }}>
+        {myNickname}
       </div>
 
-      <div className="mb-8">
-        <label className="text-amber-300 text-xs font-bold tracking-widest uppercase block mb-3">
-          주사위 색상
-          {subTab === 'join' && roomStatus === 'found' && (
-            <span className="text-white/30 font-normal normal-case tracking-normal ml-2">(어두운 색상은 이미 선택됨)</span>
-          )}
-        </label>
-        <div className="flex gap-3 justify-center flex-wrap">
-          {PLAYER_COLORS.map((c) => {
-            const takenColors = subTab === 'join' ? roomPlayers.map((p) => p.color) : [];
-            const isTaken = takenColors.includes(c.color);
-            return (
-              <button
-                key={c.color}
-                onClick={() => !isTaken && setColor(c.color)}
-                disabled={isTaken}
-                title={isTaken ? '이미 선택됨' : c.label}
-                className={`w-10 h-10 rounded-full transition-all duration-150 ${c.bg} ${isTaken ? 'opacity-20 cursor-not-allowed'
-                  : color === c.color ? 'ring-2 ring-white scale-125 shadow-lg'
-                    : 'opacity-50 hover:opacity-80 hover:scale-110'
-                  }`}
-              />
-            );
-          })}
-        </div>
+      <span className="arc-lbl" style={{ color: 'var(--gold)' }}>DICE COLOR</span>
+      <div style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 22, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {PLAYER_COLORS.map((c) => {
+          const takenColors = subTab === 'join' ? roomPlayers.map((p) => p.color) : [];
+          const isTaken = takenColors.includes(c.color);
+          const hex = COLOR_HEX[c.color] ?? '#888';
+          return (
+            <button key={c.color} onClick={() => !isTaken && setColor(c.color)} disabled={isTaken} title={c.label}
+              style={{
+                width: 38, height: 38, borderRadius: '50%', border: 'none',
+                cursor: isTaken ? 'not-allowed' : 'pointer',
+                background: hex,
+                opacity: isTaken ? 0.18 : color === c.color ? 1 : 0.5,
+                transform: color === c.color ? 'scale(1.2)' : 'none',
+                boxShadow: color === c.color ? `0 0 0 3px var(--bg), 0 0 18px ${hex}` : 'none',
+                transition: 'all .15s',
+              }} />
+          );
+        })}
       </div>
 
-      {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
+      {error && <p style={{ color: 'var(--red)', fontSize: 13, textAlign: 'center', marginBottom: 14 }}>{error}</p>}
 
-      <button
-        onClick={subTab === 'create' ? handleCreate : handleJoin}
-        disabled={loading}
-        className="w-full py-4 rounded-2xl font-black text-lg tracking-widest uppercase bg-gradient-to-r from-amber-500 to-yellow-400 text-black hover:from-amber-400 hover:to-yellow-300 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-      >
-        {loading ? '처리 중...' : subTab === 'create' ? '방 만들기' : '참가하기'}
+      <button className="arc-btn" disabled={loading} onClick={subTab === 'create' ? handleCreate : handleJoin} style={{ fontSize: 19 }}>
+        {loading ? '처리 중...' : subTab === 'create' ? '방 만들기 🎲' : '참가하기 🎲'}
       </button>
     </div>
   );
@@ -338,59 +336,48 @@ export default function LasVegasSetupPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#1e1a0f] via-[#17130c] to-[#100e09] px-4 py-10">
-      <button
-        onClick={toggleMusic}
-        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-lg hover:bg-white/20 transition-all"
-        title={musicOn ? '음악 끄기' : '음악 켜기'}
-      >
-        {musicOn ? '🎵' : '🔇'}
-      </button>
+    <div className="cabinet">
+      <div className="crt" />
+      <div className="arc-screen" style={{ '--c': 'var(--gold)' } as React.CSSProperties}>
+        {/* Top bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px' }}>
+          <button className="arc-btn-ghost" onClick={() => router.push('/lobby')} style={{ fontSize: 13, padding: '9px 14px' }}>
+            ← 로비
+          </button>
+          <button className="arc-btn-ghost" onClick={toggleMusic} style={{ width: 40, height: 40, padding: 0, borderRadius: 11, fontSize: 16 }}>
+            {musicOn ? '🔊' : '🔇'}
+          </button>
+        </div>
 
-      <button
-        onClick={() => router.push('/lobby')}
-        className="fixed top-4 left-4 z-50 text-sm text-gray-500 hover:text-gray-300 border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
-      >
-        ← 로비
-      </button>
+        {/* Game logo */}
+        <div className="arc-pop" style={{ textAlign: 'center', margin: '12px 0 22px' }}>
+          <div className="arc-float" style={{ fontSize: 56, lineHeight: 1 }}>🎰</div>
+          <h1 className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 40, letterSpacing: 1, margin: '6px 0 2px' }}>
+            LAS VEGAS
+          </h1>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 20, color: 'var(--text)' }}>라스베가스</div>
+          <Link href="/las-vegas/rules">
+            <span className="arc-chip" style={{ marginTop: 12, cursor: 'pointer', display: 'inline-flex' }}>📖 게임 방법</span>
+          </Link>
+        </div>
 
-      <div className="text-center mb-8">
-        <div className="text-7xl mb-3">🎲</div>
-        <h1 className="text-5xl font-black tracking-widest text-amber-400 mb-2">LAS VEGAS</h1>
-        <p className="text-amber-300/60 text-sm tracking-widest uppercase mb-3">The Dice Game</p>
-        <Link
-          href="/las-vegas/rules"
-          className="text-white/40 hover:text-amber-300 text-xs border border-white/15 hover:border-amber-400/40 px-3 py-1 rounded-lg transition-all"
-        >
-          게임 방법 ?
-        </Link>
+        {/* Local / Online tab */}
+        <div className="arc-seg" style={{ marginBottom: 18 }}>
+          <button className={tab === 'local' ? 'on' : ''} onClick={() => setTab('local')}>🖥️ 로컬 플레이</button>
+          <button className={tab === 'online' ? 'on' : ''} onClick={() => setTab('online')}>🌐 온라인</button>
+        </div>
+
+        {tab === 'local'
+          ? <LocalPlayTab myNickname={nickname} />
+          : <OnlinePlayTab myNickname={nickname} myUid={uid} />
+        }
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
+          <span className="arc-chip" style={{ fontSize: 11 }}>🏨 카지노 6</span>
+          <span className="arc-chip" style={{ fontSize: 11 }}>🎲 주사위 4–8</span>
+          <span className="arc-chip" style={{ fontSize: 11 }}>💰 4 라운드</span>
+        </div>
       </div>
-
-      <div className="flex rounded-2xl bg-white/5 border border-white/10 p-1 mb-6 w-full max-w-lg">
-        <button
-          onClick={() => setTab('local')}
-          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${tab === 'local' ? 'bg-white/15 text-white shadow' : 'text-white/40 hover:text-white/70'}`}
-        >
-          🖥️ 로컬 플레이
-        </button>
-        <button
-          onClick={() => setTab('online')}
-          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${tab === 'online' ? 'bg-white/15 text-white shadow' : 'text-white/40 hover:text-white/70'}`}
-        >
-          🌐 온라인 플레이
-        </button>
-      </div>
-
-      {tab === 'local'
-        ? <LocalPlayTab myNickname={nickname} />
-        : <OnlinePlayTab myNickname={nickname} myUid={uid} />
-      }
-
-      <div className="mt-8 max-w-lg text-center text-white/30 text-xs leading-relaxed">
-        <p>🏨 6개의 카지노 | 🎲 인원수별 주사위 4–8개 | 💰 4라운드</p>
-        <p className="mt-1">같은 숫자 주사위를 골라 카지노에 배치하고 가장 많은 돈을 모아 우승하세요!</p>
-      </div>
-
-    </main>
+    </div>
   );
 }

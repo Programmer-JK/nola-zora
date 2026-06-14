@@ -1,126 +1,136 @@
 'use client';
 
 import { Casino, Player, WHITE_PLAYER_ID } from '@/lib/las-vegas/types';
-import { getColorClasses } from '@/lib/las-vegas/gameLogic';
+import { getColorHex } from '@/lib/las-vegas/gameLogic';
 
 interface CasinoCardProps {
   casino: Casino;
   players: Player[];
   isHighlighted?: boolean;
   isSelectable?: boolean;
+  potentialCount?: number;
+  potentialWhiteCount?: number;
+  currentPlayerColor?: string;
   onSelect?: () => void;
 }
 
-// Background theme per casino
-const CASINO_THEMES = [
-  { bg: 'from-red-950/80 to-red-900/60',     border: 'border-red-700/40',    accent: 'bg-red-600/30',    num: 'text-red-300' },
-  { bg: 'from-blue-950/80 to-blue-900/60',   border: 'border-blue-700/40',   accent: 'bg-blue-600/30',   num: 'text-blue-300' },
-  { bg: 'from-emerald-950/80 to-green-900/60', border: 'border-green-700/40', accent: 'bg-green-600/30', num: 'text-green-300' },
-  { bg: 'from-yellow-950/80 to-yellow-900/60', border: 'border-yellow-700/40', accent: 'bg-yellow-600/30', num: 'text-yellow-300' },
-  { bg: 'from-purple-950/80 to-purple-900/60', border: 'border-purple-700/40', accent: 'bg-purple-600/30', num: 'text-purple-300' },
-  { bg: 'from-orange-950/80 to-orange-900/60', border: 'border-orange-700/40', accent: 'bg-orange-600/30', num: 'text-orange-300' },
-];
-
-// Denomination colors — each value gets a distinct "bill" color
-function getBillStyle(value: number): { bg: string; text: string } {
-  if (value >= 90000) return { bg: 'bg-amber-300',   text: 'text-black' };
-  if (value >= 80000) return { bg: 'bg-amber-400',   text: 'text-black' };
-  if (value >= 70000) return { bg: 'bg-yellow-400',  text: 'text-black' };
-  if (value >= 60000) return { bg: 'bg-yellow-500',  text: 'text-black' };
-  if (value >= 50000) return { bg: 'bg-red-500',     text: 'text-white' };
-  if (value >= 40000) return { bg: 'bg-orange-500',  text: 'text-white' };
-  if (value >= 30000) return { bg: 'bg-purple-500',  text: 'text-white' };
-  if (value >= 20000) return { bg: 'bg-cyan-600',    text: 'text-white' };
-  return                     { bg: 'bg-emerald-600', text: 'text-white' };
+function getBillColors(value: number): { bg: string; text: string } {
+  if (value >= 90000) return { bg: 'var(--gold)',            text: '#1a1206' };
+  if (value >= 70000) return { bg: 'rgba(255,183,43,0.5)',  text: 'var(--coin)' };
+  if (value >= 50000) return { bg: 'var(--red)',            text: '#fff' };
+  if (value >= 30000) return { bg: 'var(--violet)',         text: '#fff' };
+  if (value >= 20000) return { bg: 'var(--cyan)',           text: '#06231f' };
+  return                     { bg: 'rgba(126,217,87,0.35)', text: 'var(--green)' };
 }
 
 export default function CasinoCard({
-  casino,
-  players,
-  isHighlighted = false,
-  isSelectable = false,
+  casino, players,
+  isHighlighted = false, isSelectable = false,
+  potentialCount = 0, potentialWhiteCount = 0,
+  currentPlayerColor = 'white',
   onSelect,
 }: CasinoCardProps) {
   const totalMoney = casino.moneyCards.reduce((sum, c) => sum + c.value, 0);
-  const theme = CASINO_THEMES[(casino.id - 1) % CASINO_THEMES.length];
+  const sortedDice = [...casino.placedDice].sort((a, b) => b.count - a.count);
 
   return (
     <div
       onClick={isSelectable ? onSelect : undefined}
-      className={[
-        'relative rounded-2xl border flex flex-col overflow-hidden transition-all duration-200',
-        `bg-gradient-to-b ${theme.bg} ${theme.border}`,
-        isSelectable ? 'cursor-pointer hover:scale-105 hover:brightness-125' : '',
-        isHighlighted ? 'scale-105 ring-2 ring-amber-400 shadow-lg shadow-amber-400/30 brightness-125' : '',
-      ].filter(Boolean).join(' ')}
+      style={{
+        position: 'relative', borderRadius: 14, overflow: 'hidden',
+        background: 'linear-gradient(180deg, var(--surface-2) 0%, var(--bg-2) 100%)',
+        border: isHighlighted ? '1.5px solid var(--gold)' : '1.5px solid var(--line)',
+        boxShadow: isHighlighted ? '0 0 0 1px var(--gold), 0 0 22px -4px var(--gold)' : 'none',
+        cursor: isSelectable ? 'pointer' : 'default',
+        transform: isHighlighted ? 'translateY(-2px)' : 'none',
+        transition: 'all .2s',
+        display: 'flex', flexDirection: 'column',
+      }}
     >
-      {/* Casino header */}
-      <div className={`flex items-center justify-between px-2.5 pt-2.5 pb-1.5`}>
-        <div className={`flex items-center gap-1.5`}>
-          <div className={`w-7 h-7 rounded-lg ${theme.accent} flex items-center justify-center font-black text-base ${theme.num}`}>
-            {casino.id}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-white/30 text-[9px] leading-none uppercase tracking-wider">Casino</span>
-            <span className={`text-[10px] font-bold ${theme.num}`}>
-              {(totalMoney / 10000).toFixed(0)}억
-            </span>
-          </div>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 8px 5px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--f-disp)', fontSize: 11, color: '#1a1206',
+            background: 'var(--gold)', boxShadow: '0 2px 0 var(--gold-lo)',
+          }}>{casino.id}</span>
+          {(potentialCount > 0 || potentialWhiteCount > 0) ? (
+            <div className="blink" style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+              {potentialCount > 0 && (
+                <span style={{
+                  fontFamily: 'var(--f-disp)', fontSize: 9, fontWeight: 900,
+                  color: getColorHex(currentPlayerColor),
+                  background: `${getColorHex(currentPlayerColor)}22`,
+                  border: `1px solid ${getColorHex(currentPlayerColor)}66`,
+                  borderRadius: 4, padding: '1px 4px', lineHeight: 1.4,
+                }}>×{potentialCount}</span>
+              )}
+              {potentialWhiteCount > 0 && (
+                <span style={{
+                  fontFamily: 'var(--f-disp)', fontSize: 9, fontWeight: 900,
+                  color: '#f0e8d8', background: 'rgba(240,232,216,0.15)',
+                  border: '1px solid rgba(240,232,216,0.3)',
+                  borderRadius: 4, padding: '1px 4px', lineHeight: 1.4,
+                }}>×{potentialWhiteCount}</span>
+              )}
+            </div>
+          ) : (
+            <span className="pix" style={{ fontSize: 6, color: 'var(--dim)' }}>CASINO</span>
+          )}
         </div>
-        {isSelectable && (
-          <span className="text-[10px] text-amber-300 font-black animate-pulse">▶ 선택</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {isSelectable && (
+            <span className="pix blink" style={{ fontSize: 7, color: 'var(--gold)' }}>▸</span>
+          )}
+          <span style={{ fontFamily: 'var(--f-disp)', fontSize: 10, color: 'var(--coin)' }}>
+            {(totalMoney / 10000).toFixed(0)}억
+          </span>
+        </div>
       </div>
 
-      {/* Money cards — shown as denomination bills */}
-      <div className="px-2 pb-2 flex flex-col gap-0.5">
+      {/* 상금 지폐 */}
+      <div style={{ padding: '0 8px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
         {casino.moneyCards.length === 0 ? (
-          <p className="text-white/20 text-[10px] text-center py-1.5 italic">상금 없음</p>
+          <p style={{ color: 'var(--faint)', fontSize: 9, textAlign: 'center', padding: '4px 0', margin: 0 }}>상금 없음</p>
         ) : (
           casino.moneyCards.map((card, i) => {
-            const bill = getBillStyle(card.value);
+            const bill = getBillColors(card.value);
             return (
-              <div
-                key={i}
-                className={`flex items-center justify-between px-1.5 py-[3px] rounded-md text-[11px] font-black ${bill.bg} ${bill.text}`}
-                style={{ opacity: i === 0 ? 1 : Math.max(0.45, 0.85 - i * 0.12) }}
-              >
-                {/* Left symbol — prize rank */}
-                <span className="text-xs [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.7))]">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-                <span>{(card.value / 10000).toFixed(0)}억</span>
+              <div key={i} style={{
+                padding: '2px 6px', borderRadius: 5,
+                fontFamily: 'var(--f-disp)', fontSize: 10,
+                background: bill.bg, color: bill.text,
+                opacity: i === 0 ? 1 : Math.max(0.4, 0.88 - i * 0.14),
+                display: 'flex', justifyContent: 'flex-end',
+              }}>
+                {(card.value / 10000).toFixed(0)}억
               </div>
             );
           })
         )}
       </div>
-
-      {/* Placed dice */}
-      {casino.placedDice.length > 0 && (
-        <div className="border-t border-white/10 mx-2 pt-1.5 pb-2 flex flex-col gap-0.5">
-          {casino.placedDice
-            .slice()
-            .sort((a, b) => b.count - a.count)
-            .map((pd) => {
-              if (pd.playerId === WHITE_PLAYER_ID) {
-                return (
-                  <div key="white" className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white/60 flex-shrink-0" />
-                    <span className="text-white/40 text-[10px] flex-1 truncate">중립</span>
-                    <span className="text-[10px] font-bold text-white/50">{pd.count}</span>
-                  </div>
-                );
-              }
-              const player = players.find((p) => p.id === pd.playerId);
-              if (!player) return null;
-              const cc = getColorClasses(player.color);
-              return (
-                <div key={pd.playerId} className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${cc.bg} flex-shrink-0`} />
-                  <span className="text-white/60 text-[10px] flex-1 truncate">{player.name}</span>
-                  <span className={`text-[10px] font-bold ${cc.text}`}>{pd.count}</span>
-                </div>
-              );
-            })}
+      {/* 배치된 주사위 */}
+      {sortedDice.length > 0 && (
+        <div style={{
+          borderTop: '1px solid var(--line)', margin: '0 8px',
+          padding: '5px 0 7px', display: 'flex', flexDirection: 'column', gap: 3,
+        }}>
+          {sortedDice.map((pd) => {
+            const isNeutral = pd.playerId === WHITE_PLAYER_ID;
+            const hex = isNeutral
+              ? 'rgba(255,255,255,0.35)'
+              : getColorHex(players.find((p) => p.id === pd.playerId)?.color ?? 'red');
+            const name = isNeutral ? '중립' : (players.find((p) => p.id === pd.playerId)?.name ?? '?');
+            return (
+              <div key={pd.playerId} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: hex, boxShadow: isNeutral ? 'none' : `0 0 5px ${hex}`, flexShrink: 0 }} />
+                <span style={{ fontSize: 10, color: 'var(--text-2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                <span style={{ fontFamily: 'var(--f-disp)', fontSize: 10, color: hex }}>{pd.count}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

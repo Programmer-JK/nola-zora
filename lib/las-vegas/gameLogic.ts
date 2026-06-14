@@ -381,6 +381,14 @@ export function getScoringBreakdown(state: GameState): CasinoScoringResult[] {
   return results;
 }
 
+export function getColorHex(color: string): string {
+  const map: Record<string, string> = {
+    red: '#ef4444', blue: '#3b82f6', green: '#22c55e',
+    yellow: '#facc15', purple: '#a855f7', orange: '#f97316',
+  };
+  return map[color] ?? '#888888';
+}
+
 export function getColorClasses(color: string) {
   const map: Record<string, { bg: string; text: string; border: string; light: string }> = {
     red:    { bg: 'bg-red-500',    text: 'text-red-500',    border: 'border-red-500',    light: 'bg-red-100' },

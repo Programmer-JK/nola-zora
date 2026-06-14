@@ -1,23 +1,10 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_KR, Jua } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 
-const notoSansKR = Noto_Sans_KR({
-  variable: '--font-noto',
-  subsets: ['latin'],
-  weight: ['400', '700'],
-})
-
-const jua = Jua({
-  variable: '--font-jua',
-  subsets: ['latin'],
-  weight: ['400'],
-})
-
 export const metadata: Metadata = {
-  title: '놀아조라',
-  description: '라스베가스 주사위 게임 & 캐릭터 카드 파티 게임',
+  title: '놀아조라 ARCADE',
+  description: '라스베가스 · 캐릭터 카드 · 모던 아트 보드게임 허브',
 }
 
 export default function RootLayout({
@@ -27,7 +14,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className={`${notoSansKR.variable} ${jua.variable} antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Bungee&family=Press+Start+2P&family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

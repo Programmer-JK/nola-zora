@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { logoutGuest } from '@/lib/auth'
@@ -7,29 +8,99 @@ import { logoutGuest } from '@/lib/auth'
 const GAMES = [
   {
     id: 'las-vegas',
-    title: '라스베가스',
-    subtitle: 'Las Vegas 주사위 보드게임',
-    emoji: '🎰',
-    desc: '2~6인 / 주사위 전략 게임\n카지노에 주사위를 배치해 가장 많은 돈을 모으세요!',
+    kr: '라스베가스',
+    latin: 'LAS VEGAS',
+    tag: 'THE DICE GAME',
+    emoji: '🎲',
+    accent: 'var(--gold)',
+    accentHex: '#ffb72b',
+    players: '2–6인',
+    kind: '주사위 전략',
+    desc: '카지노에 주사위를 배치해\n가장 많은 돈을 쓸어담아라',
     href: '/las-vegas',
-    bg: 'bg-amber-50 hover:bg-amber-100/80',
-    border: 'border-amber-300/60 hover:border-amber-400',
-    badge: 'bg-amber-400 text-black',
-    arrow: 'text-amber-400',
   },
   {
     id: 'card-game',
-    title: '캐릭터 카드 뽑기',
-    subtitle: '애니메이션 캐릭터 파티 게임',
+    kr: '캐릭터 카드',
+    latin: 'CHARACTER CARD',
+    tag: 'PARTY GAME',
     emoji: '🃏',
-    desc: '2인 이상 / 파티 카드 게임\n무작위 카드로 캐릭터를 만들어 설명하세요!',
+    accent: 'var(--magenta)',
+    accentHex: '#ff5da2',
+    players: '2인+',
+    kind: '파티 카드',
+    desc: '무작위 카드를 조합해\n나만의 캐릭터를 만들어 설명하라',
     href: '/card-game',
-    bg: 'bg-violet-50 hover:bg-violet-100/80',
-    border: 'border-violet-300/60 hover:border-violet-400',
-    badge: 'bg-violet-500 text-white',
-    arrow: 'text-violet-400',
+  },
+  {
+    id: 'modern-art',
+    kr: '모던 아트',
+    latin: 'MODERN ART',
+    tag: 'AUCTION GAME',
+    emoji: '🎨',
+    accent: 'var(--cyan)',
+    accentHex: '#36e0cf',
+    players: '2–5인',
+    kind: '경매 전략',
+    desc: '작가의 작품을 경매로 사고팔아\n최고의 자산가가 되어라',
+    href: '/modern-art',
   },
 ]
+
+function GameCard({ game, onPick }: { game: typeof GAMES[0]; onPick: () => void }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      onClick={onPick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="arc-panel arc-rise"
+      style={{
+        textAlign: 'left', cursor: 'pointer', padding: 0, overflow: 'hidden', width: '100%',
+        borderColor: hover ? game.accentHex : 'var(--line)',
+        boxShadow: hover ? `0 0 0 1px ${game.accentHex}, 0 14px 30px -10px ${game.accentHex}` : 'none',
+        transition: 'box-shadow .2s, border-color .2s, transform .12s',
+        transform: hover ? 'translateY(-3px)' : 'none',
+      }}
+    >
+      {/* accent top edge */}
+      <div style={{ height: 5, background: `linear-gradient(90deg, ${game.accentHex}, transparent)` }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 18px' }}>
+        {/* emoji token */}
+        <div style={{
+          width: 64, height: 64, borderRadius: 16, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 34,
+          background: `radial-gradient(circle at 50% 35%, color-mix(in srgb, ${game.accentHex} 28%, var(--surface-2)) 0%, var(--surface) 100%)`,
+          border: `1.5px solid color-mix(in srgb, ${game.accentHex} 45%, transparent)`,
+          boxShadow: `inset 0 0 18px -6px ${game.accentHex}`,
+          transform: hover ? 'scale(1.08) rotate(-4deg)' : 'none',
+          transition: 'transform .2s',
+        }}>{game.emoji}</div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--text)', whiteSpace: 'nowrap' }}>{game.kr}</span>
+            <span className="arc-badge" style={{ background: game.accentHex }}>{game.tag}</span>
+          </div>
+          <div style={{ fontFamily: 'var(--f-disp)', fontSize: 10, letterSpacing: 1.5, color: game.accentHex, marginTop: 5 }}>{game.latin}</div>
+          <p style={{ color: 'var(--dim)', fontSize: 12.5, margin: '8px 0 0', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{game.desc}</p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 11 }}>
+            <span className="arc-chip" style={{ fontSize: 11, padding: '4px 9px' }}>👥 {game.players}</span>
+            <span className="arc-chip" style={{ fontSize: 11, padding: '4px 9px' }}>🎯 {game.kind}</span>
+          </div>
+        </div>
+
+        <div style={{
+          fontFamily: 'var(--f-pix)', fontSize: 13, color: game.accentHex,
+          transform: hover ? 'translateX(4px)' : 'none', transition: 'transform .2s',
+          textShadow: `0 0 12px ${game.accentHex}`,
+          flexShrink: 0,
+        }}>▶</div>
+      </div>
+    </button>
+  )
+}
 
 export default function LobbyPage() {
   const router = useRouter()
@@ -41,56 +112,57 @@ export default function LobbyPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fdfcea] p-4 text-amber-900">
-      {/* Header */}
-      <header className="max-w-2xl mx-auto flex items-center justify-between pt-6 pb-8">
-        <div className="flex items-center gap-3">
-          <img src="/icon.png" alt="놀아조라" className="w-9 h-9 rounded-xl" />
-          <div>
-            <h1 className="text-xl font-black text-amber-800">
-              놀아조라
-            </h1>
-            <p className="text-amber-700/50 text-xs mt-0.5">
-              안녕하세요, <span className="text-amber-900 font-semibold">{nickname}</span>님!
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-amber-700/50 hover:text-amber-800 border border-amber-300/50 hover:border-amber-400 px-3 py-1.5 rounded-lg transition-all"
-        >
-          로그아웃
-        </button>
-      </header>
+    <div className="cabinet">
+      <div className="crt" />
 
-      {/* Game Cards */}
-      <div className="max-w-2xl mx-auto space-y-4">
-        <p className="text-amber-700 text-xs uppercase tracking-widest font-bold mb-6">게임 선택</p>
-        {GAMES.map(game => (
-          <button
-            key={game.id}
-            onClick={() => router.push(game.href)}
-            className={`w-full text-left ${game.bg} border ${game.border} rounded-2xl p-6 transition-all duration-200 shadow-sm hover:shadow-md group`}
-          >
-            <div className="flex items-center gap-4">
-              <span className="text-5xl group-hover:scale-110 transition-transform duration-200">
-                {game.emoji}
-              </span>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-amber-950 font-bold text-xl">{game.title}</h2>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${game.badge}`}>
-                    게임
-                  </span>
-                </div>
-                <p className="text-amber-800/60 text-sm">{game.subtitle}</p>
-                <p className="text-amber-700 text-xs mt-2 whitespace-pre-line">{game.desc}</p>
-              </div>
-              <span className={`${game.arrow} text-2xl transition-colors`}>→</span>
+      <div className="arc-screen">
+        {/* Header */}
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 0 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 13, overflow: 'hidden',
+              background: '#f3edcf', border: '2px solid rgba(255,255,255,.6)',
+              boxShadow: '0 0 0 2px rgba(0,0,0,.4)', flexShrink: 0,
+            }}>
+              <img src="/icon.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
+            <div style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 23, lineHeight: 1.1 }}>놀아조라</div>
+              <div className="pix" style={{ fontSize: 7.5, color: 'var(--gold)', marginTop: 6, letterSpacing: 1 }}>ARCADE</div>
+            </div>
+          </div>
+          <button className="arc-btn-ghost" onClick={handleLogout} style={{ fontSize: 13, padding: '9px 14px' }}>
+            로그아웃
           </button>
-        ))}
+        </header>
+
+        {/* Welcome chip */}
+        <div className="arc-chip" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+          <span style={{ fontSize: 15 }}>👋</span>
+          <span style={{ color: 'var(--text)' }}>{nickname}</span>
+          <span style={{ color: 'var(--dim)' }}>님 어서오세요</span>
+        </div>
+
+        {/* Section label */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0 14px' }}>
+          <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
+          <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>03</span>
+        </div>
+
+        {/* Game cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {GAMES.map((g, i) => (
+            <div key={g.id} style={{ animationDelay: `${i * 0.08}s` }}>
+              <GameCard game={g} onPick={() => router.push(g.href)} />
+            </div>
+          ))}
+        </div>
+
+        <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 30, lineHeight: 1.8 }}>
+          INSERT COIN · CHOOSE YOUR GAME · HAVE FUN
+        </p>
       </div>
-    </main>
+    </div>
   )
 }

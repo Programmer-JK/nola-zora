@@ -10,46 +10,28 @@ interface RoundStartModalProps {
   onStart: () => void;
 }
 
-const CASINO_ACCENT = [
-  'border-red-500/60 bg-red-950/60',
-  'border-blue-500/60 bg-blue-950/60',
-  'border-emerald-500/60 bg-emerald-950/60',
-  'border-yellow-500/60 bg-yellow-950/60',
-  'border-purple-500/60 bg-purple-950/60',
-  'border-orange-500/60 bg-orange-950/60',
-];
-
-const CASINO_NUM_COLOR = [
-  'text-red-400', 'text-blue-400', 'text-emerald-400',
-  'text-yellow-400', 'text-purple-400', 'text-orange-400',
-];
-
-function getBillStyle(value: number): { bg: string; text: string } {
-  if (value >= 90000) return { bg: 'bg-amber-300',   text: 'text-black' };
-  if (value >= 80000) return { bg: 'bg-amber-400',   text: 'text-black' };
-  if (value >= 70000) return { bg: 'bg-yellow-400',  text: 'text-black' };
-  if (value >= 60000) return { bg: 'bg-yellow-500',  text: 'text-black' };
-  if (value >= 50000) return { bg: 'bg-red-500',     text: 'text-white' };
-  if (value >= 40000) return { bg: 'bg-orange-500',  text: 'text-white' };
-  if (value >= 30000) return { bg: 'bg-purple-500',  text: 'text-white' };
-  if (value >= 20000) return { bg: 'bg-cyan-600',    text: 'text-white' };
-  return                     { bg: 'bg-emerald-600', text: 'text-white' };
+function getBillColors(value: number): { bg: string; text: string } {
+  if (value >= 90000) return { bg: 'var(--gold)',            text: '#1a1206' };
+  if (value >= 70000) return { bg: 'rgba(255,183,43,0.5)',  text: 'var(--coin)' };
+  if (value >= 50000) return { bg: 'var(--red)',            text: '#fff' };
+  if (value >= 30000) return { bg: 'var(--violet)',         text: '#fff' };
+  if (value >= 20000) return { bg: 'var(--cyan)',           text: '#06231f' };
+  return                     { bg: 'rgba(126,217,87,0.35)', text: 'var(--green)' };
 }
 
-const CASINO_STAGGER = 130; // ms between each casino appearing
-const CARD_STAGGER   = 70;  // ms between each money card within a casino
-const ANIM_DURATION  = 450; // ms for card-deal-in
+// 카지노별 강조 색상
+const CASINO_COLORS = [
+  '#ef4444', '#3b82f6', '#22c55e', '#facc15', '#a855f7', '#f97316',
+];
 
-export default function RoundStartModal({
-  casinos,
-  round,
-  totalRounds,
-  onStart,
-}: RoundStartModalProps) {
+const CASINO_STAGGER = 130;
+const CARD_STAGGER   = 70;
+const ANIM_DURATION  = 450;
+
+export default function RoundStartModal({ casinos, round, totalRounds, onStart }: RoundStartModalProps) {
   const [canStart, setCanStart] = useState(false);
 
   useEffect(() => {
-    // Wait until the last card of the last casino has finished animating
     const lastCasinoIdx = casinos.length - 1;
     const lastCardIdx = Math.max(...casinos.map((c) => c.moneyCards.length)) - 1;
     const lastAnimStart = lastCasinoIdx * CASINO_STAGGER + (lastCardIdx + 1) * CARD_STAGGER;
@@ -58,65 +40,86 @@ export default function RoundStartModal({
   }, [casinos]);
 
   return (
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 backdrop-blur-sm overflow-y-auto py-6">
-      <div className="bg-[#12121e] border border-amber-400/20 rounded-3xl p-5 w-full max-w-md mx-4 shadow-2xl">
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(12,10,18,0.9)', backdropFilter: 'blur(10px)',
+      overflowY: 'auto', padding: '24px 16px',
+    }}>
+      <div className="arc-panel ticks" style={{ width: '100%', maxWidth: 420, padding: '20px 18px' }}>
 
-        {/* Header */}
-        <div className="text-center mb-5 slide-up">
-          <div className="text-4xl mb-1">🎰</div>
-          <h2 className="text-2xl font-black gold-text tracking-wide">라운드 {round}</h2>
-          <p className="text-white/40 text-xs mt-1">
+        {/* 헤더 */}
+        <div className="slide-up" style={{ textAlign: 'center', marginBottom: 18 }}>
+          <div style={{ fontSize: 38, lineHeight: 1, marginBottom: 6 }}>🎰</div>
+          <h2 className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 26, letterSpacing: 1, margin: '0 0 4px' }}>
+            라운드 {round}
+          </h2>
+          <p className="pix" style={{ fontSize: 8, color: 'var(--dim)' }}>
             {round} / {totalRounds} · 카지노별 상금이 배정되었습니다
           </p>
         </div>
 
-        {/* 3×2 casino grid */}
-        <div className="grid grid-cols-3 gap-2.5 mb-5">
-          {casinos.map((casino, idx) => (
-            <div
-              key={casino.id}
-              className={`card-deal-in border rounded-2xl p-2 flex flex-col gap-1 ${CASINO_ACCENT[(casino.id - 1) % CASINO_ACCENT.length]}`}
-              style={{ animationDelay: `${idx * CASINO_STAGGER}ms` }}
-            >
-              {/* Casino number */}
-              <div className={`text-center text-xs font-black ${CASINO_NUM_COLOR[(casino.id - 1) % CASINO_NUM_COLOR.length]}`}>
-                {casino.id}번
-              </div>
+        {/* 3×2 카지노 그리드 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
+          {casinos.map((casino, idx) => {
+            const accentHex = CASINO_COLORS[(casino.id - 1) % CASINO_COLORS.length];
+            const total = casino.moneyCards.reduce((s, c) => s + c.value, 0);
+            return (
+              <div
+                key={casino.id}
+                className="arc-rise"
+                style={{
+                  borderRadius: 12, padding: '8px 7px',
+                  background: accentHex + '12', border: `1.5px solid ${accentHex}40`,
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                  animationDelay: `${idx * CASINO_STAGGER}ms`,
+                }}
+              >
+                {/* 번호 */}
+                <div style={{ textAlign: 'center' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 20, height: 20, borderRadius: 6,
+                    fontFamily: 'var(--f-disp)', fontSize: 11, color: '#1a1206',
+                    background: accentHex, boxShadow: `0 2px 0 ${accentHex}80`,
+                  }}>{casino.id}</span>
+                </div>
 
-              {/* Money cards dealt in */}
-              {casino.moneyCards.map((card, i) => {
-                const bill = getBillStyle(card.value);
-                return (
-                  <div
-                    key={i}
-                    className={`card-deal-in text-center rounded-lg py-0.5 text-[11px] font-black ${bill.bg} ${bill.text}`}
-                    style={{
-                      animationDelay: `${idx * CASINO_STAGGER + (i + 1) * CARD_STAGGER}ms`,
-                      opacity: i === 0 ? 1 : Math.max(0.5, 0.9 - i * 0.15),
-                    }}
-                  >
-                    {(card.value / 10000).toFixed(0)}만
-                  </div>
-                );
-              })}
+                {/* 지폐 */}
+                {casino.moneyCards.map((card, i) => {
+                  const bill = getBillColors(card.value);
+                  return (
+                    <div
+                      key={i}
+                      className="arc-rise"
+                      style={{
+                        textAlign: 'center', borderRadius: 5, padding: '2px 0',
+                        fontFamily: 'var(--f-disp)', fontSize: 10,
+                        background: bill.bg, color: bill.text,
+                        opacity: i === 0 ? 1 : Math.max(0.5, 0.9 - i * 0.15),
+                        animationDelay: `${idx * CASINO_STAGGER + (i + 1) * CARD_STAGGER}ms`,
+                      }}
+                    >
+                      {(card.value / 10000).toFixed(0)}억
+                    </div>
+                  );
+                })}
 
-              {/* Total */}
-              <div className="text-center text-white/35 text-[10px] font-bold mt-0.5">
-                계 {(casino.moneyCards.reduce((s, c) => s + c.value, 0) / 10000).toFixed(0)}만
+                {/* 합계 */}
+                <div className="pix" style={{ textAlign: 'center', fontSize: 7, color: 'var(--faint)', marginTop: 2 }}>
+                  계 {(total / 10000).toFixed(0)}만
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Start button */}
+        {/* 시작 버튼 */}
         <button
           onClick={onStart}
           disabled={!canStart}
-          className={`w-full py-3 rounded-2xl font-black text-sm tracking-widest transition-all duration-300 ${
-            canStart
-              ? 'bg-amber-400 text-black hover:bg-amber-300 hover:scale-105 active:scale-95 pulse-glow'
-              : 'bg-white/10 text-white/30 cursor-not-allowed'
-          }`}
+          className={`arc-btn${canStart ? ' pulse-glow' : ''}`}
+          style={{ fontSize: 16 }}
         >
           {canStart ? `라운드 ${round} 시작! →` : '상금 배정 중...'}
         </button>
