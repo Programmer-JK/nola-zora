@@ -4,10 +4,11 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { GameState } from '@/lib/las-vegas/types';
-import { rollDice, chooseCasino, scoreRound, getColorHex } from '@/lib/las-vegas/gameLogic';
+import { rollDice, chooseCasino, scoreRound, getColorHex, createInitialState } from '@/lib/las-vegas/gameLogic';
 import { playDiceRoll } from '@/lib/las-vegas/sounds';
 import { useSoundEnabled } from '@/hooks/useSoundEnabled';
-import { subscribeRoom, updateGameState } from '@/lib/las-vegas/roomService';
+import { subscribeRoom, updateGameState, startGame, Room } from '@/lib/las-vegas/roomService';
+import LobbyWaiting from '@/components/las-vegas/LobbyWaiting';
 import Dice from '@/components/las-vegas/Dice';
 import CasinoCard from '@/components/las-vegas/CasinoCard';
 import PlayerPanel from '@/components/las-vegas/PlayerPanel';
@@ -43,12 +44,14 @@ export default function OnlineGamePage() {
   const code = params.code;
   const { uid } = useAuth();
 
+  const [room, setRoom] = useState<Room | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showRoundStart, setShowRoundStart] = useState(true);
   const [isRolling, setIsRolling] = useState(false);
   const [tumblingDice, setTumblingDice] = useState<{ colored: number[]; white: number[] } | null>(null);
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [isScoringInProgress, setIsScoringInProgress] = useState(false);
+  const [starting, setStarting] = useState(false);
   const { soundEnabled: musicOn, toggleSound: toggleMusic } = useSoundEnabled();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevPhaseRef = useRef<GameState['phase'] | null>(null);
@@ -70,14 +73,30 @@ export default function OnlineGamePage() {
   }, [musicOn]);
 
   useEffect(() => {
-    const unsub = subscribeRoom(code, (room) => {
-      if (!room) { router.replace('/las-vegas'); return; }
-      const gs = room.gameState ? sanitizeGameState(room.gameState) : null;
-      if (!gs) return;
-      setGameState(gs);
+    const unsub = subscribeRoom(code, (r) => {
+      if (!r) { router.replace('/las-vegas'); return; }
+      setRoom(r);
+      const gs = r.gameState ? sanitizeGameState(r.gameState) : null;
+      if (gs) setGameState(gs);
     });
     return unsub;
   }, [code, router]);
+
+  const handleStart = async () => {
+    if (!room || starting) return;
+    setStarting(true);
+    try {
+      const setup = room.players.map((p) => ({
+        name: p.name,
+        color: p.color,
+        clientId: p.clientId,
+      }));
+      const gs = createInitialState(setup);
+      await startGame(code, gs);
+    } catch {
+      setStarting(false);
+    }
+  };
 
   useEffect(() => {
     if (!gameState) return;
@@ -173,6 +192,26 @@ export default function OnlineGamePage() {
       setIsScoringInProgress(false);
     }
   }, [gameState, isScoringInProgress, code]);
+
+  if (!room) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+        <div className="pix blink" style={{ fontSize: 11, color: 'var(--gold)', letterSpacing: 2 }}>LOADING...</div>
+      </div>
+    );
+  }
+
+  if (room.status === 'waiting') {
+    return (
+      <LobbyWaiting
+        code={code}
+        room={room}
+        myUid={uid}
+        onStart={handleStart}
+        starting={starting}
+      />
+    );
+  }
 
   if (!gameState) {
     return (

@@ -25,6 +25,7 @@ const GAMES = [
     latin: 'CHARACTER CARD',
     tag: 'PARTY GAME',
     emoji: '🃏',
+    iconSrc: '/charater-association.svg',
     accent: 'var(--magenta)',
     accentHex: '#ff5da2',
     players: '2인+',
@@ -47,7 +48,7 @@ const GAMES = [
   },
 ]
 
-function GameCard({ game, onPick }: { game: typeof GAMES[0]; onPick: () => void }) {
+function GameCard({ game, onPick }: { game: (typeof GAMES)[number]; onPick: () => void }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -76,7 +77,12 @@ function GameCard({ game, onPick }: { game: typeof GAMES[0]; onPick: () => void 
           boxShadow: `inset 0 0 18px -6px ${game.accentHex}`,
           transform: hover ? 'scale(1.08) rotate(-4deg)' : 'none',
           transition: 'transform .2s',
-        }}>{game.emoji}</div>
+        }}>
+          {'iconSrc' in game
+            ? <img src={game.iconSrc} width={42} height={42} alt="" style={{ display: 'block' }} />
+            : game.emoji
+          }
+        </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

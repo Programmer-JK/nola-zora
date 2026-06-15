@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Crown, Star, Award, Flame } from 'lucide-react'
+import { Crown, Star, Award } from 'lucide-react'
 
 const RANK1_MSGS = ['전설의 등장', '누가 막겠어', '압도적 지배', '독보적 1위', '이미 끝났다']
 const RANK2_MSGS = ['아슬아슬했는데...', '다음엔 꼭!', '0.1점 차이의 눈물', '2위도 충분히 멋져']
@@ -17,7 +17,7 @@ const getRankMsg = (rank: number) => {
   return pick(RANK_MSGS)
 }
 
-const ACCENT = ['var(--accent1)', 'var(--accent2)', 'var(--accent3)', 'var(--accent4)']
+const ACCENT = ['var(--magenta)', 'var(--coin)', 'var(--cyan)', 'var(--violet)']
 
 interface Member { name: string; score: number }
 
@@ -41,7 +41,7 @@ export default function ResultPage() {
     setAllZero(zero)
     const tie = s.length > 1 && s[0].score === s[1].score && !zero
     if (zero) setSubtext('점수가 없어요... 다들 괜찮으신가요?')
-    else if (tie) setSubtext('공동 1위! 결판을 내야 해요')
+    else if (tie) setSubtext('공동 1위! 결판을 내야 해요 🔥')
     else setSubtext(`${s[0].name}의 완벽한 승리!`)
 
     const PER = 1400
@@ -66,7 +66,7 @@ export default function ResultPage() {
     document.body.appendChild(canvas)
     const ctx = canvas.getContext('2d')!
     canvas.width = window.innerWidth; canvas.height = window.innerHeight
-    const colors = ['#e8c97a', '#c96a8f', '#6a9fc9', '#8fc96a', '#c9906a', '#a06ac9']
+    const colors = ['#ff5da2', '#ffb72b', '#36e0cf', '#a274ff', '#ffd84d', '#7ed957']
     const pieces = Array.from({ length: 120 }, () => ({
       x: Math.random() * canvas.width, y: Math.random() * -300,
       w: Math.random() * 9 + 4, h: Math.random() * 5 + 2,
@@ -95,34 +95,74 @@ export default function ResultPage() {
   }
 
   return (
-    <main style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ fontFamily: 'var(--font-jua), sans-serif', fontSize: 28, marginBottom: 6 }}>🏆 결과 발표</div>
-        {subtext && (
-          <div style={{ fontSize: 14, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            {subtext}
-            {subtext.includes('공동') && <Flame size={14} color="#ff7043" />}
+    <div className="cabinet">
+      <div className="crt" />
+      <main className="arc-screen">
+
+        {/* 헤더 */}
+        <div className="arc-pop" style={{ textAlign: 'center', padding: '32px 0 24px' }}>
+          <div style={{ fontSize: 46, lineHeight: 1 }} className="arc-float">🏆</div>
+          <h1
+            className="neon-magenta"
+            style={{ fontFamily: 'var(--f-disp)', fontSize: 22, letterSpacing: 1, margin: '10px 0 4px' }}
+          >
+            RESULT
+          </h1>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--text)', marginBottom: 6 }}>결과 발표</div>
+          {subtext && (
+            <div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>{subtext}</div>
+          )}
+        </div>
+
+        {/* 결과 목록 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+          {sorted.length === 0 && (
+            <div style={{ color: 'var(--dim)', textAlign: 'center', marginTop: 40 }}>결과 데이터가 없어요</div>
+          )}
+          {sorted.map((m, i) => {
+            const maxScore = sorted[0]?.score || 1
+            const pct = maxScore > 0 ? (m.score / maxScore) * 100 : 0
+            const color = ACCENT[Math.min(i, 3)]
+            return (
+              <ResultItem
+                key={i}
+                member={m}
+                rank={i}
+                color={color}
+                pct={pct}
+                revealed={revealed[i] ?? false}
+                msg={msgs[i] ?? getRankMsg(i)}
+                allZero={allZero}
+              />
+            )
+          })}
+        </div>
+
+        {/* 액션 버튼 */}
+        {actionsVisible && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
+            <button
+              onClick={() => { sessionStorage.removeItem('results'); router.push('/card-game') }}
+              className="arc-btn-ghost"
+              style={{ flex: 1, fontSize: 14 }}
+            >
+              처음으로
+            </button>
+            <button
+              onClick={() => router.push('/card-game/game/local')}
+              className="arc-btn arc-btn--magenta"
+              style={{ flex: 1, fontSize: 14 }}
+            >
+              다시 하기
+            </button>
           </div>
         )}
-      </div>
 
-      <div style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {sorted.length === 0 && <div style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: 40 }}>결과 데이터가 없어요</div>}
-        {sorted.map((m, i) => {
-          const maxScore = sorted[0]?.score || 1
-          const pct = maxScore > 0 ? (m.score / maxScore) * 100 : 0
-          const color = ACCENT[Math.min(i, 3)]
-          return <ResultItem key={i} member={m} rank={i} color={color} pct={pct} revealed={revealed[i] ?? false} msg={msgs[i] ?? getRankMsg(i)} allZero={allZero} />
-        })}
-      </div>
-
-      {actionsVisible && (
-        <div className="flex gap-3 mt-8">
-          <button onClick={() => { sessionStorage.removeItem('results'); router.push('/card-game') }} style={actionBtn('var(--border)', 'var(--text-dim)')}>처음으로</button>
-          <button onClick={() => router.push('/card-game/game/local')} style={actionBtn('var(--accent1)', 'var(--accent1)')}>다시 하기</button>
-        </div>
-      )}
-    </main>
+        <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 24, lineHeight: 1.8 }}>
+          BEST DESCRIPTION WINS · CHARACTER CARD
+        </p>
+      </main>
+    </div>
   )
 }
 
@@ -143,23 +183,38 @@ function ResultItem({ member, rank, color, pct, revealed, msg, allZero }: {
     setTimeout(() => setShowMsg(true), 1500)
   }, [revealed, pct, member.score, allZero])
 
+  const isFirst = rank === 0
+
   return (
-    <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${color}44`, background: revealed ? `${color}0a` : 'var(--surface)', transition: 'opacity 0.5s, transform 0.5s, background 0.5s', opacity: revealed ? 1 : 0, transform: revealed ? 'translateY(0)' : 'translateY(20px)', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div
+      className="arc-panel"
+      style={{
+        padding: '14px 16px',
+        borderColor: revealed && isFirst ? color : 'var(--line)',
+        boxShadow: revealed && isFirst ? `0 0 22px -6px ${color}` : 'none',
+        transition: 'opacity 0.5s, transform 0.5s, border-color 0.5s, box-shadow 0.5s',
+        opacity: revealed ? 1 : 0,
+        transform: revealed ? 'translateY(0)' : 'translateY(20px)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}
+    >
       <div style={{ width: 28, display: 'flex', justifyContent: 'center' }}>
-        {rank === 0 ? <Crown size={18} color="var(--accent1)" />
-          : rank === 1 ? <Star size={18} color="var(--accent2)" />
-          : rank === 2 ? <Award size={18} color="var(--accent3)" />
-          : <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{rank + 1}</span>}
+        {rank === 0 ? <Crown size={18} color="var(--magenta)" />
+          : rank === 1 ? <Star size={18} color="var(--coin)" />
+          : rank === 2 ? <Award size={18} color="var(--cyan)" />
+          : <span style={{ fontSize: 11, color: 'var(--dim)', fontFamily: 'var(--f-pix)' }}>{rank + 1}</span>}
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 600, fontSize: 15 }}>{member.name}</span>
-          <span ref={scoreRef} style={{ fontSize: 16, fontWeight: 700, color }}>?</span>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>{member.name}</span>
+          <span ref={scoreRef} style={{ fontSize: 16, fontWeight: 700, color, fontFamily: 'var(--f-disp)' }}>?</span>
         </div>
         <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
           <div ref={barRef} className="result-bar" style={{ background: color, width: 0 }} />
         </div>
-        {showMsg && <div style={{ fontSize: 11, color: 'var(--text-dim)', transition: 'opacity 0.4s' }}>{msg}</div>}
+        {showMsg && (
+          <div style={{ fontSize: 11, color: 'var(--dim)', transition: 'opacity 0.4s' }}>{msg}</div>
+        )}
       </div>
     </div>
   )
@@ -182,8 +237,3 @@ function spinSettle(el: HTMLSpanElement, target: number) {
   }
   requestAnimationFrame(frame)
 }
-
-const actionBtn = (borderColor: string, color: string): React.CSSProperties => ({
-  padding: '10px 24px', borderRadius: 10, border: `1px solid ${borderColor}`,
-  background: 'transparent', color, cursor: 'pointer', fontSize: 14,
-})

@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Zap, CheckCircle, Search } from 'lucide-react'
+import { playBuzz } from '@/lib/card-game/sounds'
+import { useSoundEnabled } from '@/hooks/useSoundEnabled'
 
 interface Props {
   buzzedBy: string | null
@@ -18,6 +20,7 @@ export default function BuzzInButton({ buzzedBy, buzzedName, myUid, disabled, on
   const [charName, setCharName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const { soundEnabled } = useSoundEnabled()
   const isBuzzedByMe = buzzedBy === myUid
   const isBuzzedByOther = buzzedBy && buzzedBy !== myUid
 
@@ -26,16 +29,15 @@ export default function BuzzInButton({ buzzedBy, buzzedName, myUid, disabled, on
   }, [modalOpen])
 
   const handleClick = () => {
-    if (imageSearchMode) {
-      setModalOpen(true)
-    } else {
-      onBuzz()
-    }
+    if (soundEnabled) playBuzz()
+    if (imageSearchMode) setModalOpen(true)
+    else onBuzz()
   }
 
   const handleConfirm = () => {
     const name = charName.trim()
     if (!name) return
+    if (soundEnabled) playBuzz()
     onBuzzWithName?.(name)
     setModalOpen(false)
     setCharName('')
@@ -48,29 +50,36 @@ export default function BuzzInButton({ buzzedBy, buzzedName, myUid, disabled, on
 
   if (isBuzzedByOther) {
     return (
-      <div style={{
-        padding: '14px 20px', borderRadius: 12, textAlign: 'center',
-        background: 'var(--accent1)15', border: '2px solid var(--accent1)',
-        animation: 'pulse 1s infinite',
-      }}>
-        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>먼저 준비한 사람</div>
-        <div style={{ fontSize: 22, fontFamily: 'var(--font-jua), sans-serif', color: 'var(--accent1)' }}>
+      <div
+        className="arc-panel"
+        style={{
+          padding: '14px 18px', textAlign: 'center',
+          borderColor: 'var(--magenta)',
+          boxShadow: '0 0 20px -6px var(--magenta)',
+        }}
+      >
+        <div className="pix" style={{ fontSize: 8, color: 'var(--magenta)', marginBottom: 6 }}>BUZZED IN</div>
+        <div style={{ fontFamily: 'var(--f-title)', fontSize: 20, color: 'var(--magenta)' }}>
           ⚡ {buzzedName}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>설명을 들어봐요!</div>
+        <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 6 }}>설명을 들어봐요!</div>
       </div>
     )
   }
 
   if (isBuzzedByMe) {
     return (
-      <div style={{
-        padding: '14px 20px', borderRadius: 12, textAlign: 'center',
-        background: 'var(--accent3)15', border: '2px solid var(--accent3)',
-      }}>
-        <CheckCircle size={24} color="var(--accent3)" style={{ margin: '0 auto 6px' }} />
-        <div style={{ fontSize: 15, fontFamily: 'var(--font-jua), sans-serif', color: 'var(--accent3)' }}>내가 먼저!</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>캐릭터를 설명해봐요</div>
+      <div
+        className="arc-panel"
+        style={{
+          padding: '14px 18px', textAlign: 'center',
+          borderColor: 'var(--cyan)',
+          boxShadow: '0 0 20px -6px var(--cyan)',
+        }}
+      >
+        <CheckCircle size={24} color="var(--cyan)" style={{ margin: '0 auto 6px' }} />
+        <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--cyan)' }}>내가 먼저!</div>
+        <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4 }}>캐릭터를 설명해봐요</div>
       </div>
     )
   }
@@ -80,44 +89,27 @@ export default function BuzzInButton({ buzzedBy, buzzedName, myUid, disabled, on
       <button
         onClick={handleClick}
         disabled={disabled}
-        style={{
-          width: '100%', padding: '16px 0', borderRadius: 12, fontSize: 17,
-          fontFamily: 'var(--font-jua), sans-serif', border: 'none',
-          background: disabled ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, var(--accent1), var(--accent2))',
-          color: disabled ? 'var(--text-dim)' : '#fff',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          boxShadow: disabled ? 'none' : '0 4px 20px rgba(232,201,122,0.3)',
-          transition: 'all 0.2s',
-        }}
+        className="arc-btn arc-btn--magenta"
+        style={{ fontSize: 17, opacity: disabled ? 0.4 : 1 }}
       >
-        <Zap size={20} />
-        저요! 저요!
+        <Zap size={18} /> 저요! 저요!
       </button>
 
-      {/* 캐릭터 이름 입력 모달 */}
       {modalOpen && (
         <div
           onClick={() => { setModalOpen(false); setCharName('') }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 16, padding: '28px 24px', width: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-            }}
+            className="arc-panel ticks"
+            style={{ padding: '24px 22px', width: 320 }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Search size={16} color="var(--accent1)" />
-              <span style={{ fontSize: 15, fontFamily: 'var(--font-jua), sans-serif', color: 'var(--accent1)' }}>
-                캐릭터 이름 입력
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Search size={15} color="var(--magenta)" />
+              <span className="arc-lbl" style={{ color: 'var(--magenta)' }}>캐릭터 이름 입력</span>
             </div>
-            <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, color: 'var(--dim)', marginBottom: 14, lineHeight: 1.5 }}>
               입력 후 모든 참가자에게 구글 이미지 검색 링크가 표시돼요
             </p>
             <input
@@ -126,31 +118,22 @@ export default function BuzzInButton({ buzzedBy, buzzedName, myUid, disabled, on
               onChange={e => setCharName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="예) 나루토, 해리포터..."
-              style={{
-                width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14,
-                border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)',
-                color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
-              }}
+              className="arc-field"
+              style={{ '--c': 'var(--magenta)' } as React.CSSProperties}
             />
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button
                 onClick={() => { setModalOpen(false); setCharName('') }}
-                style={{
-                  flex: 1, padding: '9px 0', borderRadius: 8, border: '1px solid var(--border)',
-                  background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13,
-                }}
+                className="arc-btn-ghost"
+                style={{ flex: 1, fontSize: 13 }}
               >
                 취소
               </button>
               <button
                 onClick={handleConfirm}
                 disabled={!charName.trim()}
-                style={{
-                  flex: 2, padding: '9px 0', borderRadius: 8, border: 'none',
-                  background: charName.trim() ? 'var(--accent1)' : 'var(--accent1)44',
-                  color: charName.trim() ? '#000' : 'rgba(0,0,0,0.3)', cursor: charName.trim() ? 'pointer' : 'default',
-                  fontSize: 13, fontFamily: 'var(--font-jua), sans-serif',
-                }}
+                className="arc-btn arc-btn--magenta"
+                style={{ flex: 2, fontSize: 13, padding: '11px 0' }}
               >
                 검색 시작!
               </button>

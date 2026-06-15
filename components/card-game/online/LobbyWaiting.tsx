@@ -1,6 +1,7 @@
 'use client'
 
 import { Crown, Copy, Check, Infinity as InfinityIcon, Link, Image } from 'lucide-react'
+import CharacterIcon from '@/components/card-game/CharacterIcon'
 import { useState } from 'react'
 import { RoomMeta, RoomMember } from '@/lib/card-game/firebase-game'
 
@@ -23,6 +24,12 @@ const TIMER_OPTIONS = [
   { label: '90초', value: 90 },
 ]
 
+const magSeg: React.CSSProperties = {
+  background: 'linear-gradient(180deg, color-mix(in srgb, var(--magenta) 92%, #fff), var(--magenta))',
+  color: '#fff',
+  boxShadow: '0 3px 0 0 var(--magenta-lo)',
+}
+
 export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, onModeChange, onInfiniteChange, onTimerChange, onImageSearchChange }: Props) {
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -42,69 +49,75 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-[#fdfcea] text-amber-900 px-4 py-10">
+    <div className="cabinet">
+      <div className="crt" />
+      <main className="arc-screen">
 
-      {/* Hero */}
-      <div className="text-center mb-8">
-        <div className="text-6xl mb-3">🎴</div>
-        <h1
-          className="text-4xl font-black tracking-widest text-amber-700 mb-1"
-          style={{ fontFamily: 'var(--font-jua), sans-serif' }}
-        >
-          대기실
-        </h1>
-        <p className="text-amber-700 text-xs tracking-widest uppercase">Waiting for players...</p>
-      </div>
-
-      {/* Room code + share */}
-      <div className="text-center mb-6">
-        <p className="text-amber-700 text-xs tracking-widest uppercase mb-2">방 코드</p>
-        <div className="flex items-center gap-3 justify-center mb-2">
-          <span
-            className="text-4xl font-black tracking-[0.3em] text-amber-700"
-            style={{ fontFamily: 'var(--font-jua), sans-serif' }}
+        {/* Title */}
+        <div className="arc-pop" style={{ textAlign: 'center', padding: '28px 0 20px' }}>
+          <div className="arc-float" style={{ lineHeight: 1 }}><CharacterIcon size={120} /></div>
+          <h1
+            className="neon-magenta"
+            style={{ fontFamily: 'var(--f-disp)', fontSize: 22, letterSpacing: 1, margin: '8px 0 2px' }}
           >
-            {roomId}
-          </span>
+            WAITING ROOM
+          </h1>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--text)' }}>대기실</div>
+        </div>
+
+        {/* 방 코드 */}
+        <div className="arc-panel ticks" style={{ padding: '18px 20px', textAlign: 'center', marginBottom: 14 }}>
+          <span className="arc-lbl" style={{ color: 'var(--magenta)', marginBottom: 10, display: 'block' }}>ROOM CODE</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
+            <span style={{ fontFamily: 'var(--f-disp)', fontSize: 36, letterSpacing: '0.2em', color: 'var(--text)' }}>
+              {roomId}
+            </span>
+            <button onClick={copyCode} className="arc-btn-ghost" style={{ padding: '8px 12px' }} title="코드 복사">
+              {copied ? <Check size={15} color="var(--green)" /> : <Copy size={15} />}
+            </button>
+          </div>
           <button
-            onClick={copyCode}
-            title="코드 복사"
-            className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600/50 hover:text-amber-700 hover:border-amber-400 transition-all"
+            onClick={copyLink}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontSize: 12, color: linkCopied ? 'var(--magenta)' : 'var(--dim)',
+              transition: 'color .15s',
+            }}
           >
-            {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+            <Link size={11} />
+            {linkCopied ? '링크 복사됨!' : '입장 링크 복사'}
           </button>
         </div>
-        <button
-          onClick={copyLink}
-          className="flex items-center gap-1.5 mx-auto text-xs text-amber-700 hover:text-amber-600 transition-colors"
-        >
-          <Link size={11} />
-          {linkCopied ? '링크 복사됨!' : '입장 링크 복사'}
-        </button>
-      </div>
-
-      <div className="w-full max-w-md space-y-4">
 
         {/* 참가자 목록 */}
-        <div className="bg-white/70 border border-amber-200/60 rounded-2xl p-5">
-          <h2 className="text-amber-700/70 text-xs font-bold tracking-widest uppercase mb-3">
-            참가자 ({memberList.length}명)
-          </h2>
-          <div className="space-y-2">
+        <div className="arc-panel" style={{ padding: '16px 18px', marginBottom: 14 }}>
+          <span className="arc-lbl" style={{ color: 'var(--magenta)', marginBottom: 12, display: 'block' }}>
+            PLAYERS ({memberList.length}명)
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {memberList.map(([uid, m]) => (
               <div
                 key={uid}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${uid === myUid ? 'bg-amber-100 border border-amber-300/60' : 'bg-amber-50/60'}`}
+                className="arc-panel-inset"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+                  borderColor: uid === myUid ? 'var(--magenta)' : 'var(--line)',
+                }}
               >
                 {uid === meta.host
-                  ? <Crown size={14} className="text-amber-500 flex-shrink-0" />
-                  : <span className="w-3.5 h-3.5 rounded-full bg-amber-200 flex-shrink-0" />
+                  ? <Crown size={13} color="var(--magenta)" style={{ flexShrink: 0 }} />
+                  : <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--surface-3)', border: '1.5px solid var(--line-2)', flexShrink: 0 }} />
                 }
-                <span className={`flex-1 text-sm font-medium ${uid === myUid ? 'text-amber-700' : 'text-amber-800'}`}>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: uid === myUid ? 'var(--magenta)' : 'var(--text)' }}>
                   {m.name}
                 </span>
-                {uid === myUid && <span className="text-amber-600/40 text-xs">나</span>}
-                {uid === meta.host && uid !== myUid && <span className="text-amber-600/60 text-xs">호스트</span>}
+                {uid === myUid && (
+                  <span className="arc-badge" style={{ background: 'var(--magenta)', color: '#fff' }}>나</span>
+                )}
+                {uid === meta.host && uid !== myUid && (
+                  <span className="arc-badge">HOST</span>
+                )}
               </div>
             ))}
           </div>
@@ -112,18 +125,18 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
 
         {/* 호스트 게임 설정 */}
         {isHost && (
-          <div className="bg-white/70 border border-amber-200/60 rounded-2xl p-5 space-y-4">
-            <h2 className="text-amber-700/70 text-xs font-bold tracking-widest uppercase">게임 설정</h2>
+          <div className="arc-panel" style={{ padding: '18px 20px', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <span className="arc-lbl" style={{ color: 'var(--magenta)' }}>GAME SETTINGS</span>
 
-            {/* 모드 */}
             <div>
-              <p className="text-amber-700 text-xs mb-2">카드 모드</p>
-              <div className="flex rounded-xl bg-amber-50/80 p-1 gap-1">
+              <span className="arc-lbl" style={{ marginBottom: 8, display: 'block' }}>카드 모드</span>
+              <div className="arc-seg" style={{ '--c': 'var(--magenta)', '--seg-text': '#fff' } as React.CSSProperties}>
                 {(['basic', 'genre'] as const).map(gm => (
                   <button
                     key={gm}
                     onClick={() => onModeChange(gm)}
-                    className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 ${meta.mode === gm ? 'bg-amber-400 text-black shadow' : 'text-amber-700/50 hover:text-amber-900'}`}
+                    className={meta.mode === gm ? 'on' : ''}
+                    style={meta.mode === gm ? magSeg : {}}
                   >
                     {gm === 'basic' ? '기본 (6장 자동)' : '카테고리 선택'}
                   </button>
@@ -131,26 +144,39 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
               </div>
             </div>
 
-            {/* 무한 모드 */}
             <div>
-              <p className="text-amber-700 text-xs mb-2">카드 중복</p>
+              <span className="arc-lbl" style={{ marginBottom: 8, display: 'block' }}>카드 중복</span>
               <button
                 onClick={() => onInfiniteChange(!meta.infiniteMode)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${meta.infiniteMode ? 'border-sky-500 text-sky-600 bg-sky-50' : 'border-amber-300/50 text-amber-600/50 hover:text-amber-700'}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                  border: `1.5px solid ${meta.infiniteMode ? 'var(--magenta)' : 'var(--line-2)'}`,
+                  color: meta.infiniteMode ? 'var(--magenta)' : 'var(--dim)',
+                  background: meta.infiniteMode ? 'color-mix(in srgb, var(--magenta) 14%, transparent)' : 'transparent',
+                  cursor: 'pointer', transition: 'all .15s',
+                }}
               >
                 <InfinityIcon size={12} /> 무한 모드 {meta.infiniteMode ? 'ON' : 'OFF'}
               </button>
             </div>
 
-            {/* 타이머 */}
             <div>
-              <p className="text-amber-700 text-xs mb-2">설명 타이머</p>
-              <div className="flex gap-2">
+              <span className="arc-lbl" style={{ marginBottom: 8, display: 'block' }}>설명 타이머</span>
+              <div style={{ display: 'flex', gap: 7 }}>
                 {TIMER_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => onTimerChange(opt.value)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all duration-200 ${meta.timerSeconds === opt.value ? 'bg-amber-400 text-black border-amber-400' : 'border-amber-200 text-amber-700/50 hover:text-amber-800 hover:border-amber-400'}`}
+                    style={{
+                      flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                      border: `1.5px solid ${meta.timerSeconds === opt.value ? 'var(--magenta)' : 'var(--line-2)'}`,
+                      background: meta.timerSeconds === opt.value
+                        ? 'color-mix(in srgb, var(--magenta) 18%, transparent)'
+                        : 'transparent',
+                      color: meta.timerSeconds === opt.value ? 'var(--magenta)' : 'var(--dim)',
+                      cursor: 'pointer', transition: 'all .15s',
+                    }}
                   >
                     {opt.label}
                   </button>
@@ -158,17 +184,25 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
               </div>
             </div>
 
-            {/* 이미지 검색 모드 */}
             <div>
-              <p className="text-amber-700 text-xs mb-2">버즈인 이미지 검색</p>
+              <span className="arc-lbl" style={{ marginBottom: 8, display: 'block' }}>버즈인 이미지 검색</span>
               <button
                 onClick={() => onImageSearchChange(!meta.imageSearch)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${meta.imageSearch ? 'border-violet-500 text-violet-600 bg-violet-50' : 'border-amber-300/50 text-amber-600/50 hover:text-amber-700'}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                  border: `1.5px solid ${meta.imageSearch ? 'var(--violet)' : 'var(--line-2)'}`,
+                  color: meta.imageSearch ? 'var(--violet)' : 'var(--dim)',
+                  background: meta.imageSearch ? 'color-mix(in srgb, var(--violet) 14%, transparent)' : 'transparent',
+                  cursor: 'pointer', transition: 'all .15s',
+                }}
               >
                 <Image size={12} /> 이미지 검색 {meta.imageSearch ? 'ON' : 'OFF'}
               </button>
               {meta.imageSearch && (
-                <p className="text-amber-600/50 text-xs mt-1.5">버즈인 시 캐릭터 이름을 입력하면 모든 참가자에게 구글 이미지 링크가 표시돼요</p>
+                <p style={{ fontSize: 11, color: 'var(--dim)', marginTop: 6, lineHeight: 1.5 }}>
+                  버즈인 시 캐릭터 이름을 입력하면 모든 참가자에게 구글 이미지 링크가 표시돼요
+                </p>
               )}
             </div>
           </div>
@@ -176,31 +210,34 @@ export default function LobbyWaiting({ roomId, meta, members, myUid, onStart, on
 
         {/* 비호스트 설정 표시 */}
         {!isHost && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-amber-700/50">
-              <span className="text-amber-800 font-medium">{meta.mode === 'basic' ? '기본 (6장 자동)' : '카테고리 선택'}</span>
-              {meta.infiniteMode && <span className="text-sky-600 text-xs border border-sky-400/40 rounded-full px-2 py-0.5">∞ 무한</span>}
-              {meta.timerSeconds > 0 && <span className="text-amber-600 text-xs border border-amber-400/40 rounded-full px-2 py-0.5">⏱ {meta.timerSeconds}초</span>}
-              {meta.imageSearch && <span className="text-violet-600 text-xs border border-violet-400/40 rounded-full px-2 py-0.5">🔍 이미지 검색</span>}
-            </div>
+          <div className="arc-panel-inset" style={{ padding: '12px 16px', marginBottom: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>
+              {meta.mode === 'basic' ? '기본 (6장 자동)' : '카테고리 선택'}
+            </span>
+            {meta.infiniteMode && <span className="arc-chip" style={{ fontSize: 11 }}>∞ 무한</span>}
+            {meta.timerSeconds > 0 && <span className="arc-chip" style={{ fontSize: 11 }}>⏱ {meta.timerSeconds}초</span>}
+            {meta.imageSearch && <span className="arc-chip" style={{ fontSize: 11 }}>🔍 이미지 검색</span>}
           </div>
         )}
 
         {/* 시작 버튼 */}
         {isHost ? (
-          <button
-            onClick={onStart}
-            className="w-full py-4 rounded-2xl font-black text-lg tracking-widest uppercase bg-gradient-to-r from-amber-500 to-yellow-400 text-black hover:from-amber-400 hover:to-yellow-300 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/30"
-            style={{ fontFamily: 'var(--font-jua), sans-serif' }}
-          >
-            게임 시작 🎴
+          <button onClick={onStart} className="arc-btn arc-btn--magenta" style={{ fontSize: 18 }}>
+            게임 시작
           </button>
         ) : (
-          <div className="w-full py-4 rounded-2xl text-center text-sm text-amber-700/50 border border-amber-200 bg-amber-50">
-            호스트가 게임을 시작할 때까지 기다려요...
+          <div className="arc-panel-inset" style={{ padding: '18px', textAlign: 'center' }}>
+            <p className="pix blink" style={{ fontSize: 9, color: 'var(--magenta)', letterSpacing: 1, margin: 0 }}>
+              WAITING FOR HOST...
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--dim)', marginTop: 8 }}>호스트가 게임을 시작할 때까지 기다려요</p>
           </div>
         )}
-      </div>
-    </main>
+
+        <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 20, lineHeight: 1.8 }}>
+          CHARACTER CARD · ONLINE ROOM
+        </p>
+      </main>
+    </div>
   )
 }

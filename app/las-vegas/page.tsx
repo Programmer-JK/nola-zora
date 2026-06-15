@@ -223,7 +223,7 @@ function OnlinePlayTab({ myNickname, myUid }: { myNickname: string; myUid: strin
     try {
       const code = generateRoomCode();
       await createRoom(code, myUid, { clientId: myUid, name: myNickname, color });
-      router.push(`/las-vegas/room/${code}`);
+      router.push(`/las-vegas/game/${code}`);
     } catch { setError('방 생성에 실패했습니다. 다시 시도해주세요.'); setLoading(false); }
   };
 
@@ -233,7 +233,7 @@ function OnlinePlayTab({ myNickname, myUid }: { myNickname: string; myUid: strin
     try {
       const result = await joinRoom(joinCode.trim().toUpperCase(), { clientId: myUid, name: myNickname, color });
       if (!result.success) { setError(result.error ?? '참가에 실패했습니다.'); setLoading(false); return; }
-      router.push(`/las-vegas/room/${joinCode.trim().toUpperCase()}`);
+      router.push(`/las-vegas/game/${joinCode.trim().toUpperCase()}`);
     } catch { setError('참가에 실패했습니다. 다시 시도해주세요.'); setLoading(false); }
   };
 

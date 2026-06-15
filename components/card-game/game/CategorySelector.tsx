@@ -22,9 +22,11 @@ export default function CategorySelector({
   catCounts, totalCards, maxCards, infiniteActive, onSelect, onReset, onToggleInfinite,
 }: Props) {
   return (
-    <div style={{ padding: '12px 16px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>카테고리를 선택해 카드를 뽑으세요</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+    <div className="arc-panel-inset" style={{ padding: '14px 16px' }}>
+      <span className="arc-lbl" style={{ color: 'var(--magenta)', marginBottom: 12, display: 'block' }}>
+        CATEGORY SELECT
+      </span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         {CATEGORIES.map((cat, idx) => {
           const count = catCounts.get(idx) || 0
           const maxed = totalCards >= maxCards
@@ -34,21 +36,22 @@ export default function CategorySelector({
               onClick={() => onSelect(idx)}
               disabled={maxed}
               style={{
-                padding: '6px 12px', borderRadius: 20,
-                border: `1.5px solid ${ACCENT_VARS[cat.colorIdx]}`,
-                color: ACCENT_VARS[cat.colorIdx],
-                background: count > 0 ? `${ACCENT_VARS[cat.colorIdx]}15` : 'transparent',
+                padding: '7px 13px', borderRadius: 20,
+                border: `1.5px solid ${count > 0 ? ACCENT_VARS[cat.colorIdx] : 'var(--line-2)'}`,
+                color: count > 0 ? ACCENT_VARS[cat.colorIdx] : 'var(--dim)',
+                background: count > 0 ? `color-mix(in srgb, ${ACCENT_VARS[cat.colorIdx]} 14%, transparent)` : 'transparent',
                 cursor: maxed ? 'not-allowed' : 'pointer',
                 opacity: maxed ? 0.4 : 1,
-                fontSize: 13, fontWeight: 500,
-                display: 'flex', alignItems: 'center', gap: 4,
+                fontSize: 13, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                transition: 'all .15s',
               }}
             >
               {cat.name}
               {count > 0 && (
                 <span style={{
                   background: ACCENT_VARS[cat.colorIdx], color: '#000',
-                  borderRadius: '50%', width: 16, height: 16, fontSize: 10,
+                  borderRadius: '50%', width: 17, height: 17, fontSize: 10,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
                 }}>
                   {count}
@@ -58,18 +61,19 @@ export default function CategorySelector({
           )
         })}
       </div>
-      <div className="flex items-center justify-between">
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{totalCards} / {maxCards}장 뽑음</span>
-        <div className="flex gap-2">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>
+          {totalCards} / {maxCards}장 뽑음
+        </span>
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={onToggleInfinite}
-            title="무한 모드"
             style={{
-              padding: '4px 10px', borderRadius: 20, fontSize: 12,
-              border: `1px solid ${infiniteActive ? 'var(--accent3)' : 'var(--border)'}`,
-              background: infiniteActive ? 'var(--accent3)22' : 'transparent',
-              color: infiniteActive ? 'var(--accent3)' : 'var(--text-dim)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+              border: `1.5px solid ${infiniteActive ? 'var(--magenta)' : 'var(--line-2)'}`,
+              background: infiniteActive ? 'color-mix(in srgb, var(--magenta) 14%, transparent)' : 'transparent',
+              color: infiniteActive ? 'var(--magenta)' : 'var(--dim)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'all .15s',
             }}
           >
             <InfinityIcon size={12} /> 무한
@@ -77,9 +81,10 @@ export default function CategorySelector({
           <button
             onClick={onReset}
             style={{
-              padding: '4px 10px', borderRadius: 20, fontSize: 12,
-              border: '1px solid var(--border)', background: 'transparent',
-              color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+              border: '1.5px solid var(--line-2)', background: 'transparent',
+              color: 'var(--dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+              transition: 'all .15s',
             }}
           >
             <RotateCcw size={12} /> 다시
