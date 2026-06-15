@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { GameState } from '@/lib/las-vegas/types';
 import { rollDice, chooseCasino, scoreRound, getColorHex } from '@/lib/las-vegas/gameLogic';
 import { playDiceRoll } from '@/lib/las-vegas/sounds';
+import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import { subscribeRoom, updateGameState } from '@/lib/las-vegas/roomService';
 import Dice from '@/components/las-vegas/Dice';
 import CasinoCard from '@/components/las-vegas/CasinoCard';
@@ -48,7 +49,7 @@ export default function OnlineGamePage() {
   const [tumblingDice, setTumblingDice] = useState<{ colored: number[]; white: number[] } | null>(null);
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [isScoringInProgress, setIsScoringInProgress] = useState(false);
-  const [musicOn, setMusicOn] = useState(true);
+  const { soundEnabled: musicOn, toggleSound: toggleMusic } = useSoundEnabled();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevPhaseRef = useRef<GameState['phase'] | null>(null);
   const prevRoundRef = useRef<number>(0);
@@ -58,16 +59,15 @@ export default function OnlineGamePage() {
     audio.loop = true;
     audio.volume = 0.4;
     audioRef.current = audio;
-    audio.play().catch(() => setMusicOn(false));
     return () => { audio.pause(); audio.src = ''; };
   }, []);
 
-  const toggleMusic = () => {
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (musicOn) { audio.pause(); } else { audio.play().catch(() => {}); }
-    setMusicOn((prev) => !prev);
-  };
+    if (musicOn) audio.play().catch(() => {});
+    else audio.pause();
+  }, [musicOn]);
 
   useEffect(() => {
     const unsub = subscribeRoom(code, (room) => {
@@ -129,7 +129,7 @@ export default function OnlineGamePage() {
 
   const handleRoll = useCallback(async () => {
     if (!gameState || gameState.phase !== 'rolling' || !isMyTurn || isRolling) return;
-    playDiceRoll();
+    if (musicOn) playDiceRoll();
     const next = rollDice(gameState);
     const cLen = next.rolledDice.length;
     const wLen = next.rolledWhiteDice.length;

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import { PlayerColor, PLAYER_COLORS } from '@/lib/las-vegas/types';
 import {
   generateRoomCode,
@@ -315,7 +316,7 @@ export default function LasVegasSetupPage() {
   const { nickname, uid } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<'local' | 'online'>('local');
-  const [musicOn, setMusicOn] = useState(true);
+  const { soundEnabled: musicOn, toggleSound: toggleMusic } = useSoundEnabled();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -323,17 +324,15 @@ export default function LasVegasSetupPage() {
     audio.loop = true;
     audio.volume = 0.4;
     audioRef.current = audio;
-    audio.play().catch(() => setMusicOn(false));
     return () => { audio.pause(); audio.src = ''; };
   }, []);
 
-  const toggleMusic = () => {
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (musicOn) audio.pause();
-    else audio.play().catch(() => {});
-    setMusicOn((prev) => !prev);
-  };
+    if (musicOn) audio.play().catch(() => {});
+    else audio.pause();
+  }, [musicOn]);
 
   return (
     <div className="cabinet">

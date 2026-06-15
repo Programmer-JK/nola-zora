@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 
 const CASINO_BG = [
   'bg-red-500', 'bg-blue-500', 'bg-green-500',
@@ -243,6 +244,7 @@ function Visual({ step }: { step: number }) {
 
 export default function RulesPage() {
   const [step, setStep] = useState(0);
+  const { soundEnabled } = useSoundEnabled();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -250,9 +252,15 @@ export default function RulesPage() {
     audio.loop = true;
     audio.volume = 0.4;
     audioRef.current = audio;
-    audio.play().catch(() => {});
     return () => { audio.pause(); audio.src = ''; };
   }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (soundEnabled) audio.play().catch(() => {});
+    else audio.pause();
+  }, [soundEnabled]);
 
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;

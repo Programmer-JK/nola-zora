@@ -15,12 +15,12 @@ interface CasinoCardProps {
 }
 
 function getBillColors(value: number): { bg: string; text: string } {
-  if (value >= 90000) return { bg: 'var(--gold)',            text: '#1a1206' };
-  if (value >= 70000) return { bg: 'rgba(255,183,43,0.5)',  text: 'var(--coin)' };
-  if (value >= 50000) return { bg: 'var(--red)',            text: '#fff' };
-  if (value >= 30000) return { bg: 'var(--violet)',         text: '#fff' };
-  if (value >= 20000) return { bg: 'var(--cyan)',           text: '#06231f' };
-  return                     { bg: 'rgba(126,217,87,0.35)', text: 'var(--green)' };
+  if (value >= 90000) return { bg: 'var(--gold)', text: '#1a1206' };
+  if (value >= 70000) return { bg: 'rgba(255,183,43,0.5)', text: 'var(--coin)' };
+  if (value >= 50000) return { bg: 'var(--red)', text: '#fff' };
+  if (value >= 30000) return { bg: 'var(--violet)', text: '#fff' };
+  if (value >= 20000) return { bg: 'var(--cyan)', text: '#06231f' };
+  return { bg: 'rgba(126,217,87,0.35)', text: 'var(--green)' };
 }
 
 export default function CasinoCard({
@@ -57,7 +57,7 @@ export default function CasinoCard({
             background: 'var(--gold)', boxShadow: '0 2px 0 var(--gold-lo)',
           }}>{casino.id}</span>
           {(potentialCount > 0 || potentialWhiteCount > 0) ? (
-            <div className="blink" style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               {potentialCount > 0 && (
                 <span style={{
                   fontFamily: 'var(--f-disp)', fontSize: 9, fontWeight: 900,

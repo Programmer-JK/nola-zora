@@ -11,6 +11,7 @@ import {
   getColorHex,
 } from '@/lib/las-vegas/gameLogic';
 import { playDiceRoll } from '@/lib/las-vegas/sounds';
+import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import Dice from '@/components/las-vegas/Dice';
 import CasinoCard from '@/components/las-vegas/CasinoCard';
 import PlayerPanel from '@/components/las-vegas/PlayerPanel';
@@ -25,7 +26,7 @@ function GameContent() {
   const [isRolling, setIsRolling] = useState(false);
   const [tumblingDice, setTumblingDice] = useState<{ colored: number[]; white: number[] } | null>(null);
   const [showScoringModal, setShowScoringModal] = useState(false);
-  const [musicOn, setMusicOn] = useState(true);
+  const { soundEnabled: musicOn, toggleSound: toggleMusic } = useSoundEnabled();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -33,16 +34,15 @@ function GameContent() {
     audio.loop = true;
     audio.volume = 0.4;
     audioRef.current = audio;
-    audio.play().catch(() => setMusicOn(false));
     return () => { audio.pause(); audio.src = ''; };
   }, []);
 
-  const toggleMusic = () => {
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (musicOn) { audio.pause(); } else { audio.play().catch(() => {}); }
-    setMusicOn((prev) => !prev);
-  };
+    if (musicOn) audio.play().catch(() => {});
+    else audio.pause();
+  }, [musicOn]);
 
   useEffect(() => {
     const setupParam = searchParams.get('setup');
@@ -60,7 +60,7 @@ function GameContent() {
 
   const handleRoll = useCallback(() => {
     if (!gameState || gameState.phase !== 'rolling' || isRolling) return;
-    playDiceRoll();
+    if (musicOn) playDiceRoll();
     const next = rollDice(gameState);
     const cLen = next.rolledDice.length;
     const wLen = next.rolledWhiteDice.length;
