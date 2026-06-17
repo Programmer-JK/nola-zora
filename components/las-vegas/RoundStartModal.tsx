@@ -46,21 +46,21 @@ export default function RoundStartModal({ casinos, round, totalRounds, onStart }
       background: 'rgba(12,10,18,0.9)', backdropFilter: 'blur(10px)',
       overflowY: 'auto', padding: '24px 16px',
     }}>
-      <div className="arc-panel ticks" style={{ width: '100%', maxWidth: 420, padding: '20px 18px' }}>
+      <div className="arc-panel ticks" style={{ width: '100%', maxWidth: 500, padding: '24px 22px' }}>
 
         {/* 헤더 */}
-        <div className="slide-up" style={{ textAlign: 'center', marginBottom: 18 }}>
-          <div style={{ fontSize: 38, lineHeight: 1, marginBottom: 6 }}>🎰</div>
-          <h2 className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 26, letterSpacing: 1, margin: '0 0 4px' }}>
+        <div className="slide-up" style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 48, lineHeight: 1, marginBottom: 8 }}>🎰</div>
+          <h2 className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 32, letterSpacing: 1, margin: '0 0 6px' }}>
             라운드 {round}
           </h2>
-          <p className="pix" style={{ fontSize: 8, color: 'var(--dim)' }}>
+          <p className="pix" style={{ fontSize: 10, color: 'var(--dim)' }}>
             {round} / {totalRounds} · 카지노별 상금이 배정되었습니다
           </p>
         </div>
 
         {/* 3×2 카지노 그리드 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
           {casinos.map((casino, idx) => {
             const accentHex = CASINO_COLORS[(casino.id - 1) % CASINO_COLORS.length];
             const total = casino.moneyCards.reduce((s, c) => s + c.value, 0);
@@ -69,9 +69,9 @@ export default function RoundStartModal({ casinos, round, totalRounds, onStart }
                 key={casino.id}
                 className="arc-rise"
                 style={{
-                  borderRadius: 12, padding: '8px 7px',
+                  borderRadius: 12, padding: '10px 9px',
                   background: accentHex + '12', border: `1.5px solid ${accentHex}40`,
-                  display: 'flex', flexDirection: 'column', gap: 4,
+                  display: 'flex', flexDirection: 'column', gap: 5,
                   animationDelay: `${idx * CASINO_STAGGER}ms`,
                 }}
               >
@@ -79,8 +79,8 @@ export default function RoundStartModal({ casinos, round, totalRounds, onStart }
                 <div style={{ textAlign: 'center' }}>
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 20, height: 20, borderRadius: 6,
-                    fontFamily: 'var(--f-disp)', fontSize: 11, color: '#1a1206',
+                    width: 26, height: 26, borderRadius: 7,
+                    fontFamily: 'var(--f-disp)', fontSize: 13, color: '#1a1206',
                     background: accentHex, boxShadow: `0 2px 0 ${accentHex}80`,
                   }}>{casino.id}</span>
                 </div>
@@ -93,8 +93,8 @@ export default function RoundStartModal({ casinos, round, totalRounds, onStart }
                       key={i}
                       className="arc-rise"
                       style={{
-                        textAlign: 'center', borderRadius: 5, padding: '2px 0',
-                        fontFamily: 'var(--f-disp)', fontSize: 10,
+                        textAlign: 'center', borderRadius: 5, padding: '3px 0',
+                        fontFamily: 'var(--f-disp)', fontSize: 12,
                         background: bill.bg, color: bill.text,
                         opacity: i === 0 ? 1 : Math.max(0.5, 0.9 - i * 0.15),
                         animationDelay: `${idx * CASINO_STAGGER + (i + 1) * CARD_STAGGER}ms`,
@@ -106,7 +106,7 @@ export default function RoundStartModal({ casinos, round, totalRounds, onStart }
                 })}
 
                 {/* 합계 */}
-                <div className="pix" style={{ textAlign: 'center', fontSize: 7, color: 'var(--faint)', marginTop: 2 }}>
+                <div className="pix" style={{ textAlign: 'center', fontSize: 9, color: 'var(--faint)', marginTop: 2 }}>
                   계 {(total / 10000).toFixed(0)}만
                 </div>
               </div>
@@ -119,7 +119,7 @@ export default function RoundStartModal({ casinos, round, totalRounds, onStart }
           onClick={onStart}
           disabled={!canStart}
           className={`arc-btn${canStart ? ' pulse-glow' : ''}`}
-          style={{ fontSize: 16 }}
+          style={{ fontSize: 18 }}
         >
           {canStart ? `라운드 ${round} 시작! →` : '상금 배정 중...'}
         </button>

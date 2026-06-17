@@ -178,8 +178,8 @@ function GameContent() {
       <header style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
         <button className="arc-btn-ghost" onClick={() => router.push('/las-vegas')} style={{ fontSize: 13, padding: '9px 14px' }}>← 나가기</button>
         <div style={{ textAlign: 'center' }}>
-          <div className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 17, letterSpacing: 2 }}>LAS VEGAS</div>
-          <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', marginTop: 3 }}>ROUND {gameState.round} / {gameState.totalRounds}</div>
+          <div className="neon-gold" style={{ fontFamily: 'var(--f-disp)', fontSize: 22, letterSpacing: 2 }}>LAS VEGAS</div>
+          <div className="pix" style={{ fontSize: 10, color: 'var(--dim)', marginTop: 3 }}>ROUND {gameState.round} / {gameState.totalRounds}</div>
         </div>
         <button className="arc-btn-ghost" onClick={toggleMusic} style={{ width: 40, height: 40, padding: 0, borderRadius: 11, fontSize: 16 }}>
           {musicOn ? '🔊' : '🔇'}
@@ -191,7 +191,7 @@ function GameContent() {
       </div>
 
       <div style={{ flex: 1, position: 'relative', zIndex: 1, padding: '16px 12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, maxWidth: 672, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, maxWidth: 860, margin: '0 auto' }}>
           {gameState.casinos.map((casino) => (
             <CasinoCard
               key={casino.id}
@@ -210,16 +210,16 @@ function GameContent() {
 
       <div style={{ position: 'relative', zIndex: 1, padding: '12px 12px 24px' }}>
         {gameState.lastAction && (
-          <p className="pix" style={{ textAlign: 'center', fontSize: 8, color: 'var(--dim)', marginBottom: 8, letterSpacing: 0.5 }}>{gameState.lastAction}</p>
+          <p className="pix" style={{ textAlign: 'center', fontSize: 10, color: 'var(--dim)', marginBottom: 8, letterSpacing: 0.5 }}>{gameState.lastAction}</p>
         )}
         <div className="arc-panel ticks" style={{ padding: '16px 18px' }}>
           {/* 헤더: 플레이어 이름 + 힌트 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 12, height: 12, borderRadius: '50%', background: playerHex, boxShadow: `0 0 8px ${playerHex}`, flexShrink: 0 }} />
-              <span style={{ fontFamily: 'var(--f-body)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap' }}>{currentPlayer.name}의 차례</span>
+              <span style={{ fontFamily: 'var(--f-body)', fontWeight: 700, fontSize: 17, whiteSpace: 'nowrap' }}>{currentPlayer.name}의 차례</span>
             </div>
-            <span className="pix" style={{ fontSize: 8, color: 'var(--dim)' }}>
+            <span className="pix" style={{ fontSize: 10, color: 'var(--dim)' }}>
               {gameState.phase === 'choosing' ? '같은 숫자를 탭해 배치' : 'ROLL THE DICE'}
             </span>
           </div>
@@ -227,7 +227,7 @@ function GameContent() {
           {/* 주사위 영역 */}
           <div style={{ minHeight: 92, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {(gameState.phase === 'rolling' && !isRolling) && (
-              <span className="pix" style={{ fontSize: 9, color: 'var(--faint)', textAlign: 'center', lineHeight: 1.8 }}>
+              <span className="pix" style={{ fontSize: 11, color: 'var(--faint)', textAlign: 'center', lineHeight: 1.8 }}>
                 🎲 주사위를 굴려<br />같은 숫자를 카지노에 배치하세요
               </span>
             )}
@@ -278,7 +278,7 @@ function GameContent() {
                           </div>
                         ))}
                       </div>
-                      <span className="pix" style={{ fontSize: 8, color: playerHex }}>{label}</span>
+                      <span className="pix" style={{ fontSize: 10, color: playerHex }}>{label}</span>
                     </button>
                   );
                 })}

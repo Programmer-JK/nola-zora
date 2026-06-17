@@ -28,10 +28,10 @@ const FACE_MAP: Record<string, string> = {
 };
 
 const SIZE_MAP: Record<string, number> = {
-  xs: 16,
-  sm: 28,
-  md: 40,
-  lg: 56,
+  xs: 18,
+  sm: 34,
+  md: 48,
+  lg: 64,
 };
 
 export default function Dice({ value, color, size = 'md', glow = false }: DiceProps) {
