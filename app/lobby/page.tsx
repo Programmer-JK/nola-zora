@@ -46,6 +46,19 @@ const GAMES = [
     desc: '작가의 작품을 경매로 사고팔아\n최고의 자산가가 되어라',
     href: '/modern-art',
   },
+  {
+    id: 'abra',
+    kr: '아브라카왓',
+    latin: 'ABRACA...WHAT?',
+    tag: 'SPELL GAME',
+    emoji: '🔮',
+    accent: 'var(--violet)',
+    accentHex: '#a274ff',
+    players: '2–6인',
+    kind: '마법 블러핑',
+    desc: '숨겨진 타일을 추리하며 주문을 선언하고\n라이벌 마법사를 쓰러뜨려라',
+    href: '/abra',
+  },
 ]
 
 function GameCard({ game, onPick }: { game: (typeof GAMES)[number]; onPick: () => void }) {
@@ -171,7 +184,7 @@ export default function LobbyPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
-          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>03</span>
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>04</span>
         </div>
 
         {/* 게임 카드 */}

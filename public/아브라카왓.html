@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>아브라카왓 — 놀아조라 ARCADE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Do+Hyeon&family=Press+Start+2P&family=Noto+Sans+KR:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   놀아조라 ARCADE — Design System
+   ============================================================ */
+:root {
+  --bg:        #0c0a12;
+  --bg-2:      #110d18;
+  --surface:   #181222;
+  --surface-2: #211a30;
+  --surface-3: #2b2240;
+  --line:      rgba(255,255,255,0.09);
+  --line-2:    rgba(255,255,255,0.16);
+  --text:      #f5ede0;
+  --text-2:    #c9bdd6;
+  --dim:       #95899f;
+  --faint:     #6b6178;
+  --gold:      #ffb72b;
+  --gold-lo:   #c98309;
+  --violet:    #a274ff;
+  --violet-lo: #6a3fc0;
+  --cyan:      #36e0cf;
+  --coin:      #ffd84d;
+  --red:       #ff5a4d;
+  --green:     #7ed957;
+  --f-disp:    'Bungee', system-ui, sans-serif;
+  --f-pix:     'Press Start 2P', monospace;
+  --f-title:   'Do Hyeon', 'Noto Sans KR', sans-serif;
+  --f-body:    'Noto Sans KR', system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--f-body);-webkit-font-smoothing:antialiased;min-height:100%}
+
+/* Cabinet */
+.cabinet{min-height:100dvh;background:radial-gradient(120% 90% at 50% -10%,#1d1530 0%,var(--bg-2) 42%,var(--bg) 100%);position:relative;overflow-x:hidden;display:flex;flex-direction:column;align-items:center}
+.cabinet::before{content:'';position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);background-size:26px 26px;pointer-events:none;z-index:0}
+
+/* CRT */
+.crt{position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.16) 0px,rgba(0,0,0,.16) 1px,transparent 1px,transparent 3px);mix-blend-mode:multiply;opacity:.55}
+.crt::after{content:'';position:absolute;inset:0;background:radial-gradient(120% 100% at 50% 50%,transparent 58%,rgba(0,0,0,.55) 100%)}
+
+/* Screen */
+.screen{position:relative;z-index:1;width:100%;max-width:520px;margin:0 auto;padding:0 18px 80px;flex:1;display:flex;flex-direction:column}
+
+/* Bulbs */
+.bulbs{display:flex;gap:10px;justify-content:center;align-items:center}
+.bulb{width:9px;height:9px;border-radius:50%;background:var(--coin);box-shadow:0 0 8px 1px var(--coin),0 0 2px #fff inset;animation:bulbBlink 1.4s steps(2,jump-none) infinite}
+.bulb:nth-child(2n){animation-delay:.7s;background:var(--gold);box-shadow:0 0 8px 1px var(--gold)}
+.bulb:nth-child(3n){animation-delay:.35s}
+@keyframes bulbBlink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* Typography */
+.pix{font-family:var(--f-pix);letter-spacing:.5px;line-height:1.6}
+.lbl{font-family:var(--f-pix);font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;display:block}
+.blink{animation:blink 1.1s steps(2,jump-none) infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Buttons */
+.btn{--c:var(--violet);--c-lo:var(--violet-lo);appearance:none;border:none;cursor:pointer;font-family:var(--f-body);font-weight:800;font-size:18px;letter-spacing:.5px;color:#fff;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 92%,#fff) 0%,var(--c) 100%);padding:15px 24px;border-radius:14px;box-shadow:0 6px 0 0 var(--c-lo),0 10px 18px -6px color-mix(in srgb,var(--c) 60%,transparent);transition:transform .08s ease,box-shadow .08s ease,filter .15s ease;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(5px);box-shadow:0 1px 0 0 var(--c-lo)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.4);transform:none;box-shadow:0 6px 0 0 var(--c-lo)}
+.btn-ghost{appearance:none;cursor:pointer;font-family:var(--f-body);font-weight:700;font-size:14px;color:var(--text-2);background:var(--surface);border:1.5px solid var(--line-2);padding:11px 18px;border-radius:12px;transition:all .15s;display:inline-flex;align-items:center;gap:7px;justify-content:center;white-space:nowrap}
+.btn-ghost:hover{background:var(--surface-2);color:var(--text);border-color:var(--violet)}
+
+/* Panels */
+.panel{background:linear-gradient(180deg,var(--surface) 0%,var(--bg-2) 100%);border:1.5px solid var(--line);border-radius:22px;position:relative}
+.ticks::before,.ticks::after{content:'';position:absolute;width:14px;height:14px;border:2px solid var(--line-2)}
+.ticks::before{top:9px;left:9px;border-right:none;border-bottom:none;border-radius:3px 0 0 0}
+.ticks::after{bottom:9px;right:9px;border-left:none;border-top:none;border-radius:0 0 3px 0}
+
+/* Segmented */
+.seg{display:flex;gap:5px;padding:5px;background:rgba(0,0,0,.3);border:1.5px solid var(--line);border-radius:16px}
+.seg button{flex:1;appearance:none;border:none;cursor:pointer;font-family:var(--f-body);font-weight:700;font-size:15px;padding:10px 6px;border-radius:11px;background:transparent;color:var(--dim);transition:all .15s}
+.seg button.on{color:#fff;background:linear-gradient(180deg,color-mix(in srgb,var(--violet) 92%,#fff),var(--violet));box-shadow:0 3px 0 0 var(--violet-lo)}
+.seg button:not(.on):hover{color:var(--text)}
+
+/* Field */
+.field{width:100%;background:rgba(0,0,0,.32);border:1.5px solid var(--line-2);border-radius:13px;padding:13px 16px;color:var(--text);font-family:var(--f-body);font-size:16px;outline:none;transition:border-color .15s,box-shadow .15s}
+.field::placeholder{color:var(--faint)}
+.field:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(162,116,255,.22)}
+
+/* Chips & badges */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--surface-2);border:1.5px solid var(--line);font-size:12px;font-weight:600;color:var(--text-2)}
+.badge{font-family:var(--f-pix);font-size:8px;letter-spacing:.5px;padding:5px 8px 4px;border-radius:7px;color:#fff;background:var(--violet);display:inline-block;line-height:1;white-space:nowrap}
+
+/* Animations */
+.float{animation:floatY 3.4s ease-in-out infinite}
+.pop{animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both}
+.rise{animation:rise .45s ease-out both}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes popIn{0%{transform:scale(.9) translateY(12px)}60%{transform:scale(1.04) translateY(-3px)}100%{transform:scale(1) translateY(0)}}
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ── Spell grid ── */
+.spell-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.spell-btn{appearance:none;cursor:pointer;border-radius:12px;padding:9px 4px 8px;border:1.5px solid var(--line-2);background:rgba(0,0,0,.22);transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.spell-btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.spell-btn:active:not(:disabled){transform:translateY(1px)}
+.spell-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* ── Tile chips ── */
+.tile{width:36px;height:42px;border-radius:9px;border:1.5px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--f-disp);font-size:16px;line-height:1;transition:all .12s}
+.tile-hidden{background:radial-gradient(120% 90% at 50% 0%,var(--surface-2),var(--bg-2));border-color:var(--line-2);color:var(--violet)}
+
+/* ── Opponent card ── */
+.opp-card{flex:0 0 auto;width:130px;padding:11px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);transition:all .18s;cursor:default}
+.opp-card.active{box-shadow:0 0 18px -6px var(--dot)}
+.opp-card.dead{opacity:.4}
+
+/* ── Hearts ── */
+.hearts{display:inline-flex;gap:2px;align-items:center;flex-wrap:wrap}
+.heart{font-size:12px;line-height:1;display:inline-block;transition:all .2s}
+.heart.empty{filter:grayscale(1);opacity:.28}
+
+/* ── HUD ── */
+.hud{display:flex;align-items:center;justify-content:space-between;padding:16px 0 10px;gap:8px}
+
+/* ── Turn banner ── */
+.turn-banner{display:flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;border-radius:12px;margin-bottom:14px}
+
+/* ── Result flash ── */
+.result-flash{text-align:center;padding:6px 0 12px;font-family:var(--f-title);font-size:16px}
+.result-flash.ok{color:var(--green)}
+.result-flash.fail{color:var(--red)}
+
+/* ── Cast overlay ── */
+.cast-overlay{position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;background:rgba(6,4,12,.78);backdrop-filter:blur(4px);padding:24px}
+.cast-card{width:min(280px,88vw);text-align:center}
+.cast-spell-face{width:170px;margin:0 auto;aspect-ratio:7/10;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.cast-spell-top{height:6px;flex-shrink:0}
+.cast-spell-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px}
+
+/* ── Privacy screen ── */
+.privacy-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90dvh;text-align:center;gap:0}
+
+/* ── Score table ── */
+.score-table{width:100%;border-collapse:collapse}
+.score-table th,.score-table td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+.score-table th{font-family:var(--f-pix);font-size:8px;color:var(--dim);letter-spacing:.5px}
+.score-table .winner td{color:var(--coin);font-weight:800}
+
+/* ── Memo pad ── */
+.memo-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+.memo-btn{aspect-ratio:1;border-radius:9px;cursor:pointer;border:1.5px solid;background:rgba(0,0,0,.2);font-family:var(--f-disp);font-size:14px;position:relative;transition:all .12s;appearance:none}
+
+/* ── Secret reveal ── */
+.secret-chip{display:inline-flex;align-items:center;justify-content:center;width:38px;height:45px;border-radius:9px;border:1.5px solid var(--cyan);background:rgba(54,224,207,.1);color:var(--cyan);font-family:var(--f-disp);font-size:16px;font-weight:700}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* Log */
+.log-entry{font-size:12px;color:var(--text-2);padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.22);border:1px solid var(--line);animation:rise .3s ease-out both}
+</style>
+</head>
+<body>
+<div class="cabinet" id="root"></div>
+<div class="crt"></div>
+<script>
+/* ============================================================
+   GAME DATA
+   ============================================================ */
+const SPELLS = [
+  { num:1, en:'Explosion!',      kr:'폭발',       emoji:'💥', color:'#ff6f5a', targeting:'all_dice',  effect:'주사위를 굴립니다. 다른 모든 플레이어가 그 숫자만큼 생명력을 잃습니다.' },
+  { num:2, en:'Dark Matter',     kr:'암흑 물질',   emoji:'🌑', color:'#b07cff', targeting:'all',       effect:'다른 모든 플레이어는 생명력을 1 잃고, 당신은 생명력을 1 얻습니다.' },
+  { num:3, en:'Healing Wind',    kr:'치유의 바람', emoji:'🌿', color:'#7ed957', targeting:'self_dice', effect:'주사위를 굴립니다. 당신은 그 숫자만큼 생명력을 얻습니다. (최대 3)' },
+  { num:4, en:'I Can See...',    kr:'천리안',      emoji:'👁', color:'#36e0cf', targeting:'reveal',    effect:'비밀의 돌 1개를 가져와 이번 라운드 동안 볼 수 있습니다.' },
+  { num:5, en:'Lightning Storm', kr:'번개 폭풍',   emoji:'⚡', color:'#ffb72b', targeting:'neighbors', effect:'당신의 왼쪽과 오른쪽 플레이어는 생명력을 1 잃습니다.' },
+  { num:6, en:'Ice Ball',        kr:'얼음 공',     emoji:'❄️', color:'#5ab0e8', targeting:'left',      effect:'당신의 왼쪽 플레이어는 생명력을 1 잃습니다.' },
+  { num:7, en:'Fire Ball',       kr:'화염 공',     emoji:'🔥', color:'#ff5da2', targeting:'right',     effect:'당신의 오른쪽 플레이어는 생명력을 1 잃습니다.' },
+  { num:8, en:'Heal',            kr:'치유',        emoji:'💚', color:'#a274ff', targeting:'self',      effect:'당신은 생명력을 1 얻습니다.' },
+];
+const spellOf = n => SPELLS[n - 1];
+
+const PLAYER_DOTS = ['#a274ff','#ff5a4d','#36e0cf','#5ab0e8','#ffb72b','#7ed957'];
+
+/* ============================================================
+   GAME ENGINE  (server-authoritative, deterministic)
+   ============================================================ */
+const ENGINE = {
+  rollD6: () => 1 + Math.floor(Math.random() * 6),
+
+  shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  },
+
+  createPool() {
+    const tiles = [];
+    for (let n = 1; n <= 8; n++) for (let i = 0; i < n; i++) tiles.push(n);
+    return tiles; // 36 tiles
+  },
+
+  abraConfig(n) {
+    const big = n >= 6;
+    return { maxHp: big ? 8 : 6, secret: big ? 6 : 4 };
+  },
+
+  initRound(G) {
+    const { maxHp, secret } = this.abraConfig(G.players.length);
+    G.maxHp = maxHp;
+    let pool = this.shuffle(this.createPool());
+    G.secretPile = pool.splice(0, secret);
+    G.players.forEach(p => {
+      p.hp = maxHp;
+      p.tiles = pool.splice(0, 5);
+      p.secretRevealed = [];
+      p.usedICansee = false;
+      p.memo = {};
+      p.eliminated = false;
+    });
+    G.deck = pool;
+    G.combo = null;
+    G.currentIdx = 0;
+    G.log = [];
+    G.turn = 0;
+  },
+
+  /* canDeclare — combo rule: same or LOWER number only (이하) */
+  canDeclare(G, playerIdx, num) {
+    if (G.players[playerIdx].eliminated) return false;
+    if (G.combo !== null && num > G.combo) return false;
+    return true;
+  },
+
+  checkSuccess(G, playerIdx, num) {
+    return G.players[playerIdx].tiles.includes(num);
+  },
+
+  /* resolveDeclaration — returns { success } */
+  resolveDeclaration(G, playerIdx, num) {
+    const success = this.checkSuccess(G, playerIdx, num);
+    G.turn++;
+    if (success) {
+      const idx = G.players[playerIdx].tiles.indexOf(num);
+      G.players[playerIdx].tiles.splice(idx, 1);
+      G.combo = num;
+      this.addLog(G, playerIdx, `${num} 선언 → ✓ 성공! ${spellOf(num).kr}`);
+    } else {
+      this.damage(G, playerIdx, 1);
+      this.addLog(G, playerIdx, `${num} 선언 → ✗ 실패… 체력 -1`);
+    }
+    return { success };
+  },
+
+  damage(G, idx, amt) {
+    if (G.players[idx].eliminated) return;
+    G.players[idx].hp = Math.max(0, G.players[idx].hp - amt);
+    if (G.players[idx].hp <= 0) {
+      G.players[idx].eliminated = true;
+      this.addLog(G, idx, `💀 탈락!`);
+    }
+  },
+
+  heal(G, idx, amt) {
+    if (G.players[idx].eliminated) return 0;
+    const prev = G.players[idx].hp;
+    G.players[idx].hp = Math.min(G.maxHp, G.players[idx].hp + amt);
+    return G.players[idx].hp - prev;
+  },
+
+  /* applyEffect — returns { lines, diceRoll, revealedTile } */
+  applyEffect(G, spellNum, casterIdx, targetIdx /* for Explosion */) {
+    const sp = spellOf(spellNum);
+    const n = G.players.length;
+    const living = i => !G.players[i].eliminated;
+    const leftOf  = i => { for(let d=1;d<n;d++){const j=(i-d+n)%n; if(living(j)) return j;} return -1; };
+    const rightOf = i => { for(let d=1;d<n;d++){const j=(i+d)%n; if(living(j)) return j;} return -1; };
+
+    let lines = [], diceRoll = null, revealedTile = null;
+
+    switch (sp.targeting) {
+      case 'all_dice': { // Explosion! — roll d6, ALL others lose that HP
+        const roll = this.rollD6();
+        diceRoll = roll;
+        for (let i = 0; i < n; i++) {
+          if (i !== casterIdx && living(i)) {
+            this.damage(G, i, roll);
+            lines.push(`${G.players[i].name} -${roll} HP`);
+          }
+        }
+        break;
+      }
+      case 'all': { // Dark Matter — others -1, self +1
+        for (let i = 0; i < n; i++) {
+          if (i !== casterIdx && living(i)) { this.damage(G, i, 1); lines.push(`${G.players[i].name} -1 HP`); }
+        }
+        const gained = this.heal(G, casterIdx, 1);
+        if (gained > 0) lines.push(`${G.players[casterIdx].name} +${gained} HP`);
+        break;
+      }
+      case 'self_dice': { // Healing Wind — roll d6, heal min(roll, 3)
+        const roll = this.rollD6();
+        diceRoll = roll;
+        const healAmt = Math.min(roll, 3);
+        const gained = this.heal(G, casterIdx, healAmt);
+        lines.push(`🎲 ${roll} → ${G.players[casterIdx].name} +${gained} HP`);
+        break;
+      }
+      case 'self': { // Heal — self +1
+        const gained = this.heal(G, casterIdx, 1);
+        lines.push(`${G.players[casterIdx].name} +${gained} HP`);
+        break;
+      }
+      case 'reveal': { // I Can See... — take 1 secret tile
+        if (G.secretPile.length > 0) {
+          const tile = G.secretPile.pop();
+          G.players[casterIdx].secretRevealed.push(tile);
+          G.players[casterIdx].usedICansee = true;
+          revealedTile = tile;
+          lines.push(`비밀의 돌 ${tile} 획득!`);
+        } else {
+          lines.push('비밀의 돌이 남아있지 않습니다.');
+        }
+        break;
+      }
+      case 'neighbors': { // Lightning Storm — left + right -1
+        const l = leftOf(casterIdx), r = rightOf(casterIdx);
+        if (l !== -1) { this.damage(G, l, 1); lines.push(`${G.players[l].name} -1 HP`); }
+        if (r !== -1 && r !== l) { this.damage(G, r, 1); lines.push(`${G.players[r].name} -1 HP`); }
+        break;
+      }
+      case 'left': { // Ice Ball — left -1
+        const l = leftOf(casterIdx);
+        if (l !== -1) { this.damage(G, l, 1); lines.push(`${G.players[l].name} -1 HP`); }
+        break;
+      }
+      case 'right': { // Fire Ball — right -1
+        const r = rightOf(casterIdx);
+        if (r !== -1) { this.damage(G, r, 1); lines.push(`${G.players[r].name} -1 HP`); }
+        break;
+      }
+    }
+    this.addLog(G, casterIdx, `${sp.kr}: ${lines.join(', ')}`);
+    return { lines, diceRoll, revealedTile };
+  },
+
+  drawTiles(G, idx) {
+    const p = G.players[idx];
+    const need = 5 - p.tiles.length;
+    if (need > 0 && G.deck.length > 0) {
+      const drawn = G.deck.splice(0, Math.min(need, G.deck.length));
+      p.tiles.push(...drawn);
+    }
+  },
+
+  endTurn(G) {
+    this.drawTiles(G, G.currentIdx);
+    G.combo = null;
+    // advance to next living player
+    const n = G.players.length;
+    for (let d = 1; d <= n; d++) {
+      const next = (G.currentIdx + d) % n;
+      if (!G.players[next].eliminated) { G.currentIdx = next; break; }
+    }
+  },
+
+  checkRoundEnd(G) {
+    const living = G.players.filter(p => !p.eliminated);
+    if (living.length <= 1) return true;
+    if (living.some(p => p.tiles.length === 0)) return true;
+    return false;
+  },
+
+  scoreRound(G) {
+    const n = G.players.length;
+    const round = Array(n).fill(0);
+    const living = G.players.filter(p => !p.eliminated);
+    // Survival
+    G.players.forEach((p, i) => { if (!p.eliminated) round[i] += 1; });
+    // Tile clear
+    G.players.forEach((p, i) => { if (!p.eliminated && p.tiles.length === 0) round[i] += 3; });
+    // I Can See bonus
+    G.players.forEach((p, i) => { if (p.usedICansee) round[i] += 1; });
+    // Elimination credit: +3 to living players per eliminated
+    const elimCount = G.players.filter(p => p.eliminated).length;
+    if (elimCount > 0 && living.length > 0) {
+      const bonus = Math.floor((elimCount * 3) / living.length);
+      G.players.forEach((p, i) => { if (!p.eliminated) round[i] += bonus; });
+    }
+    round.forEach((v, i) => { G.scores[i] = (G.scores[i] || 0) + v; });
+    return round;
+  },
+
+  addLog(G, who, txt) {
+    G.log.unshift({ who, name: G.players[who].name, txt });
+    if (G.log.length > 10) G.log.pop();
+  },
+};
+
+/* ============================================================
+   APP STATE
+   ============================================================ */
+let G = null; // GameState
+let S = {     // UIState
+  screen: 'intro',
+  setup: { playerCount: 4, playerNames: ['플레이어 1','플레이어 2','플레이어 3','플레이어 4','플레이어 5','플레이어 6'], goalScore: 8 },
+  setupStep: 0,
+  selectedSpell: null,   // number 1-8 selected but not declared
+  pendingCast: null,     // { spell, lines, diceRoll, revealedTile }
+  lastResult: null,      // { success, num }
+  roundScores: null,     // for round-end screen
+  peekMyHand: false,     // demo debug only
+};
+
+/* ============================================================
+   HELPER RENDERERS
+   ============================================================ */
+function hearts(hp, max) {
+  return Array.from({length: max}, (_, i) =>
+    `<span class="heart${i < hp ? '' : ' empty'}">❤️</span>`
+  ).join('');
+}
+
+function tileChip(num, hidden, small) {
+  const sp = spellOf(num);
+  const sz = small ? 'width:28px;height:33px;font-size:13px' : 'width:36px;height:42px;font-size:16px';
+  if (hidden) return `<div class="tile tile-hidden" style="${sz}">?</div>`;
+  return `<div class="tile" style="${sz};color:${sp.color};border-color:${sp.color}66;background:color-mix(in srgb,${sp.color} 14%,var(--surface))">${num}</div>`;
+}
+
+function bulbs(n) {
+  return `<div class="bulbs">${Array.from({length:n},()=>`<span class="bulb"></span>`).join('')}</div>`;
+}
+
+function divider(label, accent) {
+  return `<div style="display:flex;align-items:center;gap:12px;margin:4px 0 12px">
+    <span class="lbl" style="color:${accent||'var(--dim)'}">${label}</span>
+    <div style="flex:1;height:2px;background:repeating-linear-gradient(90deg,var(--line-2) 0 8px,transparent 8px 14px)"></div>
+  </div>`;
+}
+
+/* ============================================================
+   SCREEN RENDERERS
+   ============================================================ */
+
+/* ── INTRO ── */
+function renderIntro() {
+  return `
+  <div class="screen" style="justify-content:center;align-items:center;min-height:90dvh">
+    <div class="pop" style="width:100%;max-width:400px;text-align:center">
+      ${bulbs(11)}
+      <div class="float" style="font-size:68px;line-height:1;margin:18px 0 4px">🔮</div>
+      <h1 style="font-family:var(--f-disp);font-size:36px;letter-spacing:2px;margin:4px 0 2px;color:var(--violet);text-shadow:0 0 22px rgba(162,116,255,.6)">ABRACAWHAT</h1>
+      <div style="font-family:var(--f-title);font-size:28px;color:var(--text);margin-top:2px">아브라카왓</div>
+      <p class="pix" style="font-size:8px;color:var(--violet);margin-top:10px;letter-spacing:1px">NUMBER-TILE DEDUCTION PARTY · 3–6P</p>
+
+      <div class="panel ticks" style="padding:20px;margin-top:26px;text-align:left">
+        <span class="lbl" style="color:var(--violet)">HOW TO PLAY</span>
+        <p style="font-size:13.5px;color:var(--text-2);line-height:1.65;margin:12px 0 0">
+          <b style="color:var(--violet)">내 타일은 나만 못 봐요.</b> 남의 타일은 다 보이죠.<br>
+          매 턴 1~8 중 하나를 선언 — 맞으면 <b style="color:var(--violet)">주문이 발동</b>하고<br>
+          콤보(같은 수 <b>이상</b>)로 이어가요. 빗나가면 체력 -1.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <span class="chip">👥 3–6인</span>
+          <span class="chip">🎯 숫자 추리</span>
+          <span class="chip">🪄 1~8 주문</span>
+        </div>
+      </div>
+
+      <button class="btn" style="margin-top:22px;font-size:20px" onclick="goSetup()">🚪 게임 설정</button>
+      <p class="pix blink" style="font-size:8px;color:var(--coin);margin-top:16px">PRESS START</p>
+    </div>
+  </div>`;
+}
+
+/* ── SETUP ── */
+function renderSetup() {
+  const { playerCount, playerNames, goalScore } = S.setup;
+  const cfg = ENGINE.abraConfig(playerCount);
+  return `
+  <div class="screen" style="padding-top:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <button class="btn-ghost" onclick="S.screen='intro';render()">← 뒤로</button>
+      <h2 style="font-family:var(--f-disp);font-size:20px;color:var(--violet)">SETUP</h2>
+      <span style="width:60px"></span>
+    </div>
+
+    <div class="panel ticks" style="padding:20px;margin-bottom:16px">
+      <span class="lbl" style="color:var(--violet)">플레이어 수</span>
+      <div class="seg" style="margin-top:10px">
+        ${[3,4,5,6].map(n=>`<button class="${playerCount===n?'on':''}" onclick="S.setup.playerCount=${n};render()">${n}명</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="chip">❤️ 체력 ${cfg.maxHp}</span>
+        <span class="chip">🃏 손패 5</span>
+        <span class="chip">🔒 비밀 ${cfg.secret}</span>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:20px;margin-bottom:16px">
+      <span class="lbl" style="color:var(--violet)">플레이어 이름</span>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        ${Array.from({length:playerCount},(_,i)=>`
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:12px;height:12px;border-radius:50%;background:${PLAYER_DOTS[i]};box-shadow:0 0 8px ${PLAYER_DOTS[i]};flex-shrink:0"></span>
+            <input class="field" id="pname${i}" value="${playerNames[i]}" maxlength="10" placeholder="이름" style="flex:1">
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="panel" style="padding:20px;margin-bottom:20px">
+      <span class="lbl" style="color:var(--violet)">목표 점수</span>
+      <div class="seg" style="margin-top:10px">
+        ${[6,8,10].map(s=>`<button class="${goalScore===s?'on':''}" onclick="S.setup.goalScore=${s};render()">${s}점</button>`).join('')}
+      </div>
+    </div>
+
+    <button class="btn" style="font-size:19px" onclick="startGame()">🔮 게임 시작!</button>
+  </div>`;
+}
+
+/* ── PRIVACY ── */
+function renderPrivacy() {
+  const p = G.players[G.currentIdx];
+  const alive = G.players.filter(x => !x.eliminated).length;
+  return `
+  <div class="screen">
+    <div class="privacy-wrap">
+      <div class="pop">
+        <div class="float" style="font-size:64px;margin-bottom:16px">🔮</div>
+        <h2 style="font-family:var(--f-title);font-size:32px;color:var(--violet);margin:0 0 4px">${p.name}의 차례</h2>
+        <p class="pix" style="font-size:8px;color:var(--dim);margin:0 0 24px">다른 플레이어는 화면을 보지 마세요</p>
+
+        <div class="panel" style="padding:18px;margin-bottom:24px;text-align:left;width:min(320px,90vw)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <span style="color:var(--dim);font-size:13px">체력</span>
+            <span style="font-family:var(--f-title);font-size:16px;color:var(--violet)">${p.hp} / ${G.maxHp}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <span style="color:var(--dim);font-size:13px">타일 수</span>
+            <span style="font-family:var(--f-title);font-size:16px;color:var(--text)">${p.tiles.length}개</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <span style="color:var(--dim);font-size:13px">라운드</span>
+            <span style="font-family:var(--f-title);font-size:16px;color:var(--text)">${G.round}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--dim);font-size:13px">생존자</span>
+            <span style="font-family:var(--f-title);font-size:16px;color:var(--green)">${alive}명</span>
+          </div>
+          ${G.combo !== null ? `
+          <div style="margin-top:12px;padding:8px 12px;border-radius:8px;background:rgba(162,116,255,.1);border:1px solid rgba(162,116,255,.3);font-size:13px;color:var(--violet);text-align:center">
+            ⚡ 콤보 진행 중 · ${G.combo} 이하만 선언 가능
+          </div>` : ''}
+          ${p.secretRevealed.length > 0 ? `
+          <div style="margin-top:12px">
+            <span class="lbl" style="color:var(--cyan)">천리안으로 공개한 타일</span>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              ${p.secretRevealed.map(t => `<div class="secret-chip">${t}</div>`).join('')}
+            </div>
+          </div>` : ''}
+        </div>
+
+        <button class="btn" style="font-size:18px;width:min(320px,90vw)" onclick="S.screen='game';S.selectedSpell=null;S.lastResult=null;render()">준비 완료 ✓</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── GAME ── */
+function renderGame() {
+  const me = G.currentIdx;
+  const myPlayer = G.players[me];
+  const sp = S.selectedSpell ? spellOf(S.selectedSpell) : null;
+  const accent = 'var(--violet)';
+
+  /* opponents row */
+  const opponentCards = G.players.map((p, i) => {
+    if (i === me) return '';
+    const dotStyle = `background:${p.dot || PLAYER_DOTS[i]};box-shadow:0 0 8px ${p.dot || PLAYER_DOTS[i]}`;
+    return `
+    <div class="opp-card${p.eliminated ? ' dead' : ''}"
+      style="--dot:${p.dot || PLAYER_DOTS[i]}">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+        <span style="width:11px;height:11px;border-radius:50%;flex-shrink:0;${dotStyle}"></span>
+        <span style="font-weight:700;font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+        ${p.eliminated ? '<span style="margin-left:auto;font-size:13px">💀</span>' : ''}
+      </div>
+      <div class="hearts" style="margin-bottom:8px">${hearts(p.hp, G.maxHp)}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${p.tiles.map(t => tileChip(t, false, true)).join('')}
+        ${p.secretRevealed.length > 0 ? p.secretRevealed.map(t => `<div class="secret-chip" style="width:28px;height:33px;font-size:12px">${t}</div>`).join('') : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  /* action panel */
+  const resultHtml = S.lastResult ? `
+  <div class="result-flash ${S.lastResult.success ? 'ok' : 'fail'} rise">
+    ${S.lastResult.success ? `✓ ${S.lastResult.num} 적중! ${spellOf(S.lastResult.num).kr} 발동` : `✗ ${S.lastResult.num} 없음 — 체력 -1`}
+  </div>` : '';
+
+  const spellGrid = `
+  <div class="spell-grid" style="margin-bottom:${sp ? '0' : '0'}">
+    ${SPELLS.map(s => {
+      const locked = G.combo !== null && s.num > G.combo;
+      const on = S.selectedSpell === s.num;
+      return `<button class="spell-btn" ${locked ? 'disabled' : `onclick="selectSpell(${s.num})"`}
+        style="border-color:${on ? s.color : 'var(--line-2)'};
+               background:${on ? `color-mix(in srgb,${s.color} 22%,var(--surface))` : 'rgba(0,0,0,.22)'};
+               opacity:${locked ? '0.3' : '1'}">
+        <span style="font-family:var(--f-disp);font-size:20px;color:${on ? s.color : 'var(--text)'}${on ? `;text-shadow:0 0 12px ${s.color}` : ''};line-height:1">${s.num}</span>
+        <span style="font-size:16px">${s.emoji}</span>
+        <span style="font-size:8.5px;color:${on ? 'var(--text)' : 'var(--faint)'};font-weight:700;white-space:nowrap">${s.kr}</span>
+      </button>`;
+    }).join('')}
+  </div>`;
+
+  const spellPreview = sp ? `
+  <div class="rise" style="margin-top:10px;padding:9px 12px;border-radius:10px;
+    background:color-mix(in srgb,${sp.color} 10%,transparent);
+    border:1px solid color-mix(in srgb,${sp.color} 40%,transparent);
+    font-size:12px;color:var(--text-2)">
+    <b style="color:${sp.color}">${sp.num} · ${sp.kr}</b> — ${sp.effect}
+  </div>` : '';
+
+  const actionBtns = `
+  <div style="display:flex;gap:9px;margin-top:14px">
+    <button class="btn" ${S.selectedSpell === null ? 'disabled' : `onclick="declareSell()"`} style="flex:1.6;font-size:17px">🪄 선언하기</button>
+    ${G.combo !== null ? `<button class="btn-ghost" onclick="endTurn()" style="flex:1;font-size:14px">턴 종료</button>` : ''}
+  </div>`;
+
+  /* my area */
+  const myTilesHtml = myPlayer.tiles.map(() => tileChip(0, true)).join('');
+  const memoHtml = Array.from({length:8},(_,i) => {
+    const n = i + 1; const s = myPlayer.memo[n] || 0;
+    const col = s === 1 ? 'var(--green)' : s === 2 ? 'var(--red)' : 'var(--line-2)';
+    return `<button class="memo-btn" onclick="cycleMemo(${n})"
+      style="border-color:${col};background:${s ? `color-mix(in srgb,${col} 18%,transparent)` : 'rgba(0,0,0,.2)'};
+             color:${s===2?'var(--red)':s===1?'var(--green)':'var(--dim)'}">
+      ${n}<span style="position:absolute;top:1px;right:3px;font-size:8px">${s===1?'✓':s===2?'✕':''}</span>
+    </button>`;
+  }).join('');
+
+  /* log */
+  const logHtml = G.log.slice(0,5).map(e =>
+    `<div class="log-entry"><b style="color:${PLAYER_DOTS[e.who]}">${e.name}</b> ${e.txt}</div>`
+  ).join('');
+
+  return `
+  <div class="screen">
+    <!-- HUD -->
+    <div class="hud">
+      <button class="btn-ghost" style="font-size:13px;padding:9px 13px" onclick="confirmQuit()">← 나가기</button>
+      <div style="text-align:center;line-height:1.3">
+        <div style="font-family:var(--f-disp);font-size:13px;letter-spacing:1px;color:var(--text)">라운드 ${G.round}</div>
+        <div class="pix" style="font-size:7px;color:var(--dim);margin-top:3px">🃏 덱 ${G.deck.length} · 생존 ${G.players.filter(p=>!p.eliminated).length}/${G.players.length}</div>
+      </div>
+      <div style="font-family:var(--f-title);font-size:18px;color:var(--violet);text-shadow:0 0 12px rgba(162,116,255,.5)">
+        ${G.scores.map((s,i)=>`<span style="color:${PLAYER_DOTS[i]}">${s}</span>`).join(' · ')}
+      </div>
+    </div>
+
+    <!-- Opponents -->
+    <div style="margin-bottom:14px">
+      ${divider('다른 마법사 — 타일이 보여요', 'var(--violet)')}
+      <div style="display:flex;gap:9px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch">
+        ${opponentCards}
+      </div>
+    </div>
+
+    <!-- Action Panel -->
+    <div class="panel ticks" style="padding:16px 16px 18px;margin-bottom:14px">
+      <div class="turn-banner" style="background:color-mix(in srgb,var(--violet) 16%,transparent);border:1.5px solid var(--violet)">
+        <span style="width:12px;height:12px;border-radius:50%;background:${PLAYER_DOTS[me]};box-shadow:0 0 8px ${PLAYER_DOTS[me]}"></span>
+        <span style="font-family:var(--f-title);font-size:16px;color:var(--text)">
+          ${targeting ? '💥 폭발! 대상을 지목하세요' : `내 차례 — 숫자를 선언!`}
+        </span>
+        ${!targeting ? '<span class="blink" style="color:var(--violet);font-size:18px">✦</span>' : ''}
+      </div>
+      ${G.combo !== null ? `<p class="pix" style="font-size:8px;color:var(--violet);text-align:center;margin:0 0 10px">콤보 진행 중 · ${G.combo} 이하만 선언 가능</p>` : ''}
+      ${resultHtml}
+      ${spellGrid}
+      ${spellPreview}
+      ${actionBtns}
+    </div>
+
+    <!-- My Area -->
+    <div class="panel" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-family:var(--f-title);font-size:16px;color:var(--violet)">${myPlayer.name} (나)</span>
+          <div class="hearts">${hearts(myPlayer.hp, G.maxHp)}</div>
+        </div>
+        <span style="font-size:13px;color:var(--dim)">타일 ${myPlayer.tiles.length}개</span>
+      </div>
+      <p style="font-size:11.5px;color:var(--dim);margin:0 0 8px">내 타일은 <b style="color:var(--violet)">나만 못 봐요</b> — 추리로 알아내세요</p>
+      <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap">
+        ${myPlayer.tiles.length > 0 ? myTilesHtml : '<span style="font-size:12px;color:var(--green);font-weight:700">타일 모두 소진!</span>'}
+      </div>
+      ${myPlayer.secretRevealed.length > 0 ? `
+      <div style="margin-bottom:12px">
+        <span class="lbl" style="color:var(--cyan)">천리안 — 공개된 비밀 타일</span>
+        <div style="display:flex;gap:6px;margin-top:6px">${myPlayer.secretRevealed.map(t=>`<div class="secret-chip">${t}</div>`).join('')}</div>
+      </div>` : ''}
+
+      ${divider('추리 메모 — 탭해서 표시', 'var(--violet)')}
+      <div class="memo-grid">${memoHtml}</div>
+    </div>
+
+    <!-- Log -->
+    ${G.log.length > 0 ? `
+    <div style="margin-bottom:14px">
+      ${divider('로그', 'var(--violet)')}
+      <div style="display:flex;flex-direction:column;gap:5px">${logHtml}</div>
+    </div>` : ''}
+
+    <button class="btn-ghost" onclick="if(confirm('라운드를 종료하고 점수를 계산합니까?'))endRound()" style="width:100%;margin-bottom:8px;color:var(--violet);border-color:rgba(162,116,255,.3)">
+      🏁 라운드 종료 — 점수 계산
+    </button>
+    <p class="pix" style="font-size:7.5px;color:var(--faint);text-align:center;margin-top:8px;line-height:1.8">
+      성공 = 콤보(같은 수 이상) · 실패 = 체력 -1 후 턴 종료
+    </p>
+  </div>`;
+}
+
+/* ── CAST OVERLAY ── */
+function renderCastOverlay() {
+  const { spell, lines, diceRoll, revealedTile } = S.pendingCast;
+  const face = `background:linear-gradient(165deg,color-mix(in srgb,${spell.color} 18%,var(--surface)),var(--bg-2));border:1.5px solid color-mix(in srgb,${spell.color} 55%,transparent);box-shadow:inset 0 0 30px -10px ${spell.color},0 0 22px -12px ${spell.color}`;
+  return `
+  <div class="cast-overlay" onclick="closeCast()">
+    <div class="pop cast-card">
+      <div class="cast-spell-face" style="${face}">
+        <div class="cast-spell-top" style="background:${spell.color}"></div>
+        <div class="cast-spell-body">
+          <div style="font-family:var(--f-disp);font-size:20px;color:${spell.color}">${spell.num}</div>
+          <div style="font-size:44px">${spell.emoji}</div>
+          <div style="font-family:var(--f-title);font-size:22px;color:var(--text);text-align:center">${spell.kr}</div>
+          <div style="font-size:12px;color:var(--dim);text-align:center;line-height:1.4">${spell.effect}</div>
+        </div>
+      </div>
+      <div style="font-family:var(--f-disp);font-size:18px;color:${spell.color};margin-top:14px;text-shadow:0 0 18px ${spell.color}">ABRACA…${spell.kr.toUpperCase()}!</div>
+      ${diceRoll !== null ? `<div style="font-size:48px;margin:8px 0;font-family:var(--f-disp);color:var(--coin)">${diceRoll}</div>` : ''}
+      ${revealedTile !== null ? `<div style="font-size:16px;color:var(--cyan);margin:8px 0">비밀 타일: <span style="font-family:var(--f-disp);font-size:24px">${revealedTile}</span></div>` : ''}
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
+        ${lines.map(l => `<div style="font-family:var(--f-title);font-size:17px;color:var(--text)">${l}</div>`).join('')}
+      </div>
+      <p class="pix" style="font-size:7px;color:var(--faint);margin-top:14px">TAP TO CONTINUE</p>
+    </div>
+  </div>`;
+}
+
+/* ── ROUND END ── */
+function renderRoundEnd() {
+  const scores = S.roundScores || [];
+  const sorted = [...G.players].map((p,i) => ({...p, idx:i, roundScore:scores[i]||0, total:G.scores[i]||0}))
+    .sort((a,b) => b.total - a.total);
+  const goalReached = G.scores.some(s => s >= S.setup.goalScore);
+  return `
+  <div class="screen" style="padding-top:20px">
+    <div class="pop" style="text-align:center;margin-bottom:24px">
+      ${bulbs(9)}
+      <div style="font-size:44px;margin:14px 0 0">🔮</div>
+      <h1 style="font-family:var(--f-disp);font-size:26px;letter-spacing:1px;margin:10px 0 2px;color:var(--violet)">ROUND ${G.round} END</h1>
+      <div style="font-family:var(--f-title);font-size:18px;color:var(--text)">라운드 종료</div>
+    </div>
+
+    ${divider('SCORE BOARD', 'var(--violet)')}
+    <div class="panel" style="padding:0;overflow:hidden;margin-bottom:20px">
+      <table class="score-table">
+        <thead><tr><th>순위</th><th>플레이어</th><th>이번 라운드</th><th>총점</th></tr></thead>
+        <tbody>
+          ${sorted.map((p,rank) => `
+          <tr class="${rank===0?'winner':''}">
+            <td>${['🥇','🥈','🥉'][rank]||'🎮'}</td>
+            <td style="display:flex;align-items:center;gap:6px">
+              <span style="width:9px;height:9px;border-radius:50%;background:${PLAYER_DOTS[p.idx]};flex-shrink:0"></span>
+              ${p.name}${p.eliminated?'<span style="font-size:11px">💀</span>':''}
+            </td>
+            <td style="color:${p.roundScore>0?'var(--green)':'var(--dim)'}">+${p.roundScore}</td>
+            <td style="color:var(--coin);font-weight:800">${p.total}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn-ghost" onclick="confirmQuit()" style="flex:1">🚪 그만하기</button>
+      <button class="btn" style="flex:1.4;font-size:18px" onclick="${goalReached ? 'showGameEnd()' : 'nextRound()'}">
+        ${goalReached ? '🏆 최종 결과!' : `라운드 ${G.round+1} 시작 →`}
+      </button>
+    </div>
+    ${goalReached ? `<p style="text-align:center;font-size:13px;color:var(--violet);margin-top:12px">목표 점수 ${S.setup.goalScore}점 도달!</p>` : ''}
+  </div>`;
+}
+
+/* ── GAME END ── */
+function renderGameEnd() {
+  const sorted = [...G.players].map((p,i) => ({...p, idx:i, total:G.scores[i]||0}))
+    .sort((a,b) => b.total - a.total);
+  const winner = sorted[0];
+  return `
+  <div class="screen" style="padding-top:20px">
+    <div class="pop" style="text-align:center;margin-bottom:24px">
+      ${bulbs(9)}
+      <div class="float" style="font-size:52px;margin:14px 0 0">🏆</div>
+      <h1 style="font-family:var(--f-disp);font-size:28px;letter-spacing:1px;margin:12px 0 2px;color:var(--violet);text-shadow:0 0 18px rgba(162,116,255,.6)">WINNER</h1>
+      <div style="display:inline-flex;align-items:center;gap:9px;margin-top:8px">
+        <span style="width:14px;height:14px;border-radius:50%;background:${PLAYER_DOTS[winner.idx]};box-shadow:0 0 10px ${PLAYER_DOTS[winner.idx]}"></span>
+        <span style="font-family:var(--f-title);font-size:24px;color:var(--text)">${winner.name}</span>
+        <span style="font-family:var(--f-disp);font-size:20px;color:var(--coin)">${winner.total}점</span>
+      </div>
+    </div>
+
+    ${divider('최종 순위', 'var(--violet)')}
+    <div class="panel" style="padding:0;overflow:hidden;margin-bottom:20px">
+      <table class="score-table">
+        <thead><tr><th>순위</th><th>플레이어</th><th>최종 점수</th></tr></thead>
+        <tbody>
+          ${sorted.map((p,rank) => `
+          <tr class="${rank===0?'winner':''}">
+            <td>${['🥇','🥈','🥉'][rank]||'🎮'}</td>
+            <td style="display:flex;align-items:center;gap:6px">
+              <span style="width:9px;height:9px;border-radius:50%;background:${PLAYER_DOTS[p.idx]};flex-shrink:0"></span>
+              ${p.name}
+            </td>
+            <td style="color:var(--coin);font-weight:800">${p.total}점</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn-ghost" onclick="S.screen='intro';G=null;render()" style="flex:1">🚪 홈으로</button>
+      <button class="btn" style="flex:1.4;font-size:18px" onclick="startGame()">🔄 다시 하기</button>
+    </div>
+    <p class="pix" style="font-size:8px;color:var(--faint);text-align:center;margin-top:18px;line-height:1.8">GOOD GAME · 한 판 더?</p>
+  </div>`;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render() {
+  const root = document.getElementById('root');
+  let html = '';
+  if (S.screen === 'intro')     html = renderIntro();
+  else if (S.screen === 'setup')    html = renderSetup();
+  else if (S.screen === 'privacy')  html = renderPrivacy();
+  else if (S.screen === 'game')     html = renderGame();
+  else if (S.screen === 'round-end') html = renderRoundEnd();
+  else if (S.screen === 'game-end') html = renderGameEnd();
+  root.innerHTML = html;
+  if (S.pendingCast) root.insertAdjacentHTML('beforeend', renderCastOverlay());
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+function goSetup() {
+  S.screen = 'setup';
+  render();
+}
+
+function startGame() {
+  // read names from inputs if on setup screen
+  const { playerCount, playerNames, goalScore } = S.setup;
+  for (let i = 0; i < playerCount; i++) {
+    const inp = document.getElementById(`pname${i}`);
+    if (inp && inp.value.trim()) S.setup.playerNames[i] = inp.value.trim();
+  }
+  G = {
+    players: S.setup.playerNames.slice(0, playerCount).map((name, i) => ({
+      name, dot: PLAYER_DOTS[i], hp: 0, tiles: [], secretRevealed: [], memo: {}, usedICansee: false, eliminated: false,
+    })),
+    scores: Array(playerCount).fill(0),
+    deck: [], secretPile: [],
+    maxHp: 6,
+    round: 1,
+    turn: 0,
+    currentIdx: 0,
+    combo: null,
+    log: [],
+  };
+  ENGINE.initRound(G);
+  S.screen = 'privacy';
+  S.selectedSpell = null;
+  S.pendingCast = null;
+  S.lastResult = null;
+  render();
+}
+
+function selectSpell(num) {
+  S.selectedSpell = S.selectedSpell === num ? null : num;
+  render();
+}
+
+function declareSell() {
+  if (S.selectedSpell === null) return;
+  const num = S.selectedSpell;
+  if (!ENGINE.canDeclare(G, G.currentIdx, num)) return;
+  const { success } = ENGINE.resolveDeclaration(G, G.currentIdx, num);
+  S.lastResult = { success, num };
+  S.selectedSpell = null;
+
+  if (success) {
+    const sp = spellOf(num);
+    const result = ENGINE.applyEffect(G, num, G.currentIdx, -1);
+    S.pendingCast = { spell: sp, ...result };
+    render();
+  } else {
+    // fail → show overlay briefly then go to next turn
+    S.pendingCast = { spell: { num, kr:'빗나감', emoji:'💨', color:'var(--dim)', effect:'빗나감! 체력 -1 후 턴 종료' }, lines:['체력 -1. 턴 종료.'], diceRoll: null, revealedTile: null };
+    render();
+  }
+}
+
+
+function closeCast() {
+  const wasSuccess = S.lastResult && S.lastResult.success;
+  S.pendingCast = null;
+  if (!wasSuccess) {
+    doEndTurn();
+  } else {
+    if (ENGINE.checkRoundEnd(G)) {
+      endRound();
+    } else {
+      S.screen = 'game';
+      S.lastResult = null;
+      render();
+    }
+  }
+}
+
+function endTurn() {
+  doEndTurn();
+}
+
+function doEndTurn() {
+  ENGINE.endTurn(G); // draw tiles + advance to next living player
+  if (ENGINE.checkRoundEnd(G)) {
+    endRound();
+    return;
+  }
+  S.screen = 'privacy';
+  S.selectedSpell = null;
+  S.lastResult = null;
+  render();
+}
+
+function endRound() {
+  S.roundScores = ENGINE.scoreRound(G);
+  S.screen = 'round-end';
+  render();
+}
+
+function nextRound() {
+  G.round++;
+  ENGINE.initRound(G);
+  S.screen = 'privacy';
+  S.selectedSpell = null;
+  S.pendingCast = null;
+  S.lastResult = null;
+  render();
+}
+
+function showGameEnd() {
+  S.screen = 'game-end';
+  render();
+}
+
+function cycleMemo(num) {
+  const p = G.players[G.currentIdx];
+  p.memo[num] = ((p.memo[num] || 0) + 1) % 3;
+  render();
+}
+
+function confirmQuit() {
+  if (confirm('게임을 종료하고 홈으로 돌아갑니까?')) {
+    G = null;
+    S.screen = 'intro';
+    S.pendingCast = null;
+      render();
+  }
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+render();
+</script>
+</body>
+</html>

@@ -19,6 +19,18 @@ import {
   GameState, Card, OpenAuction, FixedAuction, SecretAuction, OnceAroundAuction,
 } from '@/lib/modern-art/types';
 
+// ─── 작품명 추출 ──────────────────────────────────────────────
+function getArtworkTitle(artistId: string, artworkIndex: number): string {
+  const artist = getArtistById(artistId);
+  const src = artist.images[artworkIndex % artist.images.length];
+  if (!src) return '';
+  const filename = (src.split('/').pop() ?? '').replace(/\.[^.]+$/, '');
+  const prefixes = ['yugi', 'digimon', 'digmon', 'pokemon', 'indi', 'nintendo'];
+  const parts = filename.split('-');
+  const startIdx = prefixes.includes(parts[0]) ? 1 : 0;
+  return parts.slice(startIdx).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+}
+
 // ─── 작품 이미지 ──────────────────────────────────────────────
 function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   artistId: string; avatar: string; artworkIndex: number; className?: string;
@@ -76,8 +88,17 @@ function ArtCard({ card, selected, onClick, dimmed }: {
         <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>{artist.name}</span>
       </div>
       {/* 이미지 */}
-      <div style={{ flex: 1, width: '100%', overflow: 'hidden', background: artist.color + '12' }}>
+      <div style={{ flex: 1, width: '100%', overflow: 'hidden', background: artist.color + '12', position: 'relative' }}>
         <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.72))',
+          padding: '10px 4px 3px',
+        }}>
+          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 8, color: 'white', textAlign: 'center', fontWeight: 700, lineHeight: 1.2 }}>
+            {getArtworkTitle(card.artistId, card.artworkIndex)}
+          </div>
+        </div>
       </div>
       {/* 경매 타입 푸터 바 */}
       <div style={{
@@ -100,22 +121,25 @@ function MarketBoard({ roundMarket, artistValues, compact = false }: {
 }) {
   if (compact) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {ARTISTS.map(a => {
           const count = roundMarket[a.id] ?? 0;
           const value = artistValues[a.id] ?? 0;
           const pct = (count / 5) * 100;
           const isClose = count >= 4;
+          const isDone = count >= 5;
+          const barColor = isDone ? 'var(--red)' : isClose ? '#ff8800' : a.color;
           return (
-            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 15, width: 24, textAlign: 'center', flexShrink: 0 }}>{a.avatar}</span>
+            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14, width: 20, textAlign: 'center', flexShrink: 0 }}>{a.avatar}</span>
+              <span style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: a.color, fontWeight: 700, width: 46, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ height: 5, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 3, background: isClose ? 'var(--red)' : a.color, width: `${pct}%`, transition: 'width .5s' }} />
+                  <div style={{ height: '100%', borderRadius: 3, background: barColor, width: `${pct}%`, transition: 'width .5s' }} />
                 </div>
               </div>
-              <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: isClose ? 'var(--red)' : 'var(--faint)', width: 26, textAlign: 'right', flexShrink: 0 }}>
-                {count}/5
+              <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: isDone ? 'var(--red)' : isClose ? '#ff8800' : 'var(--faint)', width: 22, textAlign: 'right', flexShrink: 0 }}>
+                {isDone ? '⚠️' : `${count}/5`}
               </span>
               {value > 0
                 ? <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, fontWeight: 700, color: a.color, width: 28, textAlign: 'right', flexShrink: 0 }}>{value}M</span>
@@ -135,17 +159,24 @@ function MarketBoard({ roundMarket, artistValues, compact = false }: {
         const value = artistValues[a.id] ?? 0;
         const pct = (count / 5) * 100;
         const isClose = count >= 4;
+        const isDone = count >= 5;
+        const barColor = isDone ? 'var(--red)' : isClose ? '#ff8800' : a.color;
         return (
           <div key={a.id} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            padding: 8, borderRadius: 12, background: a.color + '15',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '8px 6px', borderRadius: 12,
+            background: isDone ? 'rgba(255,60,60,0.1)' : a.color + '15',
+            border: `1px solid ${isDone ? 'rgba(255,60,60,0.3)' : isClose ? a.color + '50' : a.color + '20'}`,
           }}>
-            <span style={{ fontSize: 22 }}>{a.avatar}</span>
+            <span style={{ fontSize: 20 }}>{a.avatar}</span>
+            <span style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: isDone ? 'var(--red)' : a.color, fontWeight: 700, textAlign: 'center', lineHeight: 1.2 }}>{a.name}</span>
             <div style={{ width: '100%', height: 4, background: 'var(--surface-3)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 2, background: isClose ? 'var(--red)' : a.color, width: `${pct}%` }} />
+              <div style={{ height: '100%', borderRadius: 2, background: barColor, width: `${pct}%`, transition: 'width .4s' }} />
             </div>
-            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: isClose ? 'var(--red)' : 'var(--text-2)' }}>{count}/5</span>
-            {value > 0 && <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, fontWeight: 900, color: a.color }}>{value}M</span>}
+            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: isDone ? 'var(--red)' : isClose ? '#ff8800' : 'var(--text-2)' }}>
+              {isDone ? '⚠️ 종료' : `${count}/5`}
+            </span>
+            {value > 0 && <span style={{ fontFamily: 'var(--f-pix)', fontSize: 9, fontWeight: 900, color: a.color }}>{value}M</span>}
           </div>
         );
       })}
@@ -396,7 +427,7 @@ function ModernArtGame() {
   if (phase === 'double-select-second') {
     const firstCardId = gs.pendingDoubleCardId!;
     const firstCard = currentPlayer.hand.find(c => c.id === firstCardId)!;
-    const sameArtist = currentPlayer.hand.filter(c => c.id !== firstCardId && c.artistId === firstCard.artistId);
+    const sameArtist = currentPlayer.hand.filter(c => c.id !== firstCardId && c.artistId === firstCard.artistId && c.auctionType !== 'double');
     return (
       <GameLayout gs={gs}>
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
@@ -457,8 +488,17 @@ function ModernArtGame() {
                   <span style={{ fontSize: 11 }}>{a.avatar}</span>
                   <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, color: '#000' }}>{a.name}</span>
                 </div>
-                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5' }}>
+                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5', position: 'relative' }}>
                   <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+                    padding: '12px 5px 3px',
+                  }}>
+                    <div style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: 'white', textAlign: 'center', fontWeight: 700, lineHeight: 1.2 }}>
+                      {getArtworkTitle(card.artistId, card.artworkIndex)}
+                    </div>
+                  </div>
                 </div>
                 <div style={{
                   background: AUCTION_TYPE_COLORS[card.auctionType] + 'cc', padding: '4px 8px',
@@ -793,8 +833,17 @@ function ModernArtGame() {
                   <span style={{ fontSize: 11 }}>{a.avatar}</span>
                   <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, color: '#000' }}>{a.name}</span>
                 </div>
-                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5' }}>
+                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5', position: 'relative' }}>
                   <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+                    padding: '12px 5px 3px',
+                  }}>
+                    <div style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: 'white', textAlign: 'center', fontWeight: 700, lineHeight: 1.2 }}>
+                      {getArtworkTitle(card.artistId, card.artworkIndex)}
+                    </div>
+                  </div>
                 </div>
               </div>
             );

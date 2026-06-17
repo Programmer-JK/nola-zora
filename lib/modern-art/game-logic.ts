@@ -61,11 +61,12 @@ export function selectCard(state: GameState, cardId: string): GameState {
   if (!card) return state;
 
   if (card.auctionType === 'double') {
-    const sameArtist = player.hand.filter(c => c.id !== cardId && c.artistId === card.artistId);
+    // 두 번째 카드는 같은 작가이면서 더블이 아닌 카드만 허용
+    const sameArtist = player.hand.filter(c => c.id !== cardId && c.artistId === card.artistId && c.auctionType !== 'double');
     if (sameArtist.length > 0) {
       return { ...state, pendingDoubleCardId: cardId, phase: 'double-select-second' };
     }
-    // 같은 작가 카드 없으면 공개 경매로 처리
+    // 유효한 두 번째 카드 없으면 공개 경매로 처리
     return beginAuction(state, [card]);
   }
 
