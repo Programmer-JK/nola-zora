@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ARTISTS, AUCTION_TYPE_ICONS, AUCTION_TYPE_LABELS, AUCTION_TYPE_COLORS, STARTING_CASH } from '@/lib/modern-art/game-data';
+import { ARTISTS, AUCTION_TYPE_ICONS, AUCTION_TYPE_COLORS, STARTING_CASH } from '@/lib/modern-art/game-data';
 import { AuctionType } from '@/lib/modern-art/types';
 import { loginGuest, getGuestNickname } from '@/lib/auth';
 import { createRoom, joinRoom } from '@/lib/modern-art/firebase-game';
@@ -14,11 +14,11 @@ const MIN_PLAYERS = 2;
 const AUCTION_TYPES: AuctionType[] = ['open', 'fixed', 'secret', 'once-around', 'double'];
 
 const AUCTION_RULES: Record<AuctionType, { desc: string; detail: string }> = {
-  open:          { desc: '공개 경매', detail: '시계 방향으로 돌아가며 입찰. 더 높은 금액을 부르거나 패스. 마지막 남은 사람이 낙찰.' },
-  fixed:         { desc: '지정가 경매', detail: '판매자가 가격을 먼저 정함. 다른 플레이어가 순서대로 수락/거절. 모두 거절하면 판매자가 해당 가격에 직접 구매.' },
-  secret:        { desc: '비밀 경매', detail: '모든 플레이어가 동시에 비밀 입찰. 공개 후 최고가 낙찰. 동점이면 판매자에 가까운 순.' },
+  open: { desc: '공개 경매', detail: '시계 방향으로 돌아가며 입찰. 더 높은 금액을 부르거나 패스. 마지막 남은 사람이 낙찰.' },
+  fixed: { desc: '지정가 경매', detail: '판매자가 가격을 먼저 정함. 다른 플레이어가 순서대로 수락/거절. 모두 거절하면 판매자가 해당 가격에 직접 구매.' },
+  secret: { desc: '비밀 경매', detail: '모든 플레이어가 동시에 비밀 입찰. 공개 후 최고가 낙찰. 동점이면 판매자에 가까운 순.' },
   'once-around': { desc: '한 바퀴 경매', detail: '판매자 다음 플레이어부터 딱 한 번씩만 입찰 기회. 판매자는 마지막에 모든 입찰을 이기거나 공짜로 가져갈 수 있음.' },
-  double:        { desc: '더블 경매', detail: '같은 작가 카드 2장을 동시에 경매에 올림. 경매 방식은 2번째 카드의 타입을 따름. 낙찰자는 2장 모두 획득.' },
+  double: { desc: '더블 경매', detail: '같은 작가 카드 2장을 동시에 경매에 올림. 경매 방식은 2번째 카드의 타입을 따름. 낙찰자는 2장 모두 획득.' },
 };
 
 function RulesModal({ onClose }: { onClose: () => void }) {
@@ -286,61 +286,48 @@ export default function ModernArtSetup() {
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
       <div className="crt" />
 
-      <div className="arc-screen">
-        {/* 헤더 */}
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 0 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link href="/lobby" className="arc-btn-ghost" style={{ fontSize: 13, padding: '8px 13px' }}>
-              ← 로비
+      <div className="arc-screen" style={{ '--c': 'var(--cyan)' } as React.CSSProperties}>
+        {/* 상단 바 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px' }}>
+          <Link href="/lobby" className="arc-btn-ghost" style={{ fontSize: 13, padding: '9px 14px' }}>
+            ← 로비
+          </Link>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Link href="/modern-art/rules" className="arc-btn-ghost" style={{ fontSize: 13, padding: '9px 14px' }}>
+              📖 규칙
             </Link>
-            <div>
-              <div style={{ fontFamily: 'var(--f-title)', fontSize: 22 }}>모던 아트</div>
-              <div className="pix neon-cyan" style={{ fontSize: 7, letterSpacing: 1, marginTop: 3 }}>AUCTION GAME</div>
-            </div>
+            <button onClick={() => setShowRules(true)} className="arc-btn-ghost" style={{ width: 40, height: 40, padding: 0, borderRadius: 11, fontSize: 16 }}>
+              ?
+            </button>
           </div>
-          <button onClick={() => setShowRules(true)} className="arc-btn-ghost" style={{ fontSize: 13, padding: '8px 13px' }}>
-            게임 설명 ?
-          </button>
-        </header>
+        </div>
 
-        {/* 게임 소개 패널 */}
-        <div className="arc-panel ticks arc-pop" style={{ padding: '18px 16px', marginTop: 16 }}>
-          <div style={{ height: 4, background: 'linear-gradient(90deg, var(--cyan), transparent)', marginBottom: 14, borderRadius: 2 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 38 }}>🎨</span>
-            <div>
-              <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--text)' }}>작품 투자 경매 게임</div>
-              <p style={{ color: 'var(--dim)', fontSize: 12, margin: '4px 0 0', lineHeight: 1.4 }}>서브컬처 작가 작품을 경매로 사고팔아 최고 자산가가 되세요</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-            {ARTISTS.map(a => (
-              <span key={a.id} className="arc-chip" style={{ fontSize: 11, padding: '4px 10px', color: a.color, borderColor: a.color + '50', background: a.color + '18' }}>
-                {a.avatar} {a.name}
-              </span>
-            ))}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6, marginTop: 10 }}>
-            {AUCTION_TYPES.map(t => (
-              <span key={t} className="arc-chip" style={{ fontSize: 11, padding: '5px 10px', gap: 5 }}>
-                <span>{AUCTION_TYPE_ICONS[t]}</span>
-                <span>{AUCTION_TYPE_LABELS[t]}</span>
-              </span>
-            ))}
+        {/* 게임 히어로 */}
+        <div className="arc-pop" style={{ textAlign: 'center', margin: '12px 0 22px' }}>
+          <div className="arc-float" style={{ fontSize: 56, lineHeight: 1 }}>🎨</div>
+          <h1 className="neon-cyan" style={{ fontFamily: 'var(--f-disp)', fontSize: 40, letterSpacing: 1, margin: '6px 0 2px' }}>
+            MODERN ART
+          </h1>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 20, color: 'var(--text)' }}>모던 아트</div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+            <Link href="/modern-art/rules">
+              <span className="arc-chip" style={{ cursor: 'pointer', display: 'inline-flex' }}>📖 게임 방법</span>
+            </Link>
+            <span className="arc-chip" style={{ cursor: 'pointer', display: 'inline-flex' }} onClick={() => setShowRules(true)}>💡 게임 설명</span>
           </div>
         </div>
 
         {/* 모드 탭 */}
-        <div className="arc-seg arc-rise" style={{ marginTop: 18, animationDelay: '.05s' }}>
+        <div className="arc-seg" style={{ marginBottom: 18 }}>
           {(['local', 'online'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)} className={mode === m ? 'on' : ''}>
-              {m === 'local' ? '🖥️ 로컬' : '🌐 온라인'}
+              {m === 'local' ? '🖥️ 로컬 플레이' : '🌐 온라인'}
             </button>
           ))}
         </div>
 
         {/* 라운드 설정 */}
-        <div className="arc-panel arc-rise" style={{ padding: '16px', marginTop: 12, animationDelay: '.08s' }}>
+        <div className="arc-panel arc-rise" style={{ padding: '16px', marginBottom: 12 }}>
           <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>라운드 수</span>
           <div className="arc-seg">
             {[3, 4, 5].map(r => (
@@ -350,16 +337,20 @@ export default function ModernArtSetup() {
         </div>
 
         {/* 모드별 UI */}
-        <div className="arc-panel ticks arc-rise" style={{ padding: '20px 18px', marginTop: 12, animationDelay: '.12s' }}>
+        <div className="arc-panel ticks arc-rise" style={{ padding: '20px 18px', animationDelay: '.08s' }}>
           {mode === 'local'
-            ? <LocalSetup rounds={rounds} setRounds={setRounds} />
+            ? <LocalSetup rounds={rounds} />
             : <OnlineSetup rounds={rounds} />
           }
         </div>
 
-        <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 24, lineHeight: 1.8 }}>
-          BID · COLLECT · WIN
-        </p>
+        {/* 하단 info */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
+          <span className="arc-chip" style={{ fontSize: 11 }}>🎨 작가 5명</span>
+          <span className="arc-chip" style={{ fontSize: 11 }}>🏷️ 경매 5종</span>
+          <span className="arc-chip" style={{ fontSize: 11 }}>👥 2~5명</span>
+          <span className="arc-chip" style={{ fontSize: 11 }}>💰 {STARTING_CASH}만원</span>
+        </div>
       </div>
     </div>
   );

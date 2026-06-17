@@ -57,7 +57,7 @@ export function sanitizeGameState(raw: unknown): GameState {
     }
     if (a.type === 'secret') {
       const sa = a as SecretAuction;
-      return { ...sa, cards, bidOrder: toArr(sa.bidOrder) };
+      return { ...sa, cards, bidOrder: toArr(sa.bidOrder), bids: sa.bids ?? {} };
     }
     if (a.type === 'once-around') {
       const oa = a as OnceAroundAuction;

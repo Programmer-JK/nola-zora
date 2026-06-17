@@ -25,7 +25,9 @@ function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   artistId: string; avatar: string; artworkIndex: number; className?: string;
 }) {
   const [err, setErr] = useState(false);
-  if (err) {
+  const artist = getArtistById(artistId);
+  const src = artist.images[artworkIndex % artist.images.length];
+  if (err || !src) {
     return (
       <div className={`flex items-center justify-center ${className ?? ''}`}>
         <span className="text-5xl">{avatar}</span>
@@ -34,7 +36,7 @@ function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   }
   return (
     <img
-      src={`/modern-art/${artistId}/${artworkIndex}.png`}
+      src={src}
       alt={`${artistId}-${artworkIndex}`}
       className={`object-cover ${className ?? ''}`}
       onError={() => setErr(true)}
@@ -51,7 +53,7 @@ function ArtCard({ card, selected, onClick, dimmed }: {
     <button
       onClick={onClick}
       disabled={dimmed}
-      className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-200 w-full aspect-[3/4]
+      className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-200 w-full aspect-[3/5]
         ${selected ? 'scale-105 shadow-2xl' : ''}
         ${dimmed ? 'opacity-30 cursor-not-allowed' : 'hover:scale-105 hover:shadow-xl active:scale-95 cursor-pointer'}
       `}
@@ -60,19 +62,20 @@ function ArtCard({ card, selected, onClick, dimmed }: {
         boxShadow: selected ? `0 0 24px ${artist.color}50` : undefined,
       }}
     >
-      <div className="flex-1 w-full relative"
-        style={{ background: `linear-gradient(145deg, ${artist.color}28, ${artist.color}08)` }}>
-        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-        <span
-          className="absolute top-1.5 right-1.5 text-[11px] px-1.5 py-0.5 rounded-full font-bold backdrop-blur-sm"
-          style={{ background: auctionColor + '99', color: 'white', border: `1px solid ${auctionColor}` }}
-        >
-          {AUCTION_TYPE_ICONS[card.auctionType]}
-        </span>
+      {/* 작가 헤더 바 */}
+      <div className="flex items-center gap-1 flex-shrink-0" style={{ padding: '5px 8px', background: artist.color, color: '#000' }}>
+        <span style={{ fontSize: 12 }}>{artist.avatar}</span>
+        <span className="font-black text-[11px] leading-none" style={{ fontFamily: 'var(--f-kr)' }}>{artist.name}</span>
       </div>
-      <div className="px-2 py-1.5 flex-shrink-0 text-left" style={{ background: `${artist.color}20` }}>
-        <div className="text-xs font-black leading-tight truncate" style={{ color: artist.color }}>{artist.name}</div>
-        <div className="text-[10px] text-white/40">{AUCTION_TYPE_LABELS[card.auctionType]}</div>
+      {/* 이미지 */}
+      <div className="flex-1 w-full overflow-hidden" style={{ background: artist.color + '12' }}>
+        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+      </div>
+      {/* 경매 타입 푸터 바 */}
+      <div className="flex items-center justify-center gap-1 flex-shrink-0 text-white"
+        style={{ padding: '4px 8px', background: auctionColor + 'cc' }}>
+        <span style={{ fontSize: 11 }}>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
+        <span className="font-bold text-[10px]" style={{ fontFamily: 'var(--f-kr)' }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
       </div>
     </button>
   );
@@ -168,7 +171,7 @@ function AuctionCardDisplay({ cards }: { cards: Card[] }) {
               boxShadow: `0 0 60px ${artist.color}35, 0 8px 32px ${artist.color}20`,
               width: isDouble ? '140px' : '180px',
             }}>
-            <div className="flex-1 w-full relative" style={{ aspectRatio: '3/4', background: `linear-gradient(145deg, ${artist.color}28, ${artist.color}08)` }}>
+            <div className="flex-1 w-full relative" style={{ aspectRatio: '3/5', background: `linear-gradient(145deg, ${artist.color}28, ${artist.color}08)` }}>
               <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
               <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full font-bold"
                 style={{ background: auctionColor + 'cc', color: 'white' }}>
@@ -186,9 +189,36 @@ function AuctionCardDisplay({ cards }: { cards: Card[] }) {
   );
 }
 
+// ─── 미니 카드 (사이드바용) ───────────────────────────────────
+function MiniArtCard({ card }: { card: Card }) {
+  const artist = getArtistById(card.artistId);
+  const auctionColor = AUCTION_TYPE_COLORS[card.auctionType];
+  return (
+    <div style={{
+      borderRadius: 6, border: `1.5px solid ${artist.color}60`,
+      overflow: 'hidden', aspectRatio: '3/5',
+      display: 'flex', flexDirection: 'column',
+      background: artist.color + '10',
+    }}>
+      <div style={{ background: artist.color, padding: '2px 4px', fontSize: 9, lineHeight: 1.2, flexShrink: 0 }}>
+        {artist.avatar}
+      </div>
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+      </div>
+      <div style={{ background: auctionColor + 'cc', padding: '2px 4px', fontSize: 8, textAlign: 'center', flexShrink: 0 }}>
+        {AUCTION_TYPE_ICONS[card.auctionType]}
+      </div>
+    </div>
+  );
+}
+
 // ─── 게임 레이아웃 (온라인용: 모든 플레이어 강조 없음) ────────
 function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: string; children: ReactNode }) {
+  const [handOpen, setHandOpen] = useState(false);
   const currentPlayer = gs.players[gs.currentPlayerIndex];
+  const myPlayer = gs.players.find(p => p.clientId === myClientId) ?? null;
+
   return (
     <div className="min-h-screen bg-[#0d0d1a] flex flex-col">
       <header className="border-b border-white/10 bg-black/30 px-4 md:px-6 py-3 flex items-center gap-4 flex-shrink-0">
@@ -224,6 +254,12 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
                       {collVal > 0 && <span className="text-white/35 text-[10px]">+{collVal}</span>}
                     </div>
                     <div className="text-white/25 text-[10px] mt-0.5">패 {p.hand.length}장 · 수집 {p.collection.length}장</div>
+                    {/* 내 패 미니 카드 */}
+                    {isMe && p.hand.length > 0 && (
+                      <div className="grid grid-cols-4 gap-1 mt-2">
+                        {p.hand.map(card => <MiniArtCard key={card.id} card={card} />)}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -234,8 +270,26 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
             <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} />
           </div>
         </aside>
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
       </div>
+
+      {/* 모바일 하단 내 패 토글 */}
+      {myPlayer && myPlayer.hand.length > 0 && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
+          <button
+            onClick={() => setHandOpen(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-t border-white/10"
+          >
+            <span className="text-white/60 text-sm font-semibold">내 패 ({myPlayer.hand.length}장)</span>
+            <span className="text-white/30 text-xs">{handOpen ? '▼ 닫기' : '▲ 보기'}</span>
+          </button>
+          {handOpen && (
+            <div className="bg-[#1a1a2e] border-t border-white/8 px-3 py-3 grid grid-cols-5 gap-2 max-h-52 overflow-y-auto">
+              {myPlayer.hand.map(card => <MiniArtCard key={card.id} card={card} />)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -460,6 +514,19 @@ export default function OnlineModernArtGame() {
     );
   }
 
+  // ─── 턴 커버 (온라인: 현재 플레이어가 자동 진행) ───────────
+  if (phase === 'turn-cover') {
+    if (isMyTurn) {
+      perform(s => ({ ...s, phase: 'select-card' as const }));
+      return null;
+    }
+    return (
+      <GameLayout gs={gs} myClientId={myClientId}>
+        <WaitingForPlayer name={currentPlayer.name} detail="다음 턴 준비 중..." />
+      </GameLayout>
+    );
+  }
+
   // ─── 경매 화면 ─────────────────────────────────────────────
   if (phase === 'auction' && currentAuction) {
     const seller = getPlayerById(gs, currentAuction.sellerId)!;
@@ -613,10 +680,10 @@ export default function OnlineModernArtGame() {
       }
 
       // 결과 공개
-      const entries = Object.entries(a.bids).map(([id, bid]) => ({
-        player: getPlayerById(gs, id)!,
-        bid,
-      })).sort((x, y) => y.bid - x.bid);
+      const entries = Object.entries(a.bids)
+        .map(([id, bid]) => ({ player: getPlayerById(gs, id), bid }))
+        .filter((e): e is { player: NonNullable<typeof e.player>; bid: number } => e.player != null)
+        .sort((x, y) => y.bid - x.bid);
 
       return (
         <GameLayout gs={gs} myClientId={myClientId}>

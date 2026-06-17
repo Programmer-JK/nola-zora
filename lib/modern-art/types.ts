@@ -10,6 +10,7 @@ export type Artist = {
   name: string;
   avatar: string;
   color: string;
+  images: string[];
 };
 
 export type Card = {

@@ -64,10 +64,8 @@ function GameCard({ game, onPick }: { game: (typeof GAMES)[number]; onPick: () =
         transform: hover ? 'translateY(-3px)' : 'none',
       }}
     >
-      {/* accent top edge */}
       <div style={{ height: 5, background: `linear-gradient(90deg, ${game.accentHex}, transparent)` }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 18px' }}>
-        {/* emoji token */}
         <div style={{
           width: 64, height: 64, borderRadius: 16, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -122,44 +120,64 @@ export default function LobbyPage() {
       <div className="crt" />
 
       <div className="arc-screen">
-        {/* Header */}
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 0 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* 상단 바 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 46, height: 46, borderRadius: 13, overflow: 'hidden',
-              background: '#f3edcf', border: '2px solid rgba(255,255,255,.6)',
-              boxShadow: '0 0 0 2px rgba(0,0,0,.4)', flexShrink: 0,
+              width: 36, height: 36, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+              background: '#f3edcf', border: '1.5px solid rgba(255,255,255,.5)',
+              boxShadow: '0 0 0 2px rgba(0,0,0,.35)',
             }}>
               <img src="/icon.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <div style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
-              <div style={{ fontFamily: 'var(--f-title)', fontSize: 23, lineHeight: 1.1 }}>놀아조라</div>
-              <div className="pix" style={{ fontSize: 7.5, color: 'var(--gold)', marginTop: 6, letterSpacing: 1 }}>ARCADE</div>
+            <div>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 20, lineHeight: 1.1 }}>놀아조라</div>
+              <div className="pix neon-gold" style={{ fontSize: 7, letterSpacing: 1, marginTop: 2 }}>ARCADE</div>
             </div>
           </div>
-          <button className="arc-btn-ghost" onClick={handleLogout} style={{ fontSize: 13, padding: '9px 14px' }}>
-            로그아웃
-          </button>
-        </header>
-
-        {/* Welcome chip */}
-        <div className="arc-chip" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
-          <span style={{ fontSize: 15 }}>👋</span>
-          <span style={{ color: 'var(--text)' }}>{nickname}</span>
-          <span style={{ color: 'var(--dim)' }}>님 어서오세요</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontFamily: 'var(--f-kr)', fontSize: 12, color: 'var(--dim)' }}>{nickname}</span>
+            <button className="arc-btn-ghost" onClick={handleLogout} style={{ fontSize: 13, padding: '9px 14px' }}>
+              로그아웃
+            </button>
+          </div>
         </div>
 
-        {/* Section label */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0 14px' }}>
+        {/* 히어로 */}
+        <div className="arc-pop" style={{ textAlign: 'center', margin: '14px 0 24px' }}>
+          <div className="arc-float" style={{ lineHeight: 1, marginBottom: 10 }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: 20, overflow: 'hidden', margin: '0 auto',
+              background: '#f3edcf', border: '2.5px solid rgba(255,255,255,.7)',
+              boxShadow: '0 0 0 3px rgba(0,0,0,.4), 0 12px 28px -8px rgba(0,0,0,.7), 0 0 32px -6px rgba(255,183,43,.35)',
+            }}>
+              <img src="/icon.png" alt="놀아조라" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+          </div>
+          <h1 style={{ fontFamily: 'var(--f-title)', fontSize: 38, margin: '10px 0 2px', color: 'var(--text)', lineHeight: 1, letterSpacing: 1 }}>
+            놀아조라
+          </h1>
+          <div style={{ fontFamily: 'var(--f-disp)', fontSize: 14, letterSpacing: 3 }} className="neon-gold">
+            ARCADE
+          </div>
+          <div className="arc-chip" style={{ display: 'inline-flex', marginTop: 12, gap: 6 }}>
+            <span style={{ fontSize: 14 }}>👋</span>
+            <span style={{ color: 'var(--text)', fontWeight: 700 }}>{nickname}</span>
+            <span style={{ color: 'var(--dim)' }}>님 어서오세요</span>
+          </div>
+        </div>
+
+        {/* 게임 목록 레이블 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
           <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>03</span>
         </div>
 
-        {/* Game cards */}
+        {/* 게임 카드 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {GAMES.map((g, i) => (
-            <div key={g.id} style={{ animationDelay: `${i * 0.08}s` }}>
+            <div key={g.id} className="arc-rise" style={{ animationDelay: `${i * 0.08}s` }}>
               <GameCard game={g} onPick={() => router.push(g.href)} />
             </div>
           ))}

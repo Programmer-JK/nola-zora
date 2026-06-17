@@ -24,7 +24,9 @@ function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   artistId: string; avatar: string; artworkIndex: number; className?: string;
 }) {
   const [err, setErr] = useState(false);
-  if (err) {
+  const artist = getArtistById(artistId);
+  const src = artist.images[artworkIndex % artist.images.length];
+  if (err || !src) {
     return (
       <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ fontSize: 48 }}>{avatar}</span>
@@ -33,7 +35,7 @@ function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   }
   return (
     <img
-      src={`/modern-art/${artistId}/${artworkIndex}.png`}
+      src={src}
       alt={`${artistId}-${artworkIndex}`}
       className={className}
       style={{ objectFit: 'cover' }}
@@ -55,7 +57,7 @@ function ArtCard({ card, selected, onClick, dimmed }: {
       style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
         borderRadius: 16, border: `2px solid ${selected ? artist.color : artist.color + '50'}`,
-        overflow: 'hidden', width: '100%', aspectRatio: '3/4',
+        overflow: 'hidden', width: '100%', aspectRatio: '3/5',
         cursor: dimmed ? 'not-allowed' : 'pointer', appearance: 'none', padding: 0,
         background: 'transparent',
         boxShadow: selected ? `0 0 24px ${artist.color}50` : undefined,
@@ -64,21 +66,27 @@ function ArtCard({ card, selected, onClick, dimmed }: {
         transition: 'transform .2s, box-shadow .2s, opacity .2s',
       }}
     >
-      <div style={{ flex: 1, width: '100%', position: 'relative', background: `linear-gradient(145deg, ${artist.color}28, ${artist.color}08)` }}>
-        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-        <span style={{
-          position: 'absolute', top: 6, right: 6, fontSize: 11, padding: '2px 6px',
-          borderRadius: 99, fontWeight: 700,
-          background: auctionColor + '99', color: 'white', border: `1px solid ${auctionColor}`,
-        }}>
-          {AUCTION_TYPE_ICONS[card.auctionType]}
-        </span>
+      {/* 작가 헤더 바 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        padding: '5px 8px', flexShrink: 0,
+        background: artist.color, color: '#000',
+      }}>
+        <span style={{ fontSize: 12 }}>{artist.avatar}</span>
+        <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>{artist.name}</span>
       </div>
-      <div style={{ padding: '6px 8px', flexShrink: 0, textAlign: 'left', background: `${artist.color}20` }}>
-        <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 900, color: artist.color, lineHeight: 1.2 }}>
-          {artist.name}
-        </div>
-        <div style={{ fontSize: 10, color: 'var(--faint)' }}>{AUCTION_TYPE_LABELS[card.auctionType]}</div>
+      {/* 이미지 */}
+      <div style={{ flex: 1, width: '100%', overflow: 'hidden', background: artist.color + '12' }}>
+        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+      </div>
+      {/* 경매 타입 푸터 바 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+        padding: '4px 8px', flexShrink: 0,
+        background: auctionColor + 'cc', color: 'white',
+      }}>
+        <span style={{ fontSize: 11 }}>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
+        <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700 }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
       </div>
     </button>
   );
@@ -257,133 +265,31 @@ function BidInput({ minBid, maxBid, onSubmit, label = '입찰' }: {
   );
 }
 
-// ─── 경매 중 카드 표시 ────────────────────────────────────────
-function AuctionCardDisplay({ cards }: { cards: Card[] }) {
-  const isDouble = cards.length === 2;
-  return (
-    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', padding: '8px 0' }}>
-      {cards.map((card, idx) => {
-        const artist = getArtistById(card.artistId);
-        const auctionColor = AUCTION_TYPE_COLORS[card.auctionType];
-        return (
-          <div key={card.id} style={{
-            borderRadius: 20, border: `2px solid ${idx === 0 && isDouble ? artist.color + 'aa' : artist.color}`,
-            overflow: 'hidden', flexShrink: 0, display: 'flex', flexDirection: 'column',
-            boxShadow: `0 0 60px ${artist.color}35, 0 8px 32px ${artist.color}20`,
-            width: isDouble ? 140 : 180,
-          }}>
-            <div style={{ flex: 1, position: 'relative', aspectRatio: '3/4', background: `linear-gradient(145deg, ${artist.color}28, ${artist.color}08)` }}>
-              <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-              <span style={{
-                position: 'absolute', top: 8, right: 8, fontSize: 12, padding: '2px 6px',
-                borderRadius: 99, fontWeight: 700, background: auctionColor + 'cc', color: 'white',
-              }}>
-                {AUCTION_TYPE_ICONS[card.auctionType]}
-              </span>
-            </div>
-            <div style={{ padding: '8px 12px', textAlign: 'center', background: `${artist.color}20` }}>
-              <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 13, color: artist.color }}>{artist.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 2 }}>{AUCTION_TYPE_LABELS[card.auctionType]}</div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// ─── 플레이어 상태 행 (경매용) ───────────────────────────────
+function PlayerRow({ name, cash, status, accentColor, sub }: {
+  name: string; cash: number;
+  status: 'current' | 'winner' | 'passed' | 'waiting' | 'seller';
+  accentColor?: string; sub?: string;
+}) {
+  const icon = status === 'current' ? '▶' : status === 'winner' ? '👑' : status === 'seller' ? '🎨' : status === 'passed' ? '—' : '○';
+  const borderColor = status === 'current' ? (accentColor ? accentColor + '70' : 'rgba(255,183,43,0.5)')
+    : status === 'winner' ? 'rgba(100,220,100,0.35)' : 'var(--line)';
+  const bg = status === 'current' ? (accentColor ? accentColor + '14' : 'rgba(255,183,43,0.10)')
+    : status === 'winner' ? 'rgba(100,220,100,0.07)' : 'var(--surface-2)';
+  const nameColor = status === 'current' ? (accentColor ?? 'var(--gold)') : status === 'passed' ? 'var(--faint)' : 'var(--text)';
 
-// ─── 보조 컴포넌트들 ──────────────────────────────────────────
-function AuctionHeader({ icon, label, sellerName, color }: { icon: string; label: string; sellerName: string; color?: string }) {
-  return (
-    <div className="arc-panel-inset" style={{
-      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-      borderColor: color ? color + '40' : 'var(--line)',
-      background: color ? color + '10' : undefined,
-    }}>
-      <span style={{ fontSize: 28 }}>{icon}</span>
-      <div>
-        <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 15, color: 'var(--text)' }}>{label}</div>
-        <div style={{ color: 'var(--dim)', fontSize: 12, marginTop: 2 }}>판매자: {sellerName}</div>
-      </div>
-    </div>
-  );
-}
-
-function CurrentBidDisplay({ bid, winnerName }: { bid: number; winnerName?: string }) {
-  return (
-    <div className="arc-panel-inset" style={{ padding: '14px', textAlign: 'center' }}>
-      <span className="arc-lbl" style={{ display: 'block', marginBottom: 4 }}>현재 최고 입찰</span>
-      <span style={{ fontFamily: 'var(--f-title)', fontSize: 42, color: 'var(--gold)' }}>{bid}M</span>
-      {winnerName
-        ? <div style={{ color: 'var(--dim)', fontSize: 13, marginTop: 4 }}>by {winnerName}</div>
-        : <div style={{ color: 'var(--faint)', fontSize: 13, marginTop: 4 }}>아직 입찰 없음</div>
-      }
-    </div>
-  );
-}
-
-function PlayerTurnBanner({ name, cash, badge }: { name: string; cash: number; badge?: string }) {
   return (
     <div style={{
-      background: 'rgba(255,183,43,0.08)', border: '1.5px solid rgba(255,183,43,0.28)',
-      borderRadius: 'var(--r)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12,
+      border: `1.5px solid ${borderColor}`, background: bg,
+      opacity: status === 'passed' ? 0.4 : 1, transition: 'all .2s',
     }}>
-      <div>
-        <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 15, color: 'var(--gold)' }}>{name}{badge ? ` ${badge}` : ''}</div>
-        <div style={{ color: 'var(--dim)', fontSize: 12, marginTop: 2 }}>의 차례</div>
+      <span style={{ fontSize: 17, width: 22, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 700, fontSize: 13, color: nameColor }}>{name}</div>
+        {sub && <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 1 }}>{sub}</div>}
       </div>
-      <div style={{ textAlign: 'right' }}>
-        <div style={{ color: 'var(--green)', fontWeight: 900, fontSize: 20 }}>{cash}M</div>
-        <div style={{ color: 'var(--faint)', fontSize: 10 }}>보유</div>
-      </div>
-    </div>
-  );
-}
-
-function ActiveBidders({ playerIds, players, currentId }: {
-  playerIds: string[]; players: GameState['players']; currentId: string;
-}) {
-  return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {playerIds.map(id => {
-        const p = players.find(pl => pl.id === id)!;
-        const isCurrent = id === currentId;
-        return (
-          <span key={id} className="arc-chip" style={{
-            fontSize: 12,
-            color: isCurrent ? 'var(--gold)' : 'var(--dim)',
-            borderColor: isCurrent ? 'rgba(255,183,43,0.4)' : 'var(--line)',
-            background: isCurrent ? 'rgba(255,183,43,0.1)' : 'var(--surface-2)',
-          }}>
-            {isCurrent && <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8 }}>▶ </span>}{p.name}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-function OnceAroundProgress({ bidOrder, currentIdx, players }: {
-  bidOrder: string[]; currentIdx: number; players: GameState['players'];
-}) {
-  return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {bidOrder.map((id, i) => {
-        const p = players.find(pl => pl.id === id)!;
-        const done = i < currentIdx;
-        const current = i === currentIdx;
-        return (
-          <span key={id} className="arc-chip" style={{
-            fontSize: 12,
-            color: current ? 'var(--gold)' : done ? 'var(--faint)' : 'var(--dim)',
-            borderColor: current ? 'rgba(255,183,43,0.4)' : 'var(--line)',
-            background: current ? 'rgba(255,183,43,0.1)' : 'var(--surface-2)',
-            textDecoration: done ? 'line-through' : undefined,
-          }}>
-            {current && <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8 }}>▶ </span>}{p.name}
-          </span>
-        );
-      })}
+      <span style={{ color: 'var(--green)', fontWeight: 900, fontSize: 13, flexShrink: 0 }}>{cash}M</span>
     </div>
   );
 }
@@ -392,6 +298,7 @@ function OnceAroundProgress({ bidOrder, currentIdx, players }: {
 function ModernArtGame() {
   const searchParams = useSearchParams();
   const [gs, setGs] = useState<GameState | null>(null);
+  const [secretCoverFor, setSecretCoverFor] = useState<string | null>(null);
 
   useEffect(() => {
     const playerParam = searchParams.get('players') ?? '플레이어 1,플레이어 2';
@@ -412,6 +319,24 @@ function ModernArtGame() {
 
   const currentPlayer = getCurrentPlayer(gs);
   const { phase, currentAuction, lastAuctionResult, roundEndArtistId } = gs;
+
+  // ─── 비밀 경매 기기 전달 화면 ──────────────────────────────
+  if (secretCoverFor) {
+    return (
+      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28, padding: 24 }}>
+        <div className="crt" />
+        <div className="arc-panel ticks" style={{ padding: '32px 28px', textAlign: 'center', maxWidth: 340, width: '100%' }}>
+          <div style={{ fontSize: 44, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'var(--dim)', marginBottom: 8 }}>기기를 전달하세요</div>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 34, color: 'var(--cyan)', marginBottom: 6 }}>{secretCoverFor}</div>
+          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 14, color: 'var(--text-2)' }}>님이 준비되면 버튼을 누르세요</div>
+        </div>
+        <button onClick={() => setSecretCoverFor(null)} className="arc-btn" style={{ maxWidth: 340, width: '100%', fontSize: 18 }}>
+          준비됐어요 →
+        </button>
+      </div>
+    );
+  }
 
   // ─── 턴 커버 ───────────────────────────────────────────────
   if (phase === 'turn-cover') {
@@ -494,166 +419,329 @@ function ModernArtGame() {
   // ─── 경매 ──────────────────────────────────────────────────
   if (phase === 'auction' && currentAuction) {
     const seller = getPlayerById(gs, currentAuction.sellerId)!;
+    const auctionColor = AUCTION_TYPE_COLORS[currentAuction.type];
+    const auctionIcon = AUCTION_TYPE_ICONS[currentAuction.type];
+    const auctionLabel = AUCTION_TYPE_LABELS[currentAuction.type];
+    const aCards = (currentAuction as OpenAuction | FixedAuction | SecretAuction | OnceAroundAuction).cards;
 
-    // 공개 / 더블
+    // 공통: 경매 타입 헤더 + 카드
+    const auctionTopBar = (
+      <>
+        <div className="crt" />
+        <div style={{
+          background: auctionColor + '18', borderBottom: `2px solid ${auctionColor}35`,
+          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 26 }}>{auctionIcon}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 16, color: auctionColor }}>{auctionLabel}</div>
+            <div style={{ color: 'var(--dim)', fontSize: 12 }}>판매자: {seller.name}</div>
+          </div>
+          <div style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: 'var(--faint)' }}>R{gs.round}/{gs.maxRounds}</div>
+        </div>
+        <div style={{
+          background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid var(--line)',
+          padding: '14px 16px', display: 'flex', justifyContent: 'center', gap: 14, flexShrink: 0,
+        }}>
+          {aCards.map((card, idx) => {
+            const a = getArtistById(card.artistId);
+            const isDouble = aCards.length === 2;
+            return (
+              <div key={card.id} style={{
+                width: isDouble ? 108 : 148, borderRadius: 14,
+                border: `2px solid ${idx === 0 && isDouble ? a.color + '70' : a.color}`,
+                overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                boxShadow: `0 0 40px ${a.color}30, 0 4px 16px ${a.color}18`,
+              }}>
+                <div style={{ background: a.color, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11 }}>{a.avatar}</span>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, color: '#000' }}>{a.name}</span>
+                </div>
+                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5' }}>
+                  <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+                </div>
+                <div style={{
+                  background: AUCTION_TYPE_COLORS[card.auctionType] + 'cc', padding: '4px 8px',
+                  textAlign: 'center', display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: 11 }}>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
+                  <span style={{ color: '#fff', fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700 }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </>
+    );
+
+    // ── 공개 / 더블 ─────────────────────────────────────────
     if (currentAuction.type === 'open' || currentAuction.type === 'double') {
       const a = currentAuction as OpenAuction;
       const currentBidderId = a.activeBidderIds[a.currentBidderIndex];
       const currentBidder = getPlayerById(gs, currentBidderId)!;
-      const isWinner = a.currentWinnerId === currentBidderId;
-      const auctionColor = AUCTION_TYPE_COLORS[a.type];
-      const label = a.type === 'double' ? '더블 경매' : '공개 경매';
-      const icon = a.type === 'double' ? '🎴' : '📣';
-      return (
-        <GameLayout gs={gs}>
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <AuctionHeader icon={icon} label={label} sellerName={seller.name} color={auctionColor} />
-            <AuctionCardDisplay cards={a.cards} />
-            <CurrentBidDisplay bid={a.currentBid} winnerName={a.currentWinnerId ? getPlayerById(gs, a.currentWinnerId)?.name : undefined} />
-            <PlayerTurnBanner name={currentBidder.name} cash={currentBidder.cash} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <BidInput minBid={a.currentBid + 1} maxBid={currentBidder.cash} onSubmit={v => update(s => openBid(s, v))} />
-              {isWinner ? (
-                <button onClick={() => update(s => openStand(s))} className="arc-btn" style={{ background: 'linear-gradient(180deg, var(--green) 0%, #5aaa3a 100%)', boxShadow: '0 6px 0 0 #3a7a20', color: '#0a1f04' }}>
-                  ✅ 낙찰 확정 ({a.currentBid}M)
-                </button>
-              ) : (
-                <button onClick={() => update(s => openPass(s))} className="arc-btn-ghost">패스</button>
-              )}
-            </div>
-            <ActiveBidders playerIds={a.activeBidderIds} players={gs.players} currentId={currentBidderId} />
-          </div>
-        </GameLayout>
-      );
-    }
+      const isCurrentWinner = a.currentWinnerId === currentBidderId;
 
-    // 지정가
-    if (currentAuction.type === 'fixed') {
-      const a = currentAuction as FixedAuction;
-      const fixedColor = AUCTION_TYPE_COLORS['fixed'];
-      if (a.subPhase === 'setting') {
-        const sellerPlayer = getPlayerById(gs, a.sellerId)!;
-        return (
-          <GameLayout gs={gs}>
-            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <AuctionHeader icon="🏷️" label="지정가 경매" sellerName={seller.name} color={fixedColor} />
-              <AuctionCardDisplay cards={a.cards} />
-              <div className="arc-panel-inset" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, borderColor: fixedColor + '40' }}>
-                <span style={{ fontSize: 20 }}>💰</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 700, color: 'var(--text)' }}>{sellerPlayer.name}</div>
-                  <div style={{ color: 'var(--dim)', fontSize: 12 }}>판매 가격을 설정하세요</div>
-                </div>
-                <span style={{ color: 'var(--faint)', fontSize: 12 }}>{sellerPlayer.cash}M 보유</span>
-              </div>
-              <BidInput minBid={1} maxBid={999} onSubmit={v => update(s => fixedSetPrice(s, v))} label="가격 설정" />
-            </div>
-          </GameLayout>
-        );
-      }
-      const nonSellers = gs.players.filter(p => p.id !== a.sellerId);
-      const offerTo = nonSellers[a.currentOfferIndex];
       return (
-        <GameLayout gs={gs}>
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <AuctionHeader icon="🏷️" label="지정가 경매" sellerName={seller.name} color={fixedColor} />
-            <AuctionCardDisplay cards={a.cards} />
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+          {auctionTopBar}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 최고 입찰 */}
             <div className="arc-panel-inset" style={{ padding: '14px', textAlign: 'center' }}>
-              <span className="arc-lbl" style={{ display: 'block', marginBottom: 4 }}>지정 가격</span>
-              <span style={{ fontFamily: 'var(--f-title)', fontSize: 42, color: 'var(--gold)' }}>{a.fixedPrice}M</span>
+              <div className="arc-lbl" style={{ marginBottom: 4 }}>최고 입찰</div>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 38, color: 'var(--gold)', lineHeight: 1 }}>{a.currentBid}M</div>
+              <div style={{ color: 'var(--dim)', fontSize: 12, marginTop: 4 }}>
+                {a.currentWinnerId ? `👑 ${getPlayerById(gs, a.currentWinnerId)?.name}` : '아직 입찰 없음'}
+              </div>
             </div>
-            <PlayerTurnBanner name={offerTo.name} cash={offerTo.cash} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => update(s => fixedAccept(s))} className="arc-btn" style={{ background: 'linear-gradient(180deg, var(--green) 0%, #5aaa3a 100%)', boxShadow: '0 6px 0 0 #3a7a20', color: '#0a1f04', fontSize: 18 }}>
-                💰 구매 ({a.fixedPrice}M)
-              </button>
-              <button onClick={() => update(s => fixedDecline(s))} className="arc-btn-ghost">거절</button>
+            {/* 입찰 현황 */}
+            <div className="arc-lbl">입찰 현황</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {gs.players.map(p => {
+                const isSeller = p.id === a.sellerId;
+                const isActive = a.activeBidderIds.includes(p.id);
+                const isCurrent = p.id === currentBidderId;
+                const isWinner = p.id === a.currentWinnerId;
+                const passed = !isSeller && !isActive;
+                const status = isCurrent ? 'current' : isSeller ? 'seller' : passed ? 'passed' : isWinner ? 'winner' : 'waiting';
+                const sub = isCurrent ? '입찰 중' : isSeller ? '판매자' : passed ? '패스' : isWinner ? '현재 낙찰자' : '대기';
+                return <PlayerRow key={p.id} name={p.name} cash={p.cash} status={status} sub={sub} accentColor={auctionColor} />;
+              })}
             </div>
-            {nonSellers.slice(a.currentOfferIndex + 1).length > 0 && (
-              <p style={{ color: 'var(--faint)', fontSize: 12, textAlign: 'center', margin: 0 }}>
-                다음 제안: {nonSellers.slice(a.currentOfferIndex + 1).map(p => p.name).join(', ')}
-              </p>
+            {/* 액션 */}
+            <BidInput minBid={a.currentBid + 1} maxBid={currentBidder.cash} onSubmit={v => update(s => openBid(s, v))} />
+            {isCurrentWinner ? (
+              <button onClick={() => update(s => openStand(s))} className="arc-btn" style={{
+                background: 'linear-gradient(180deg, var(--green) 0%, #5aaa3a 100%)',
+                boxShadow: '0 6px 0 0 #3a7a20', color: '#0a1f04', fontSize: 18,
+              }}>✅ 낙찰 확정 ({a.currentBid}M)</button>
+            ) : (
+              <button onClick={() => update(s => openPass(s))} className="arc-btn-ghost">패스</button>
             )}
           </div>
-        </GameLayout>
+        </div>
       );
     }
 
-    // 비밀
+    // ── 지정가 ──────────────────────────────────────────────
+    if (currentAuction.type === 'fixed') {
+      const a = currentAuction as FixedAuction;
+      const nonSellers = gs.players.filter(p => p.id !== a.sellerId);
+
+      if (a.subPhase === 'setting') {
+        return (
+          <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            {auctionTopBar}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{
+                background: auctionColor + '10', border: `1.5px solid ${auctionColor}35`,
+                borderRadius: 'var(--r)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <span style={{ fontSize: 24 }}>🎨</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 15, color: auctionColor }}>{seller.name}</div>
+                  <div style={{ color: 'var(--dim)', fontSize: 12 }}>판매 가격을 설정하세요</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ color: 'var(--green)', fontWeight: 900 }}>{seller.cash}M</div>
+                  <div style={{ color: 'var(--faint)', fontSize: 10 }}>보유</div>
+                </div>
+              </div>
+              <div className="arc-lbl">제안 순서</div>
+              {nonSellers.map((p, idx) => (
+                <PlayerRow key={p.id} name={p.name} cash={p.cash} status="waiting" sub={`${idx + 1}번째 제안`} />
+              ))}
+              <BidInput minBid={1} maxBid={999} onSubmit={v => update(s => fixedSetPrice(s, v))} label="가격 설정" />
+            </div>
+          </div>
+        );
+      }
+
+      const offerTo = nonSellers[a.currentOfferIndex];
+      return (
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+          {auctionTopBar}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 지정 가격 */}
+            <div className="arc-panel-inset" style={{ padding: '14px', textAlign: 'center' }}>
+              <div className="arc-lbl" style={{ marginBottom: 4 }}>지정 가격</div>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 48, color: auctionColor, lineHeight: 1 }}>{a.fixedPrice}M</div>
+            </div>
+            {/* 제안 현황 */}
+            <div className="arc-lbl">제안 현황</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {nonSellers.map((p, idx) => {
+                const isCurrent = idx === a.currentOfferIndex;
+                const done = idx < a.currentOfferIndex;
+                const status = isCurrent ? 'current' : done ? 'passed' : 'waiting';
+                const sub = isCurrent ? '결정 중' : done ? '거절' : '대기';
+                return <PlayerRow key={p.id} name={p.name} cash={p.cash} status={status} sub={sub} accentColor={auctionColor} />;
+              })}
+              <PlayerRow name={seller.name} cash={seller.cash} status="seller" sub="판매자 (모두 거절 시 가져감)" />
+            </div>
+            {/* 액션 */}
+            <button
+              onClick={() => update(s => fixedAccept(s))}
+              disabled={offerTo.cash < a.fixedPrice}
+              className="arc-btn"
+              style={{ background: 'linear-gradient(180deg, var(--green) 0%, #5aaa3a 100%)', boxShadow: '0 6px 0 0 #3a7a20', color: '#0a1f04', fontSize: 18 }}
+            >💰 구매 ({a.fixedPrice}M)</button>
+            <button onClick={() => update(s => fixedDecline(s))} className="arc-btn-ghost">거절</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── 비밀 경매 ───────────────────────────────────────────
     if (currentAuction.type === 'secret') {
       const a = currentAuction as SecretAuction;
       const secretColor = AUCTION_TYPE_COLORS['secret'];
+
       if (a.subPhase === 'collecting') {
         const bidderId = a.bidOrder[a.currentBidderIndex];
         const bidder = getPlayerById(gs, bidderId)!;
         return (
-          <GameLayout gs={gs}>
-            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <AuctionHeader icon="🤫" label="비밀 경매" sellerName={seller.name} color={secretColor} />
-              <AuctionCardDisplay cards={a.cards} />
-              <PlayerTurnBanner name={bidder.name} cash={bidder.cash} />
-              <p className="arc-panel-inset" style={{ padding: '12px 16px', color: 'var(--dim)', fontSize: 13, textAlign: 'center', margin: 0 }}>
-                다른 플레이어가 보지 못하게 입찰 금액을 입력하세요
-              </p>
-              <BidInput minBid={0} maxBid={bidder.cash} onSubmit={v => update(s => secretSubmitBid(s, v))} label="비밀 입찰" />
-              {a.currentBidderIndex > 0 && (
-                <p style={{ color: 'var(--faint)', fontSize: 12, textAlign: 'center', margin: 0 }}>
-                  완료: {a.bidOrder.slice(0, a.currentBidderIndex).map(id => getPlayerById(gs, id)?.name).join(', ')}
-                </p>
-              )}
+          <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            {auctionTopBar}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* 입찰 진행 현황 */}
+              <div className="arc-lbl">비밀 입찰 현황</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {a.bidOrder.map((id, idx) => {
+                  const p = getPlayerById(gs, id)!;
+                  const done = idx < a.currentBidderIndex;
+                  const isCurrent = idx === a.currentBidderIndex;
+                  const status = isCurrent ? 'current' : done ? 'passed' : 'waiting';
+                  const sub = done ? '🔒 입찰 완료' : isCurrent ? '입찰 중' : '대기';
+                  return <PlayerRow key={id} name={p.name} cash={p.cash} status={status} sub={sub} accentColor={secretColor} />;
+                })}
+                <PlayerRow name={seller.name} cash={seller.cash} status="seller" sub="판매자 (입찰 불가)" />
+              </div>
+              {/* 안내 */}
+              <div style={{
+                background: secretColor + '10', border: `1.5px solid ${secretColor}30`,
+                borderRadius: 'var(--r)', padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start',
+              }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>🤫</span>
+                <div style={{ color: 'var(--dim)', fontSize: 12, lineHeight: 1.6 }}>
+                  <b style={{ color: 'var(--text)' }}>{bidder.name}</b>님,<br />
+                  다른 플레이어가 보지 않도록 비밀로 입찰하세요.
+                </div>
+              </div>
+              <BidInput
+                minBid={0}
+                maxBid={bidder.cash}
+                label="비밀 입찰"
+                onSubmit={v => {
+                  const nextIdx = a.currentBidderIndex + 1;
+                  if (nextIdx < a.bidOrder.length) {
+                    const nextP = getPlayerById(gs, a.bidOrder[nextIdx]);
+                    if (nextP) setSecretCoverFor(nextP.name);
+                  }
+                  update(s => secretSubmitBid(s, v));
+                }}
+              />
             </div>
-          </GameLayout>
+          </div>
         );
       }
-      const entries = Object.entries(a.bids).map(([id, bid]) => ({ player: getPlayerById(gs, id)!, bid })).sort((x, y) => y.bid - x.bid);
+
+      // 공개 단계
+      const entries = Object.entries(a.bids)
+        .map(([id, bid]) => ({ player: getPlayerById(gs, id), bid }))
+        .filter((e): e is { player: NonNullable<typeof e.player>; bid: number } => e.player != null)
+        .sort((x, y) => y.bid - x.bid);
       return (
-        <GameLayout gs={gs}>
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <AuctionHeader icon="🤫" label="비밀 경매 — 결과 공개" sellerName={seller.name} color={secretColor} />
-            <AuctionCardDisplay cards={a.cards} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {entries.map((e, i) => (
-                <div key={e.player.id} className="arc-panel-inset" style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px',
-                  borderColor: i === 0 ? 'rgba(255,183,43,0.4)' : 'var(--line)',
-                  background: i === 0 ? 'rgba(255,183,43,0.08)' : undefined,
-                }}>
-                  <span style={{ fontFamily: 'var(--f-kr)', fontWeight: 700, color: i === 0 ? 'var(--gold)' : 'var(--dim)' }}>
-                    {i === 0 && '🏆 '}{e.player.name}
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+          {auctionTopBar}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="arc-lbl">비밀 입찰 공개</div>
+            {entries.map((e, i) => (
+              <div key={e.player.id} className="arc-panel-inset" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px',
+                borderColor: i === 0 ? 'rgba(255,183,43,0.4)' : 'var(--line)',
+                background: i === 0 ? 'rgba(255,183,43,0.08)' : undefined,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>{i === 0 ? '🏆' : '  '}</span>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontWeight: 700, fontSize: 14, color: i === 0 ? 'var(--gold)' : 'var(--dim)' }}>
+                    {e.player.name}
                   </span>
-                  <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: i === 0 ? 'var(--gold)' : 'var(--faint)' }}>{e.bid}M</span>
                 </div>
-              ))}
-            </div>
-            <button onClick={() => update(s => secretResolve(s))} className="arc-btn" style={{ fontSize: 16 }}>낙찰 확정</button>
+                <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: i === 0 ? 'var(--gold)' : 'var(--faint)' }}>{e.bid}M</span>
+              </div>
+            ))}
+            <button onClick={() => update(s => secretResolve(s))} className="arc-btn" style={{ fontSize: 16, marginTop: 4 }}>
+              낙찰 확정
+            </button>
           </div>
-        </GameLayout>
+        </div>
       );
     }
 
-    // 한 바퀴
+    // ── 한 바퀴 경매 ────────────────────────────────────────
     if (currentAuction.type === 'once-around') {
       const a = currentAuction as OnceAroundAuction;
       const currentOfferId = a.bidOrder[a.currentOfferIndex];
       const currentOfferPlayer = getPlayerById(gs, currentOfferId)!;
       const isSeller = currentOfferId === a.sellerId;
       const onceColor = AUCTION_TYPE_COLORS['once-around'];
+      const winnerName = a.currentWinnerId ? getPlayerById(gs, a.currentWinnerId)?.name : undefined;
+
       return (
-        <GameLayout gs={gs}>
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <AuctionHeader icon="🔄" label="한 바퀴 경매" sellerName={seller.name} color={onceColor} />
-            <AuctionCardDisplay cards={a.cards} />
-            <CurrentBidDisplay bid={a.currentBid} winnerName={a.currentWinnerId ? getPlayerById(gs, a.currentWinnerId)?.name : undefined} />
-            <PlayerTurnBanner name={currentOfferPlayer.name} cash={currentOfferPlayer.cash} badge={isSeller ? '(판매자)' : undefined} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <BidInput minBid={a.currentBid + 1} maxBid={currentOfferPlayer.cash} onSubmit={v => update(s => onceAroundBid(s, v))} />
-              <button onClick={() => update(s => onceAroundPass(s))} className="arc-btn-ghost">
-                {isSeller && !a.currentWinnerId ? '가져가기 (공짜)' : '패스'}
-              </button>
+        <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+          {auctionTopBar}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 최고 입찰 */}
+            <div className="arc-panel-inset" style={{ padding: '14px', textAlign: 'center' }}>
+              <div className="arc-lbl" style={{ marginBottom: 4 }}>최고 입찰</div>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 38, color: onceColor, lineHeight: 1 }}>{a.currentBid}M</div>
+              <div style={{ color: 'var(--dim)', fontSize: 12, marginTop: 4 }}>
+                {winnerName ? `👑 ${winnerName}` : '아직 입찰 없음'}
+              </div>
             </div>
-            <OnceAroundProgress bidOrder={a.bidOrder} currentIdx={a.currentOfferIndex} players={gs.players} />
+            {/* 입찰 순서 */}
+            <div className="arc-lbl">입찰 순서</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {a.bidOrder.map((id, idx) => {
+                const p = getPlayerById(gs, id)!;
+                const done = idx < a.currentOfferIndex;
+                const isCurrent = idx === a.currentOfferIndex;
+                const isSellerRow = id === a.sellerId;
+                const isWinnerRow = id === a.currentWinnerId;
+                const status = isCurrent ? 'current' : isWinnerRow && done ? 'winner' : done ? 'passed' : 'waiting';
+                const sub = isCurrent
+                  ? (isSellerRow ? '결정 중 (판매자)' : '입찰 중')
+                  : done ? (isWinnerRow ? `${a.currentBid}M 최고` : '패스')
+                  : (isSellerRow ? '판매자 — 마지막 결정' : '대기');
+                return <PlayerRow key={id} name={p.name} cash={p.cash} status={status} sub={sub} accentColor={onceColor} />;
+              })}
+            </div>
+            {/* 판매자 결정 안내 */}
+            {isSeller && (
+              <div style={{
+                background: onceColor + '10', border: `1.5px solid ${onceColor}30`,
+                borderRadius: 'var(--r)', padding: '12px 14px', fontSize: 12, color: 'var(--dim)', lineHeight: 1.6,
+              }}>
+                {!a.currentWinnerId
+                  ? '아무도 입찰하지 않았습니다. 이 작품을 무료로 가져갈 수 있습니다.'
+                  : `최고 입찰자: ${winnerName} (${a.currentBid}M)\n더 높게 입찰하거나 패스해서 낙찰시키세요.`}
+              </div>
+            )}
+            {/* 액션 */}
+            {isSeller && !a.currentWinnerId ? (
+              <button onClick={() => update(s => onceAroundPass(s))} className="arc-btn" style={{ fontSize: 18 }}>
+                🆓 무료로 가져가기
+              </button>
+            ) : (
+              <>
+                <BidInput minBid={a.currentBid + 1} maxBid={currentOfferPlayer.cash} onSubmit={v => update(s => onceAroundBid(s, v))} />
+                <button onClick={() => update(s => onceAroundPass(s))} className="arc-btn-ghost">
+                  {isSeller ? `패스 → ${winnerName ?? '—'}에게 낙찰` : '패스'}
+                </button>
+              </>
+            )}
           </div>
-        </GameLayout>
+        </div>
       );
     }
   }
@@ -674,9 +762,11 @@ function ModernArtGame() {
           </div>
         )}
         <div className="arc-panel ticks" style={{ padding: '28px 32px', textAlign: 'center', width: '100%', maxWidth: 340 }}>
-          {isNoContest ? (
+          {isNoContest || winner.id === seller.id ? (
             <>
-              <p style={{ color: 'var(--dim)', fontSize: 13, margin: '0 0 8px' }}>낙찰자 없음</p>
+              <p style={{ color: 'var(--dim)', fontSize: 13, margin: '0 0 8px' }}>
+                {isNoContest ? '낙찰자 없음' : '판매자가 직접 가져갑니다'}
+              </p>
               <div style={{ fontFamily: 'var(--f-title)', fontSize: 32, color: 'var(--gold)' }}>{seller.name}</div>
               <p style={{ color: 'var(--text-2)', margin: '4px 0 0' }}>이 가져갑니다</p>
             </>
@@ -685,13 +775,31 @@ function ModernArtGame() {
               <p style={{ color: 'var(--dim)', fontSize: 13, margin: '0 0 8px' }}>낙찰!</p>
               <div style={{ fontFamily: 'var(--f-title)', fontSize: 36, color: 'var(--gold)' }}>{winner.name}</div>
               <div style={{ fontFamily: 'var(--f-title)', fontSize: 24, color: 'var(--text-2)', marginTop: 6 }}>{lastAuctionResult.price}M</div>
-              {winner.id !== seller.id && (
-                <div style={{ color: 'var(--faint)', fontSize: 12, marginTop: 4 }}>판매자 {seller.name} +{lastAuctionResult.price}M</div>
-              )}
+              <div style={{ color: 'var(--faint)', fontSize: 12, marginTop: 4 }}>판매자 {seller.name} +{lastAuctionResult.price}M</div>
             </>
           )}
         </div>
-        <AuctionCardDisplay cards={lastAuctionResult.cards} />
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          {lastAuctionResult.cards.map(card => {
+            const a = getArtistById(card.artistId);
+            return (
+              <div key={card.id} style={{
+                width: lastAuctionResult.cards.length === 2 ? 110 : 150,
+                borderRadius: 14, border: `2px solid ${a.color}`,
+                overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                boxShadow: `0 0 40px ${a.color}30`,
+              }}>
+                <div style={{ background: a.color, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11 }}>{a.avatar}</span>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, color: '#000' }}>{a.name}</span>
+                </div>
+                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5' }}>
+                  <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
         <div style={{ width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 6 }}>
           {gs.players.map(p => (
             <div key={p.id} className="arc-panel-inset" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
