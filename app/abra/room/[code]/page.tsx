@@ -138,7 +138,7 @@ export default function AbraWaitingRoom() {
         </div>
 
         <p className="pix" style={{ fontSize: 7.5, color: 'var(--faint)', marginTop: 20 }}>
-          목표 점수: {room.goalScore}점
+          총 {room.maxRounds}라운드
         </p>
       </div>
     </div>

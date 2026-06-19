@@ -15,7 +15,7 @@ export type AbraOnlineRoom = {
   status: 'waiting' | 'playing' | 'finished';
   hostClientId: string;
   players: AbraRoomPlayer[];
-  goalScore: number;
+  maxRounds: number;
   gameState: AbraGameState | null;
   createdAt: number;
 };
@@ -39,7 +39,7 @@ export function sanitizeGameState(raw: unknown): AbraGameState {
 
   const sanitizeCast = (c: AbraCastResult | null): AbraCastResult | null => {
     if (!c) return null;
-    return { ...c, lines: toArr(c.lines) };
+    return { ...c, lines: toArr(c.lines), diceRoll: c.diceRoll ?? null, revealedTile: c.revealedTile ?? null };
   };
 
   return {
@@ -71,7 +71,7 @@ function roomRef(code: string) {
 export async function createRoom(
   hostClientId: string,
   hostName: string,
-  goalScore: number,
+  maxRounds: number,
 ): Promise<string> {
   const code = generateRoomCode();
   const room: AbraOnlineRoom = {
@@ -79,7 +79,7 @@ export async function createRoom(
     status: 'waiting',
     hostClientId,
     players: [{ clientId: hostClientId, name: hostName }],
-    goalScore,
+    maxRounds,
     gameState: null,
     createdAt: Date.now(),
   };
@@ -112,7 +112,7 @@ export async function startGame(code: string, hostClientId: string): Promise<str
   if (players.length < 2) return '최소 2명이 필요합니다.';
   const gameState = createGame(
     players.map(p => ({ name: p.name, clientId: p.clientId })),
-    room.goalScore,
+    room.maxRounds,
   );
   await update(roomRef(code), { status: 'playing', gameState });
   return null;

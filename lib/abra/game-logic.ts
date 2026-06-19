@@ -68,7 +68,7 @@ function heal(G: AbraGameState, idx: number, amt: number): number {
 
 export function createGame(
   players: { name: string; clientId: string }[],
-  goalScore: number,
+  maxRounds: number,
 ): AbraGameState {
   const n = players.length;
   const G: AbraGameState = {
@@ -89,7 +89,7 @@ export function createGame(
     currentIdx: 0,
     turn: 0,
     round: 1,
-    goalScore,
+    maxRounds,
     scores: Array(n).fill(0),
     log: [],
     pendingCast: null,
@@ -254,16 +254,15 @@ export function endTurn(G: AbraGameState) {
 export function checkRoundEnd(G: AbraGameState): boolean {
   const living = G.players.filter(p => !p.eliminated);
   if (living.length <= 1) return true;
-  if (living.some(p => p.tiles.length === 0)) return true;
+  if (living.some(p => p.tiles.length === 0 && p.secretRevealed.length === 0)) return true;
   return false;
 }
 
 export function scoreRound(G: AbraGameState): number[] {
   const n = G.players.length;
   const round = Array(n).fill(0);
-  const living = G.players.filter(p => !p.eliminated);
   G.players.forEach((p, i) => { if (!p.eliminated) round[i] += 1; });
-  G.players.forEach((p, i) => { if (!p.eliminated && p.tiles.length === 0) round[i] += 3; });
+  G.players.forEach((p, i) => { if (!p.eliminated && p.tiles.length === 0 && p.secretRevealed.length === 0) round[i] += 3; });
   G.players.forEach((p, i) => { if (p.usedICansee) round[i] += 1; });
   round.forEach((v, i) => { G.scores[i] = (G.scores[i] || 0) + v; });
   G.roundScores = round;
@@ -272,5 +271,5 @@ export function scoreRound(G: AbraGameState): number[] {
 }
 
 export function goalReached(G: AbraGameState): boolean {
-  return G.scores.some(s => s >= G.goalScore);
+  return G.round >= G.maxRounds;
 }

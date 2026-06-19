@@ -129,8 +129,8 @@ function CastOverlay({
   const isSuccess = cast.success;
   const accent = isSuccess ? sp.color : 'var(--dim)';
 
-  // 주사위가 필요한 경우 DiceRoll3D를 별도 오버레이로 표시
-  if (cast.diceRoll !== null) {
+  // 주사위가 필요한 경우 DiceRoll3D를 별도 오버레이로 표시 (1: 폭발, 3: 치유의 바람만)
+  if ((cast.spellNum === 1 || cast.spellNum === 3) && cast.diceRoll != null) {
     return (
       <DiceRoll3D
         result={cast.diceRoll}
@@ -313,6 +313,7 @@ function OnlineGame({
   const [selected, setSelected] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<{ success: boolean; num: number } | null>(null);
   const [memo, setMemo] = useState<Record<number, 0 | 1 | 2>>({});
+  const [showExitModal, setShowExitModal] = useState(false);
 
   // Sync from Firebase
   useEffect(() => {
@@ -460,14 +461,14 @@ function OnlineGame({
 
           {isHost ? (
             <button className="arc-btn arc-btn--violet" onClick={handleNextRound} style={{ fontSize: 18 }}>
-              {reached ? '🏆 최종 결과!' : `라운드 ${G.round + 1} 시작 →`}
+              {reached ? '🏆 최종 결과!' : `라운드 ${G.round + 1}/${G.maxRounds} 시작 →`}
             </button>
           ) : (
             <p className="pix blink" style={{ fontSize: 8, color: 'var(--dim)', textAlign: 'center' }}>
               호스트가 다음 라운드를 시작하길 기다리는 중...
             </p>
           )}
-          {reached && <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--violet)', marginTop: 12 }}>목표 점수 {G.goalScore}점 도달!</p>}
+          {reached && <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--violet)', marginTop: 12 }}>{G.maxRounds}라운드 종료!</p>}
         </div>
       </div>
     );
@@ -558,12 +559,28 @@ function OnlineGame({
         />
       )}
 
+      {showExitModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
+          <div className="arc-panel arc-rise" style={{ width: 280, padding: '28px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontSize: 36 }}>🚪</div>
+            <div>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--text)', marginBottom: 6 }}>게임을 나가시겠습니까?</div>
+              <div className="pix" style={{ fontSize: 8, color: 'var(--faint)', lineHeight: 1.8 }}>현재 게임 진행이 종료됩니다</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="arc-btn-ghost" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>취소</button>
+              <button className="arc-btn arc-btn--violet" onClick={onHome} style={{ flex: 1 }}>나가기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="arc-screen" style={{ paddingTop: 12, paddingBottom: 16 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0 8px' }}>
-          <button className="arc-btn-ghost" onClick={() => { if (confirm('게임을 나가시겠습니까?')) onHome(); }} style={{ fontSize: 13, padding: '8px 12px' }}>✕</button>
+          <button className="arc-btn-ghost" onClick={() => setShowExitModal(true)} style={{ fontSize: 13, padding: '8px 12px' }}>✕</button>
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <span className="pix" style={{ fontSize: 8, color: 'var(--violet)' }}>ROUND {G.round}</span>
+            <span className="pix" style={{ fontSize: 8, color: 'var(--violet)' }}>ROUND {G.round}/{G.maxRounds}</span>
             <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: isMyTurn ? 'var(--violet)' : 'var(--text)' }}>
               {isMyTurn ? '내 차례!' : `${currentPlayer.name}의 차례`}
             </div>
@@ -629,6 +646,11 @@ function OnlineGame({
                     : p.tiles.map((t, ti) => <TileChip key={ti} num={t} />)}
                   {p.secretRevealed.map((t, ti) => <SecretTile key={`s${ti}`} num={t} />)}
                 </div>
+                {p.secretRevealed.length > 0 && (
+                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 6, color: 'var(--cyan)', marginTop: 4 }}>
+                    👁 비밀 {p.secretRevealed.length}개
+                  </div>
+                )}
               </div>
             );
           })}
@@ -734,7 +756,9 @@ function OnlineGame({
         <div style={{ borderTop: '1.5px solid var(--line)', paddingTop: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span className="arc-lbl" style={{ color: 'var(--violet)' }}>내 타일 (비공개)</span>
-            <span style={{ fontSize: 12, color: 'var(--faint)' }}>총 {myPlayer.tiles.length}장</span>
+            <span style={{ fontSize: 12, color: 'var(--faint)' }}>
+              {myPlayer.tiles.length}장{myPlayer.secretRevealed.length > 0 && <span style={{ color: 'var(--cyan)' }}> +비밀 {myPlayer.secretRevealed.length}</span>}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
             {myPlayer.tiles.map((_, i) => <TileChip key={i} faceDown />)}

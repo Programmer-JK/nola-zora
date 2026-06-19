@@ -37,15 +37,15 @@ const STEPS = [
   },
   {
     title: '탈락 & 라운드 종료',
-    desc: '체력이 0이 되면 탈락합니다.\n생존자가 1명 이하가 되거나\n누군가 손패를 모두 비우면 라운드 종료!',
+    desc: '체력이 0이 되면 탈락합니다.\n생존자가 1명 이하가 되거나\n손패와 비밀의 돌을 모두 사용하면 라운드 종료!',
   },
   {
     title: '점수 계산',
-    desc: '생존: +1점\n손패 비우기: +3점\n천리안(4번 주문) 사용: +1점\n탈락자 수에 따른 생존자 보너스도 있어요!',
+    desc: '생존: +1점\n손패+비밀의 돌 모두 비우기: +3점\n천리안(4번 주문) 사용: +1점',
   },
   {
-    title: '목표 점수에 먼저 도달하면 승리!',
-    desc: '여러 라운드를 거쳐\n목표 점수에 가장 먼저 도달한 플레이어가\n최고의 마법사로 등극합니다!',
+    title: '설정한 라운드가 끝나면 최다 점수자 승리!',
+    desc: '1~4라운드 중 원하는 만큼 플레이!\n모든 라운드가 끝난 후\n가장 높은 점수의 플레이어가\n최고의 마법사로 등극합니다!',
   },
 ];
 
@@ -249,7 +249,7 @@ function Visual({ step }: { step: number }) {
           <div className="bounce-in" style={{ animationDelay: '280ms', display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
             {[
               '생존자 1명 이하 → 라운드 종료',
-              '누군가 손패 0장 → 라운드 종료',
+              '손패 + 비밀의 돌 모두 0 → 라운드 종료',
             ].map((txt) => (
               <div key={txt} style={{
                 padding: '8px 14px', borderRadius: 10, textAlign: 'center',
@@ -266,9 +266,8 @@ function Visual({ step }: { step: number }) {
     case 8: {
       const rows = [
         { icon: '❤️', label: '생존', pts: '+1' },
-        { icon: '🃏', label: '손패 비우기', pts: '+3' },
+        { icon: '🃏', label: '손패+비밀의 돌 모두 비우기', pts: '+3' },
         { icon: '👁', label: '천리안(4번) 사용', pts: '+1' },
-        { icon: '💀', label: '탈락자 보너스 (생존자에게)', pts: '+α' },
       ];
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
@@ -292,10 +291,19 @@ function Visual({ step }: { step: number }) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
           <span className="float" style={{ fontSize: 64 }}>🏆</span>
-          <div className="bounce-in" style={{ animationDelay: '200ms', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontFamily: 'var(--f-disp)', fontSize: 15, color: ACCENT }}>목표 점수</span>
-            <span style={{ fontFamily: 'var(--f-disp)', fontSize: 30, color: 'var(--coin)', textShadow: '0 0 18px rgba(255,216,77,.5)' }}>8</span>
-            <span style={{ fontFamily: 'var(--f-disp)', fontSize: 15, color: ACCENT }}>점 돌파!</span>
+          <div className="bounce-in" style={{ animationDelay: '200ms', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: n === 3 ? `${ACCENT}30` : 'rgba(255,255,255,.05)',
+                border: `1.5px solid ${n === 3 ? ACCENT : 'rgba(255,255,255,.1)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--f-disp)', fontSize: 16,
+                color: n === 3 ? ACCENT : 'var(--dim)',
+              }}>
+                {n}R
+              </div>
+            ))}
           </div>
           <div className="bounce-in" style={{ animationDelay: '400ms', display: 'flex', gap: 8 }}>
             {['🥇', '🥈', '🥉'].map((m, i) => (
@@ -308,6 +316,9 @@ function Visual({ step }: { step: number }) {
                 {m}
               </div>
             ))}
+          </div>
+          <div className="bounce-in" style={{ animationDelay: '560ms', fontSize: 12, color: 'var(--dim)' }}>
+            모든 라운드 종료 후 최다 점수자 승리
           </div>
         </div>
       );

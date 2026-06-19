@@ -6,62 +6,7 @@ import Link from 'next/link';
 import { loginGuest, getGuestNickname } from '@/lib/auth';
 import { createRoom, joinRoom } from '@/lib/abra/firebase-game';
 
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 6;
-
-function LocalSetup({ goalScore }: { goalScore: number }) {
-  const router = useRouter();
-  const [playerCount, setPlayerCount] = useState(4);
-  const [names, setNames] = useState(['플레이어 1', '플레이어 2', '플레이어 3', '플레이어 4', '플레이어 5', '플레이어 6']);
-
-  const handleStart = () => {
-    const params = new URLSearchParams({
-      players: names.slice(0, playerCount).join(','),
-      goalScore: String(goalScore),
-    });
-    router.push(`/abra/game/local?${params}`);
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>플레이어 수</span>
-        <div className="arc-seg" style={{ '--c': 'var(--violet)', '--seg-text': '#fff' } as React.CSSProperties}>
-          {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map(n => (
-            <button key={n} onClick={() => setPlayerCount(n)} className={playerCount === n ? 'on' : ''}>{n}명</button>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>플레이어 이름</span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {Array.from({ length: playerCount }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="arc-badge" style={{ background: 'var(--surface-3)', color: 'var(--dim)', flexShrink: 0 }}>{i + 1}</span>
-              <input
-                type="text"
-                value={names[i]}
-                onChange={e => { const next = [...names]; next[i] = e.target.value; setNames(next); }}
-                maxLength={10}
-                className="arc-field"
-                style={{ flex: 1, fontWeight: 600 }}
-                placeholder={`플레이어 ${i + 1}`}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <button onClick={handleStart} className="arc-btn arc-btn--violet" style={{ fontSize: 18 }}>
-        <span style={{ fontFamily: 'var(--f-pix)', fontSize: 10, marginRight: 2 }}>▶</span>
-        게임 시작
-      </button>
-    </div>
-  );
-}
-
-function OnlineSetup({ goalScore }: { goalScore: number }) {
+function OnlineSetup({ maxRounds }: { maxRounds: number }) {
   const router = useRouter();
   const [nickname, setNickname] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -77,7 +22,7 @@ function OnlineSetup({ goalScore }: { goalScore: number }) {
     if (!nickname.trim()) { setError('닉네임을 입력하세요.'); return; }
     setError(''); setLoading('create');
     const uid = await loginGuest(nickname.trim());
-    const code = await createRoom(uid, nickname.trim(), goalScore);
+    const code = await createRoom(uid, nickname.trim(), maxRounds);
     router.push(`/abra/room/${code}`);
   };
 
@@ -147,17 +92,14 @@ function OnlineSetup({ goalScore }: { goalScore: number }) {
 
       <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--faint)' }}>
         <span>🔮 2~6명</span>
-        <span>🏆 목표 점수 {goalScore}점</span>
+        <span>🏆 {maxRounds}라운드</span>
       </div>
     </div>
   );
 }
 
-type Mode = 'local' | 'online';
-
 export default function AbraSetup() {
-  const [mode, setMode] = useState<Mode>('local');
-  const [goalScore, setGoalScore] = useState(8);
+  const [maxRounds, setMaxRounds] = useState(2);
 
   return (
     <div className="cabinet">
@@ -188,31 +130,19 @@ export default function AbraSetup() {
           </div>
         </div>
 
-        {/* Mode tabs */}
-        <div className="arc-seg" style={{ marginBottom: 18, '--c': 'var(--violet)', '--seg-text': '#fff' } as React.CSSProperties}>
-          {(['local', 'online'] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)} className={mode === m ? 'on' : ''}>
-              {m === 'local' ? '🖥️ 로컬 플레이' : '🌐 온라인'}
-            </button>
-          ))}
-        </div>
-
-        {/* Goal score */}
+        {/* Round count */}
         <div className="arc-panel arc-rise" style={{ padding: 16, marginBottom: 12 }}>
-          <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>목표 점수</span>
+          <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>라운드 수</span>
           <div className="arc-seg" style={{ '--c': 'var(--violet)', '--seg-text': '#fff' } as React.CSSProperties}>
-            {[6, 8, 10].map(s => (
-              <button key={s} onClick={() => setGoalScore(s)} className={goalScore === s ? 'on' : ''}>{s}점</button>
+            {[1, 2, 3, 4].map(n => (
+              <button key={n} onClick={() => setMaxRounds(n)} className={maxRounds === n ? 'on' : ''}>{n}라운드</button>
             ))}
           </div>
         </div>
 
-        {/* Mode UI */}
+        {/* Online setup */}
         <div className="arc-panel ticks arc-rise" style={{ padding: '20px 18px', animationDelay: '.08s' }}>
-          {mode === 'local'
-            ? <LocalSetup goalScore={goalScore} />
-            : <OnlineSetup goalScore={goalScore} />
-          }
+          <OnlineSetup maxRounds={maxRounds} />
         </div>
 
         <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 24, lineHeight: 1.8 }}>

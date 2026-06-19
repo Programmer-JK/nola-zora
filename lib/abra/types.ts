@@ -48,7 +48,7 @@ export type AbraGameState = {
   currentIdx: number;
   turn: number;
   round: number;
-  goalScore: number;
+  maxRounds: number;
   scores: number[];
   log: AbraLogEntry[];
   pendingCast: AbraCastResult | null;
