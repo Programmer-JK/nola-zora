@@ -95,6 +95,7 @@ export function createGame(
     pendingCast: null,
     phase: 'game',
     roundScores: null,
+    castCounts: Array(8).fill(0),
   };
   initRound(G);
   return G;
@@ -120,6 +121,7 @@ export function initRound(G: AbraGameState) {
   G.pendingCast = null;
   G.phase = 'game';
   G.roundScores = null;
+  G.castCounts = Array(8).fill(0);
 }
 
 export function canDeclare(G: AbraGameState, playerIdx: number, num: number): boolean {
@@ -133,12 +135,19 @@ export function resolveDeclaration(
   playerIdx: number,
   num: number,
 ): { success: boolean } {
-  const success = G.players[playerIdx].tiles.includes(num);
+  const p = G.players[playerIdx];
+  const inTiles = p.tiles.includes(num);
+  const inSecret = p.secretRevealed.includes(num);
+  const success = inTiles || inSecret;
   G.turn++;
   if (success) {
-    const idx = G.players[playerIdx].tiles.indexOf(num);
-    G.players[playerIdx].tiles.splice(idx, 1);
+    if (inTiles) {
+      p.tiles.splice(p.tiles.indexOf(num), 1);
+    } else {
+      p.secretRevealed.splice(p.secretRevealed.indexOf(num), 1);
+    }
     G.combo = num;
+    G.castCounts[num - 1]++;
     addLog(G, playerIdx, `${num} 선언 → ✓ 성공! ${spellOf(num).kr}`);
   } else {
     damage(G, playerIdx, 1);
@@ -256,11 +265,6 @@ export function scoreRound(G: AbraGameState): number[] {
   G.players.forEach((p, i) => { if (!p.eliminated) round[i] += 1; });
   G.players.forEach((p, i) => { if (!p.eliminated && p.tiles.length === 0) round[i] += 3; });
   G.players.forEach((p, i) => { if (p.usedICansee) round[i] += 1; });
-  const elimCount = G.players.filter(p => p.eliminated).length;
-  if (elimCount > 0 && living.length > 0) {
-    const bonus = Math.floor((elimCount * 3) / living.length);
-    G.players.forEach((p, i) => { if (!p.eliminated) round[i] += bonus; });
-  }
   round.forEach((v, i) => { G.scores[i] = (G.scores[i] || 0) + v; });
   G.roundScores = round;
   G.phase = 'round-end';

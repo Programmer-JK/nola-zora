@@ -48,7 +48,7 @@ export function sanitizeGameState(raw: unknown): GameState {
   const sanitizeAuction = (a: AuctionState | null): AuctionState | null => {
     if (!a) return null;
     const cards = toArr((a as OpenAuction).cards);
-    if (a.type === 'open' || a.type === 'double') {
+    if (a.type === 'open') {
       const oa = a as OpenAuction;
       return { ...oa, cards, activeBidderIds: toArr(oa.activeBidderIds) };
     }

@@ -101,15 +101,20 @@ function beginAuction(state: GameState, cards: Card[]): GameState {
   const players = state.players.map(p =>
     p.id === player.id ? { ...p, hand: p.hand.filter(c => !cardIds.has(c.id)) } : p
   );
-  const type = cards[0].auctionType;
+
+  // 더블 경매(카드 2장)는 두 번째 카드 타입이 경매 방식을 결정.
+  // 더블 카드를 단독으로 낼 경우(두 번째 카드 없음)는 공개 경매로 처리.
+  const rawType = cards.length === 2 ? cards[1].auctionType : cards[0].auctionType;
+  const effectiveType = rawType === 'double' ? 'open' : rawType;
+
   const nonSellers = state.players.filter(p => p.id !== player.id).map(p => p.id);
   const sellerIdx = state.players.findIndex(p => p.id === player.id);
 
   let auction: AuctionState;
 
-  if (type === 'open' || type === 'double') {
+  if (effectiveType === 'open') {
     auction = {
-      type: type === 'double' ? 'double' : 'open',
+      type: 'open',
       cards,
       sellerId: player.id,
       currentBid: 0,
@@ -117,7 +122,16 @@ function beginAuction(state: GameState, cards: Card[]): GameState {
       activeBidderIds: nonSellers,
       currentBidderIndex: 0,
     } as OpenAuction;
-  } else if (type === 'secret') {
+  } else if (effectiveType === 'fixed') {
+    auction = {
+      type: 'fixed',
+      cards,
+      sellerId: player.id,
+      fixedPrice: 0,
+      subPhase: 'setting',
+      currentOfferIndex: 0,
+    } as FixedAuction;
+  } else if (effectiveType === 'secret') {
     // 판매자 제외, 판매자 다음 플레이어부터 순서
     const bidOrder = [
       ...state.players.slice(sellerIdx + 1).map(p => p.id),
@@ -156,7 +170,7 @@ function beginAuction(state: GameState, cards: Card[]): GameState {
 // ─── 공개/더블 경매 ──────────────────────────────────────────
 export function openBid(state: GameState, amount: number): GameState {
   const a = state.currentAuction as OpenAuction;
-  if (!a || (a.type !== 'open' && a.type !== 'double')) return state;
+  if (!a || a.type !== 'open') return state;
   if (amount <= a.currentBid) return state;
 
   const bidderId = a.activeBidderIds[a.currentBidderIndex];

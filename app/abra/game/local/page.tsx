@@ -1,13 +1,16 @@
 'use client';
 
-import { Suspense, useState, useCallback } from 'react';
+import { Suspense, useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   SPELLS, PLAYER_DOTS, spellOf,
   createGame, initRound, canDeclare, resolveDeclaration,
   applyEffect, endTurn, checkRoundEnd, scoreRound, goalReached,
 } from '@/lib/abra/game-logic';
-import { AbraGameState, AbraCastResult } from '@/lib/abra/types';
+import { AbraGameState, AbraCastResult, AbraSpell } from '@/lib/abra/types';
+import { SpellFX, DiceRoll3D } from '../_abra-fx';
+
+const TG: Record<string, string> = { all_dice:'전체', all:'전체', self_dice:'자신', self:'자신', reveal:'비밀', neighbors:'←→', left:'←', right:'→' };
 
 // ─── Shared UI ───────────────────────────────────────────────
 
@@ -35,12 +38,11 @@ function TileChip({ num, faceDown }: { num?: number; faceDown?: boolean }) {
   return (
     <div style={{
       width: 28, height: 33, borderRadius: 6,
-      border: `1.5px solid ${sp.color}`,
-      background: `color-mix(in srgb, ${sp.color} 16%, transparent)`,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+      border: `1.5px solid ${sp.color}88`,
+      background: `linear-gradient(160deg, color-mix(in srgb, ${sp.color} 22%, transparent), color-mix(in srgb, ${sp.color} 8%, transparent))`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: sp.color, lineHeight: 1 }}>{num}</span>
-      <span style={{ fontSize: 9, lineHeight: 1 }}>{sp.emoji}</span>
+      <span style={{ fontFamily: 'var(--f-disp)', fontSize: 15, color: sp.color, lineHeight: 1, textShadow: `0 0 8px ${sp.color}66` }}>{num}</span>
     </div>
   );
 }
@@ -49,13 +51,40 @@ function SecretTile({ num }: { num: number }) {
   return (
     <div style={{
       width: 28, height: 33, borderRadius: 6, border: '1.5px dashed var(--cyan)',
-      background: 'rgba(54,224,207,.1)', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 1,
+      background: 'rgba(54,224,207,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: 'var(--cyan)', lineHeight: 1 }}>{num}</span>
-      <span style={{ fontSize: 9, lineHeight: 1 }}>👁</span>
+      <span style={{ fontFamily: 'var(--f-disp)', fontSize: 15, color: 'var(--cyan)', lineHeight: 1, textShadow: '0 0 8px rgba(54,224,207,.5)' }}>{num}</span>
     </div>
   );
+}
+
+function SpellIcon({ num, size = 24 }: { num: number; size?: number }) {
+  const sp = spellOf(num);
+  const c = sp.color;
+  const svg = { width: size, height: size, viewBox: '0 0 24 24', style: { display: 'block' as const } };
+  switch (num) {
+    case 1: return <svg {...svg}><path d="M12 2 13.9 7.4 19.1 4.9 16.6 10.1 22 12 16.6 13.9 19.1 19.1 13.9 16.6 12 22 10.1 16.6 4.9 19.1 7.4 13.9 2 12 7.4 10.1 4.9 4.9 10.1 7.4Z" fill={c}/></svg>;
+    case 2: return <svg {...svg}><circle cx="12" cy="12" r="5.5" fill={c}/><ellipse cx="12" cy="12" rx="11" ry="3.8" stroke={c} strokeWidth="2" fill="none" transform="rotate(-20 12 12)"/></svg>;
+    case 3: return <svg {...svg}><path d="M2 8C6 4 10 4 12 8C14 12 18 12 22 8" stroke={c} strokeWidth="2.3" fill="none" strokeLinecap="round"/><path d="M2 14C6 10 10 10 12 14C14 18 18 18 22 14" stroke={c} strokeWidth="2.3" fill="none" strokeLinecap="round"/><path d="M5 20C8 16 11 16 14 20" stroke={c} strokeWidth="2" fill="none" strokeLinecap="round"/></svg>;
+    case 4: return <svg {...svg}><path d="M2 12C6 5.5 18 5.5 22 12C18 18.5 6 18.5 2 12Z" fill={c + '40'} stroke={c} strokeWidth="1.5"/><circle cx="12" cy="12" r="3.8" fill={c}/><circle cx="13.5" cy="10.5" r="1.3" fill="rgba(255,255,255,.55)"/></svg>;
+    case 5: return <svg {...svg}><path d="M13 2 7 12H12L9 22 18 12H13Z" fill={c}/></svg>;
+    case 6: return <svg {...svg}><line x1="12" y1="2" x2="12" y2="22" stroke={c} strokeWidth="2.5" strokeLinecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke={c} strokeWidth="2.5" strokeLinecap="round"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke={c} strokeWidth="2.5" strokeLinecap="round"/><line x1="19.1" y1="4.9" x2="4.9" y2="19.1" stroke={c} strokeWidth="2.5" strokeLinecap="round"/><circle cx="12" cy="12" r="3" fill="rgba(10,8,16,1)" stroke={c} strokeWidth="2"/></svg>;
+    case 7: return <svg {...svg}><path d="M12 2C10 6 7 9 7 14C7 18.4 9.2 22 12 22C14.8 22 17 18.4 17 14C17 9 14 6 12 2Z" fill={c}/><path d="M8 9C7 7 5 8 5 12C5 15.5 7 18 9 19" fill={c} opacity=".65"/><path d="M16 9C17 7 19 8 19 12C19 15.5 17 18 15 19" fill={c} opacity=".65"/><ellipse cx="12" cy="17.5" rx="2.8" ry="3.5" fill="rgba(255,255,255,.22)"/></svg>;
+    case 8: return <svg {...svg}><rect x="9.5" y="2" width="5" height="20" rx="2.5" fill={c}/><rect x="2" y="9.5" width="20" height="5" rx="2.5" fill={c}/></svg>;
+    default: return null;
+  }
+}
+
+function getNeighbors(players: { eliminated: boolean }[], myIdx: number) {
+  const n = players.length;
+  const alive = (i: number) => !players[i].eliminated;
+  let l = -1, r = -1;
+  for (let d = 1; d < n; d++) {
+    if (l === -1) { const j = (myIdx - d + n) % n; if (alive(j)) l = j; }
+    if (r === -1) { const j = (myIdx + d) % n; if (alive(j)) r = j; }
+    if (l !== -1 && r !== -1) break;
+  }
+  return [l, r] as [number, number];
 }
 
 function CastOverlay({
@@ -69,42 +98,73 @@ function CastOverlay({
   const isSuccess = cast.success;
   const accent = isSuccess ? sp.color : 'var(--dim)';
 
+  // 주사위가 필요한 경우 DiceRoll3D를 별도 오버레이로 표시
+  if (cast.diceRoll !== null) {
+    return (
+      <DiceRoll3D
+        result={cast.diceRoll}
+        color={sp.color}
+        caption={cast.lines[0]}
+        onDone={canClose ? onClose : undefined}
+      />
+    );
+  }
+
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 50,
+        position: 'fixed', inset: 0, zIndex: 50, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: `radial-gradient(circle at 50% 44%, color-mix(in srgb, ${accent} 18%, rgba(12,10,18,.96)) 0%, rgba(12,10,18,.97) 100%)`,
         backdropFilter: 'blur(6px)',
       }}
       onClick={canClose ? onClose : undefined}
     >
-      <div className="arc-pop" style={{ textAlign: 'center', padding: '0 28px', maxWidth: 360, width: '100%' }}>
-        <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 12, filter: isSuccess ? `drop-shadow(0 0 18px ${accent})` : 'none' }}>
-          {isSuccess ? sp.emoji : '💨'}
-        </div>
-        <div style={{ fontFamily: 'var(--f-disp)', fontSize: 22, letterSpacing: 1, color: accent, marginBottom: 4 }}>
-          {isSuccess ? sp.kr.toUpperCase() : '빗나감'}
-        </div>
-        <div style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: isSuccess ? accent : 'var(--faint)', marginBottom: 20, opacity: 0.8 }}>
-          {isSuccess ? `${sp.num} · ${sp.en}` : 'MISS'}
-        </div>
+      {/* 파티클 FX — 배경 레이어 */}
+      {isSuccess && <SpellFX num={cast.spellNum} color={sp.color} />}
 
-        {cast.diceRoll !== null && (
-          <div style={{ fontFamily: 'var(--f-disp)', fontSize: 56, color: 'var(--coin)', lineHeight: 1, marginBottom: 12, textShadow: '0 0 20px rgba(255,216,77,.6)' }}>
-            {cast.diceRoll}
-          </div>
+      <div
+        className={`arc-pop${isSuccess && (cast.spellNum === 1 || cast.spellNum === 5) ? ' abra-fx-shake' : ''}`}
+        style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '0 28px', maxWidth: 320, width: '100%' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 스펠 카드 */}
+        {isSuccess ? (
+          <>
+            <div style={{ width: 160, margin: '0 auto 16px', aspectRatio: '7/10', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: `linear-gradient(165deg, color-mix(in srgb, ${sp.color} 18%, var(--surface)) 0%, var(--bg-2) 100%)`, border: `1.5px solid color-mix(in srgb, ${sp.color} 55%, transparent)`, boxShadow: `inset 0 0 30px -10px ${sp.color}, 0 0 22px -12px ${sp.color}` }}>
+              <div style={{ height: 6, background: sp.color, flexShrink: 0 }} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontFamily: 'var(--f-disp)', fontSize: 20, color: sp.color }}>{sp.num}</span>
+                  <span className="pix" style={{ fontSize: 7, color: sp.color }}>{sp.en}</span>
+                </div>
+                <div className={`abra-cast-${cast.spellNum}`} style={{ filter: `drop-shadow(0 0 18px ${sp.color})` }}>
+                  <SpellIcon num={cast.spellNum} size={48} />
+                </div>
+                <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--text)', textAlign: 'center', lineHeight: 1.15, wordBreak: 'keep-all' }}>{sp.kr}</span>
+                <span style={{ fontSize: 11, color: 'var(--dim)', textAlign: 'center', lineHeight: 1.35, wordBreak: 'keep-all' }}>{sp.effect}</span>
+              </div>
+            </div>
+            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 18, color: sp.color, marginBottom: 12, textShadow: `0 0 18px ${sp.color}` }}>
+              ABRACA…{sp.kr.toUpperCase()}!
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 64, marginBottom: 12 }}>💨</div>
+            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 22, color: accent, marginBottom: 8 }}>빗나감</div>
+          </>
         )}
 
         {cast.revealedTile !== null && (
-          <div style={{ fontSize: 15, color: 'var(--cyan)', marginBottom: 12 }}>
-            비밀의 돌: <span style={{ fontFamily: 'var(--f-disp)', fontSize: 24 }}>{cast.revealedTile}</span>
+          <div style={{ fontSize: 14, color: 'var(--cyan)', marginBottom: 10 }}>
+            비밀의 돌: <span style={{ fontFamily: 'var(--f-disp)', fontSize: 22 }}>{cast.revealedTile}</span>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 }}>
           {cast.lines.map((l, i) => (
-            <div key={i} style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)' }}>{l}</div>
+            <div key={i} style={{ fontFamily: 'var(--f-title)', fontSize: 16, color: 'var(--text)' }}>{l}</div>
           ))}
         </div>
 
@@ -116,6 +176,84 @@ function CastOverlay({
           <p className="pix blink" style={{ fontSize: 8, color: 'var(--faint)' }}>WAITING...</p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Spell modal (bottom sheet) ─────────────────────────────
+
+function SpellModal({
+  spell, onDeclare, onClose,
+}: {
+  spell: AbraSpell;
+  onDeclare: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 40, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
+      onClick={onClose}
+    >
+      <div
+        className="arc-rise"
+        style={{
+          width: '100%', maxWidth: 480, margin: '0 auto',
+          background: 'linear-gradient(180deg, rgba(14,12,24,.99) 0%, rgba(8,8,15,1) 100%)',
+          border: `1.5px solid color-mix(in srgb, ${spell.color} 35%, rgba(255,255,255,0.07))`,
+          borderBottom: 'none', borderRadius: '22px 22px 0 0',
+          padding: '8px 20px 36px',
+          boxShadow: `0 -16px 48px color-mix(in srgb, ${spell.color} 14%, transparent)`,
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.14)', margin: '0 auto 18px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
+          <span style={{ lineHeight: 1, filter: `drop-shadow(0 0 12px ${spell.color})` }}><SpellIcon num={spell.num} size={52} /></span>
+          <div>
+            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 24, color: spell.color, letterSpacing: .5, lineHeight: 1.1 }}>
+              {spell.num} · {spell.en}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 3 }}>{spell.kr}</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 20, padding: '9px 12px', background: 'rgba(255,255,255,.03)', borderRadius: 10, border: '1px solid var(--line)' }}>
+          {spell.effect}
+        </div>
+
+        <button className="arc-btn arc-btn--violet" onClick={onDeclare} style={{ width: '100%', fontSize: 18, letterSpacing: 1 }}>
+          🪄 {spell.en.toUpperCase()}!
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Spell board (cast count tracker) ───────────────────────
+
+function SpellBoard({ castCounts }: { castCounts: number[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
+      {SPELLS.map(s => {
+        const cast = castCounts?.[s.num - 1] ?? 0;
+        const total = s.num;
+        const done = cast >= total;
+        return (
+          <div key={s.num} style={{
+            padding: '5px 3px', borderRadius: 8, textAlign: 'center',
+            border: `1px solid ${done ? 'rgba(255,255,255,0.07)' : s.color + '48'}`,
+            background: done ? 'rgba(0,0,0,.18)' : `color-mix(in srgb, ${s.color} 9%, transparent)`,
+            opacity: done ? 0.36 : 1, transition: 'opacity .3s',
+          }}>
+            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: done ? 'var(--faint)' : s.color, lineHeight: 1 }}>{s.num}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 1 }}><SpellIcon num={s.num} size={13} /></div>
+            <div style={{ fontSize: 9, color: done ? 'var(--faint)' : 'var(--dim)', fontFamily: 'var(--f-pix)', lineHeight: 1 }}>
+              {cast}/{total}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -142,11 +280,8 @@ function AbraGame({
   const myPlayer = G.players[me];
   const myMemo = memos[me] ?? {};
 
-  const cycleMemo = useCallback((num: number) => {
-    setMemos(prev => {
-      const cur = prev[me] ?? {};
-      return { ...prev, [me]: { ...cur, [num]: (((cur[num] ?? 0) + 1) % 3) as 0 | 1 | 2 } };
-    });
+  const writeMemo = useCallback((num: number, state: 0 | 1 | 2) => {
+    setMemos(prev => ({ ...prev, [me]: { ...(prev[me] ?? {}), [num]: state } }));
   }, [me]);
 
   // ── Declare ─────────────────────────────────────────────────
@@ -295,19 +430,31 @@ function AbraGame({
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((p, rank) => (
-                  <tr key={p.i} style={{ borderBottom: '1px solid var(--line)', background: rank === 0 ? 'rgba(162,116,255,.07)' : undefined }}>
-                    <td style={{ padding: '10px 12px' }}>{['🥇', '🥈', '🥉'][rank] ?? '🎮'}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: PLAYER_DOTS[p.i], flexShrink: 0, display: 'inline-block' }} />
-                        {p.name}{p.eliminated ? ' 💀' : ''}
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 12px', color: p.roundScore > 0 ? 'var(--green)' : 'var(--dim)' }}>+{p.roundScore}</td>
-                    <td style={{ padding: '10px 12px', color: 'var(--coin)', fontWeight: 800 }}>{p.total}</td>
-                  </tr>
-                ))}
+                {sorted.map((p, rank) => {
+                  const sp = !p.eliminated ? 1 : 0;
+                  const rp = p.usedICansee ? 1 : 0;
+                  const tp = Math.max(0, p.roundScore - sp - rp);
+                  return (
+                    <tr key={p.i} style={{ borderBottom: '1px solid var(--line)', background: rank === 0 ? 'rgba(162,116,255,.07)' : undefined }}>
+                      <td style={{ padding: '10px 12px' }}>{['🥇', '🥈', '🥉'][rank] ?? '🎮'}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: PLAYER_DOTS[p.i], flexShrink: 0, display: 'inline-block' }} />
+                          {p.name}{p.eliminated ? ' 💀' : ''}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <div style={{ color: p.roundScore > 0 ? 'var(--green)' : 'var(--dim)', fontWeight: 800 }}>+{p.roundScore}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
+                          {sp > 0 && <span style={{ fontSize: 7, color: 'var(--green)', background: 'rgba(126,217,87,.12)', padding: '1px 3px', borderRadius: 3 }}>생존</span>}
+                          {tp > 0 && <span style={{ fontSize: 7, color: 'var(--violet)', background: 'rgba(162,116,255,.12)', padding: '1px 3px', borderRadius: 3 }}>타일+{tp}</span>}
+                          {rp > 0 && <span style={{ fontSize: 7, color: 'var(--cyan)', background: 'rgba(54,224,207,.12)', padding: '1px 3px', borderRadius: 3 }}>천리안</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--coin)', fontWeight: 800 }}>{p.total}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -397,8 +544,8 @@ function AbraGame({
 
   // ─────────────────────────────────────────────────────────────
   // GAME SCREEN
-  const sp = selected !== null ? spellOf(selected) : null;
   const alive = G.players.filter(p => !p.eliminated).length;
+  const [leftIdx, rightIdx] = getNeighbors(G.players, me);
 
   return (
     <div className="cabinet">
@@ -409,47 +556,90 @@ function AbraGame({
         <CastOverlay cast={G.pendingCast} onClose={handleCloseCast} canClose={true} />
       )}
 
-      <div className="arc-screen" style={{ paddingTop: 12 }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0 8px' }}>
-          <button className="arc-btn-ghost" onClick={() => { if (confirm('게임을 종료하고 홈으로 돌아갑니까?')) onHome(); }} style={{ fontSize: 13, padding: '8px 12px' }}>
-            ✕
-          </button>
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <span className="pix" style={{ fontSize: 8, color: 'var(--violet)' }}>ROUND {G.round}</span>
-            <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--text)' }}>{myPlayer.name}의 차례</div>
+      {/* 주문 선언 모달 */}
+      {selected !== null && (
+        <SpellModal
+          spell={spellOf(selected)}
+          onDeclare={handleDeclare}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      <div className="arc-screen" style={{ paddingTop: 10, paddingBottom: 16 }}>
+
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0 6px' }}>
+          <button className="arc-btn-ghost" onClick={() => { if (confirm('게임을 종료하고 홈으로 돌아갑니까?')) onHome(); }} style={{ fontSize: 13, padding: '8px 12px' }}>✕</button>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="pix" style={{ fontSize: 8, color: 'var(--violet)', letterSpacing: 1 }}>R{G.round}</span>
+              <span style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)' }}>{myPlayer.name}의 차례</span>
+            </div>
+            <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+              {Array.from({ length: G.maxHp }, (_, i) => (
+                <span key={i} style={{ fontSize: 11, opacity: i < myPlayer.hp ? 1 : 0.14, lineHeight: 1 }}>❤️</span>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span className="pix" style={{ fontSize: 7, color: 'var(--faint)' }}>생존 {alive}명</span>
-            <Hearts hp={myPlayer.hp} max={G.maxHp} />
-          </div>
+          <span className="pix" style={{ fontSize: 7, color: 'var(--faint)' }}>생존 {alive}명</span>
         </div>
 
-        {/* Combo indicator */}
+        {/* 주문 현황판 */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+            <span className="arc-lbl">주문 현황</span>
+            <span className="pix" style={{ fontSize: 7, color: 'var(--faint)' }}>덱 {G.deck.length} · 비밀 {G.secretPile.length}</span>
+          </div>
+          <SpellBoard castCounts={G.castCounts} />
+        </div>
+
+        {/* 콤보 배너 */}
         {G.combo !== null && (
-          <div style={{ margin: '0 0 8px', padding: '7px 12px', borderRadius: 8, background: 'rgba(162,116,255,.1)', border: '1px solid rgba(162,116,255,.3)', fontSize: 13, color: 'var(--violet)', textAlign: 'center' }}>
-            ⚡ 콤보 진행 중 · {G.combo} 이하만 선언 가능
+          <div style={{
+            marginBottom: 8, padding: '7px 12px', borderRadius: 8,
+            background: 'rgba(162,116,255,.12)', border: '1px solid rgba(162,116,255,.32)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          }}>
+            <span style={{ fontSize: 14 }}>⚡</span>
+            <span style={{ fontSize: 13, color: 'var(--violet)' }}>콤보 진행 중</span>
+            <span style={{ fontFamily: 'var(--f-disp)', fontSize: 18, color: 'var(--violet)', lineHeight: 1 }}>{G.combo}</span>
+            <span style={{ fontSize: 12, color: 'var(--dim)' }}>이하 선언 · 또는 턴 종료</span>
           </div>
         )}
 
-        {/* Opponent cards */}
-        <div style={{ overflowX: 'auto', display: 'flex', gap: 10, paddingBottom: 6, marginBottom: 12 }}>
+        {/* 플레이어 카드 — 나 포함 전원 */}
+        <div style={{ overflowX: 'auto', display: 'flex', gap: 8, paddingBottom: 6, marginBottom: 10 }}>
           {G.players.map((p, i) => {
-            if (i === me) return null;
-            const dotStyle = { background: p.dot, boxShadow: `0 0 8px ${p.dot}` };
+            const isMe = i === me;
+            const isTurn = i === me; // local 모드: 현재 플레이어 = 나
+            const neighborTag = i === leftIdx ? '◀ 내 왼쪽' : i === rightIdx ? '내 오른쪽 ▶' : null;
             return (
-              <div key={i} className="arc-panel-inset" style={{
-                flexShrink: 0, width: 130, padding: 11, borderRadius: 14,
-                opacity: p.eliminated ? 0.4 : 1,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
-                  <span style={{ width: 11, height: 11, borderRadius: '50%', flexShrink: 0, ...dotStyle, display: 'inline-block' }} />
-                  <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                  {p.eliminated && <span style={{ marginLeft: 'auto', fontSize: 13 }}>💀</span>}
+              <div
+                key={i}
+                className={`arc-panel-inset${isTurn ? ' abra-turn-active' : ''}`}
+                style={{
+                  '--turn': p.dot,
+                  flexShrink: 0, width: 124, padding: 10, borderRadius: 12,
+                  opacity: p.eliminated ? 0.38 : 1,
+                  background: isMe ? `color-mix(in srgb, ${p.dot} 10%, var(--surface))` : undefined,
+                } as React.CSSProperties}
+              >
+                {neighborTag && (
+                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 6, color: 'var(--cyan)', marginBottom: 4 }}>{neighborTag}</div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: p.dot, boxShadow: `0 0 7px ${p.dot}`, display: 'inline-block' }} />
+                  <span style={{ fontWeight: 700, fontSize: 12, color: isMe ? p.dot : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {p.name}{isMe && ' (나)'}
+                  </span>
+                  {isTurn && <span className="pix" style={{ fontSize: 5.5, color: p.dot, flexShrink: 0 }}>NOW</span>}
+                  {p.eliminated && <span style={{ fontSize: 11, marginLeft: 'auto' }}>💀</span>}
                 </div>
                 <Hearts hp={p.hp} max={G.maxHp} />
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8 }}>
-                  {p.tiles.map((t, ti) => <TileChip key={ti} num={t} />)}
+                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 7 }}>
+                  {isMe
+                    ? p.tiles.map((_, ti) => <TileChip key={ti} faceDown />)
+                    : p.tiles.map((t, ti) => <TileChip key={ti} num={t} />)}
                   {p.secretRevealed.map((t, ti) => <SecretTile key={`s${ti}`} num={t} />)}
                 </div>
               </div>
@@ -457,122 +647,116 @@ function AbraGame({
           })}
         </div>
 
-        {/* Last result flash */}
+        {/* 결과 플래시 */}
         {lastResult && !G.pendingCast && (
           <div style={{
-            padding: '8px 14px', borderRadius: 10, marginBottom: 10, fontSize: 14, fontWeight: 700, textAlign: 'center',
+            padding: '7px 12px', borderRadius: 10, marginBottom: 8, fontSize: 13, fontWeight: 700, textAlign: 'center',
             background: lastResult.success ? 'rgba(126,217,87,.1)' : 'rgba(255,90,77,.1)',
             border: `1px solid ${lastResult.success ? 'rgba(126,217,87,.3)' : 'rgba(255,90,77,.3)'}`,
             color: lastResult.success ? 'var(--green)' : 'var(--red)',
           }}>
             {lastResult.success
-              ? `✓ ${lastResult.num} 적중! ${spellOf(lastResult.num).kr} 발동`
+              ? `✓ ${lastResult.num} HIT! ${spellOf(lastResult.num).en}`
               : `✗ ${lastResult.num} 없음 — 체력 -1`}
           </div>
         )}
 
-        {/* Spell grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
-          {SPELLS.map(s => {
-            const locked = !canDeclare(G, me, s.num);
-            const on = selected === s.num;
-            return (
-              <button
-                key={s.num}
-                disabled={locked}
-                onClick={() => setSelected(prev => prev === s.num ? null : s.num)}
-                style={{
-                  appearance: 'none', border: `1.5px solid ${on ? s.color : 'var(--line-2)'}`,
-                  borderRadius: 10, padding: '8px 4px', cursor: locked ? 'not-allowed' : 'pointer',
-                  background: on ? `color-mix(in srgb, ${s.color} 22%, var(--surface))` : 'rgba(0,0,0,.22)',
-                  opacity: locked ? 0.3 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  transition: 'all .12s',
-                }}
-              >
-                <span style={{ fontFamily: 'var(--f-disp)', fontSize: 18, color: on ? s.color : 'var(--text)', textShadow: on ? `0 0 12px ${s.color}` : 'none', lineHeight: 1 }}>{s.num}</span>
-                <span style={{ fontSize: 15 }}>{s.emoji}</span>
-                <span style={{ fontSize: 8, color: on ? 'var(--text)' : 'var(--faint)', fontWeight: 700, whiteSpace: 'nowrap' }}>{s.kr}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Spell preview */}
-        {sp && (
-          <div className="arc-rise" style={{
-            marginBottom: 10, padding: '9px 12px', borderRadius: 10,
-            background: `color-mix(in srgb, ${sp.color} 10%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${sp.color} 40%, transparent)`,
-            fontSize: 12, color: 'var(--text-2)',
-          }}>
-            <b style={{ color: sp.color }}>{sp.num} · {sp.kr}</b> — {sp.effect}
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 9, marginBottom: 18 }}>
-          <button
-            className="arc-btn arc-btn--violet"
-            disabled={selected === null}
-            onClick={handleDeclare}
-            style={{ flex: 1.6, fontSize: 17 }}
-          >
-            🪄 선언하기
-          </button>
-          {G.combo !== null && (
-            <button className="arc-btn-ghost" onClick={handleEndTurn} style={{ flex: 1, fontSize: 14 }}>
-              턴 종료
-            </button>
-          )}
-        </div>
-
-        {/* My area */}
-        <div style={{ borderTop: '1.5px solid var(--line)', paddingTop: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span className="arc-lbl" style={{ color: 'var(--violet)' }}>내 타일 (비공개)</span>
-            <span style={{ fontSize: 12, color: 'var(--faint)' }}>총 {myPlayer.tiles.length}장</span>
-          </div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
-            {myPlayer.tiles.map((_, i) => <TileChip key={i} faceDown />)}
-            {myPlayer.secretRevealed.map((t, i) => <SecretTile key={`s${i}`} num={t} />)}
-          </div>
-
-          {/* Memo */}
-          <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>메모 (내 타일 추측)</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 5 }}>
+        {/* 타일 메모 */}
+        <div style={{ marginBottom: 8 }}>
+          <span className="arc-lbl" style={{ display: 'block', marginBottom: 5 }}>내 타일 메모</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4 }}>
             {SPELLS.map(s => {
-              const state = myMemo[s.num] ?? 0;
-              const col = state === 1 ? 'var(--green)' : state === 2 ? 'var(--red)' : 'var(--line-2)';
+              const mState = myMemo[s.num] ?? 0;
+              const nextState: 0 | 1 | 2 = mState === 0 ? 1 : mState === 1 ? 2 : 0;
+              const borderColor = mState === 0 ? 'var(--line)' : mState === 1 ? 'rgba(126,217,87,.5)' : 'rgba(255,90,77,.5)';
               return (
                 <button
                   key={s.num}
-                  onClick={() => cycleMemo(s.num)}
+                  onClick={() => writeMemo(s.num, nextState)}
                   style={{
-                    position: 'relative', appearance: 'none', border: `1.5px solid ${col}`,
-                    background: state ? `color-mix(in srgb, ${col} 18%, transparent)` : 'rgba(0,0,0,.2)',
-                    borderRadius: 8, padding: '5px 2px',
-                    color: state === 2 ? 'var(--red)' : state === 1 ? 'var(--green)' : 'var(--dim)',
-                    cursor: 'pointer', fontFamily: 'var(--f-disp)', fontSize: 15,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    appearance: 'none', cursor: 'pointer',
+                    aspectRatio: '1', borderRadius: 8, padding: '4px 2px',
+                    border: `1px solid ${borderColor}`,
+                    background: mState === 0 ? 'rgba(0,0,0,.15)' : mState === 1 ? 'rgba(126,217,87,.1)' : 'rgba(255,90,77,.1)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                    position: 'relative', transition: 'all .1s',
                   }}
                 >
-                  {s.num}
-                  <span style={{ position: 'absolute', top: 1, right: 2, fontSize: 8 }}>
-                    {state === 1 ? '✓' : state === 2 ? '✕' : ''}
-                  </span>
+                  <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: mState === 0 ? 'var(--faint)' : mState === 1 ? 'var(--green)' : 'var(--red)', lineHeight: 1 }}>{s.num}</span>
+                  {mState !== 0 && (
+                    <span style={{ position: 'absolute', top: 1, right: 2, fontSize: 7, fontWeight: 800, color: mState === 1 ? 'var(--green)' : 'var(--red)', lineHeight: 1 }}>
+                      {mState === 1 ? '✓' : '✕'}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Log */}
+        {/* 주문 선택 그리드 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, marginBottom: 8 }}>
+          {SPELLS.map(s => {
+            const locked = !canDeclare(G, me, s.num);
+            const mState = myMemo[s.num] ?? 0;
+            return (
+              <button
+                key={s.num}
+                disabled={locked}
+                onClick={() => setSelected(s.num)}
+                style={{
+                  position: 'relative', appearance: 'none',
+                  border: `1.5px solid ${locked ? 'rgba(255,255,255,0.06)' : `${s.color}55`}`,
+                  borderRadius: 12, padding: '10px 4px 8px', cursor: locked ? 'not-allowed' : 'pointer',
+                  background: locked ? 'rgba(0,0,0,.1)' : `color-mix(in srgb, ${s.color} 7%, rgba(0,0,0,.2))`,
+                  opacity: locked ? 0.22 : 1,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  transition: 'all .12s',
+                }}
+              >
+                {mState !== 0 && (
+                  <span style={{
+                    position: 'absolute', top: 3, right: 4,
+                    fontSize: 8, fontWeight: 800, lineHeight: 1,
+                    color: mState === 1 ? 'var(--green)' : 'var(--red)',
+                  }}>{mState === 1 ? '✓' : '✕'}</span>
+                )}
+                <span style={{ fontFamily: 'var(--f-disp)', fontSize: 20, color: locked ? 'var(--faint)' : s.color, lineHeight: 1, textShadow: locked ? 'none' : `0 0 10px ${s.color}88` }}>{s.num}</span>
+                <SpellIcon num={s.num} size={18} />
+                <span style={{ fontSize: 8, fontWeight: 700, color: locked ? 'var(--faint)' : 'var(--dim)', whiteSpace: 'nowrap', lineHeight: 1 }}>{s.kr}</span>
+                <span style={{ fontSize: 6, color: locked ? 'var(--faint)' : s.color + 'bb', lineHeight: 1 }}>{TG[s.targeting]}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 콤보 중 턴 종료 버튼 */}
+        {G.combo !== null && (
+          <button className="arc-btn-ghost" onClick={handleEndTurn} style={{ width: '100%', marginBottom: 10, fontSize: 13 }}>
+            ↩ 턴 종료 (콤보 끝내기)
+          </button>
+        )}
+
+        {/* 내 타일 영역 */}
+        <div style={{ borderTop: '1.5px solid var(--line)', paddingTop: 12, marginTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+            <span className="arc-lbl" style={{ color: 'var(--violet)' }}>내 타일 (비공개)</span>
+            <span style={{ fontSize: 11, color: 'var(--faint)' }}>{myPlayer.tiles.length}장</span>
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
+            {myPlayer.tiles.map((_, i) => <TileChip key={i} faceDown />)}
+            {myPlayer.secretRevealed.map((t, i) => <SecretTile key={`s${i}`} num={t} />)}
+          </div>
+
+        </div>
+
+        {/* 로그 */}
         {G.log.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>게임 로그</span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {G.log.slice(0, 5).map((e, i) => (
-                <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '5px 10px', borderRadius: 8, background: 'rgba(0,0,0,.22)', border: '1px solid var(--line)' }}>
+          <div style={{ marginTop: 14, marginBottom: 8 }}>
+            <span className="arc-lbl" style={{ display: 'block', marginBottom: 6 }}>게임 로그</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {G.log.slice(0, 4).map((e, i) => (
+                <div key={i} style={{ fontSize: 11, color: 'var(--text-2)', padding: '4px 9px', borderRadius: 7, background: 'rgba(0,0,0,.22)', border: '1px solid var(--line)' }}>
                   <b style={{ color: G.players[e.who]?.dot ?? 'var(--violet)' }}>{e.name}</b>: {e.txt}
                 </div>
               ))}

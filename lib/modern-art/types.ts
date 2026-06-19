@@ -29,9 +29,9 @@ export type PlayerState = {
   collection: Card[];
 };
 
-// 공개/더블 경매
+// 공개 경매 (더블 경매는 cards.length === 2로 구분)
 export type OpenAuction = {
-  type: 'open' | 'double';
+  type: 'open';
   cards: Card[];
   sellerId: string;
   currentBid: number;

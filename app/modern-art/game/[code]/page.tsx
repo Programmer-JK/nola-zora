@@ -532,16 +532,16 @@ export default function OnlineModernArtGame() {
     const seller = getPlayerById(gs, currentAuction.sellerId)!;
 
     // 공개 / 더블 경매
-    if (currentAuction.type === 'open' || currentAuction.type === 'double') {
+    if (currentAuction.type === 'open') {
       const a = currentAuction as OpenAuction;
       const currentBidderId = a.activeBidderIds[a.currentBidderIndex];
       const currentBidder = getPlayerById(gs, currentBidderId)!;
       const isWinner = a.currentWinnerId === currentBidderId;
       const amIBidder = isMyPlayerId(currentBidderId);
-      const auctionType = a.type;
-      const auctionLabel = auctionType === 'double' ? '더블 경매' : '공개 경매';
-      const auctionIcon = auctionType === 'double' ? '🎴' : '📣';
-      const auctionColor = AUCTION_TYPE_COLORS[auctionType];
+      const isDoubleAuction = a.cards.length === 2;
+      const auctionLabel = isDoubleAuction ? '🎴 더블 + 공개 경매' : '공개 경매';
+      const auctionIcon = isDoubleAuction ? '🎴' : '📣';
+      const auctionColor = AUCTION_TYPE_COLORS['open'];
 
       return (
         <GameLayout gs={gs} myClientId={myClientId}>

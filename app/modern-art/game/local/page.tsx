@@ -80,25 +80,21 @@ function ArtCard({ card, selected, onClick, dimmed }: {
     >
       {/* 작가 헤더 바 */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 4,
+        display: 'flex', flexDirection: 'column',
         padding: '5px 8px', flexShrink: 0,
         background: artist.color, color: '#000',
       }}>
-        <span style={{ fontSize: 12 }}>{artist.avatar}</span>
-        <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>{artist.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12 }}>{artist.avatar}</span>
+          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>{artist.name}</span>
+        </div>
+        <div style={{ fontFamily: 'var(--f-kr)', fontSize: 8, fontWeight: 700, lineHeight: 1.2, marginTop: 2, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {getArtworkTitle(card.artistId, card.artworkIndex)}
+        </div>
       </div>
       {/* 이미지 */}
-      <div style={{ flex: 1, width: '100%', overflow: 'hidden', background: artist.color + '12', position: 'relative' }}>
+      <div style={{ flex: 1, width: '100%', overflow: 'hidden', background: artist.color + '12' }}>
         <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.72))',
-          padding: '10px 4px 3px',
-        }}>
-          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 8, color: 'white', textAlign: 'center', fontWeight: 700, lineHeight: 1.2 }}>
-            {getArtworkTitle(card.artistId, card.artworkIndex)}
-          </div>
-        </div>
       </div>
       {/* 경매 타입 푸터 바 */}
       <div style={{
@@ -110,6 +106,189 @@ function ArtCard({ card, selected, onClick, dimmed }: {
         <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700 }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
       </div>
     </button>
+  );
+}
+
+// ─── 핸드 카드 행 (카드 선택용 컴팩트 가로형) ────────────────
+function HandCardRow({ card, onClick, dimmed, selected }: {
+  card: Card; onClick?: () => void; dimmed?: boolean; selected?: boolean;
+}) {
+  const artist = getArtistById(card.artistId);
+  const auctionColor = AUCTION_TYPE_COLORS[card.auctionType];
+  const title = getArtworkTitle(card.artistId, card.artworkIndex);
+  return (
+    <button
+      onClick={onClick}
+      disabled={dimmed}
+      style={{
+        display: 'flex', alignItems: 'stretch', gap: 0,
+        borderRadius: 10,
+        border: `2px solid ${selected ? artist.color : artist.color + '40'}`,
+        overflow: 'hidden', width: '100%', height: 62,
+        cursor: dimmed ? 'not-allowed' : 'pointer',
+        appearance: 'none', padding: 0,
+        background: selected ? artist.color + '18' : artist.color + '08',
+        opacity: dimmed ? 0.3 : 1,
+        boxShadow: selected ? `0 0 14px ${artist.color}40` : undefined,
+        flexShrink: 0,
+        transition: 'all .15s',
+      }}
+    >
+      {/* 작가 컬러 밴드 */}
+      <div style={{
+        width: 46, flexShrink: 0, background: artist.color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: 20 }}>{artist.avatar}</span>
+      </div>
+      {/* 작품명 + 작가명 + 경매타입 */}
+      <div style={{ flex: 1, padding: '8px 10px', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 900, color: 'var(--text)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {title || artist.name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, color: artist.color, fontWeight: 700 }}>{artist.name}</span>
+          <span style={{ width: 1, height: 10, background: 'var(--line-2)', flexShrink: 0 }} />
+          <span style={{
+            fontSize: 9, background: auctionColor + 'dd', color: '#fff',
+            padding: '2px 6px', borderRadius: 4,
+            fontFamily: 'var(--f-kr)', fontWeight: 700, flexShrink: 0,
+          }}>
+            {AUCTION_TYPE_ICONS[card.auctionType]} {AUCTION_TYPE_LABELS[card.auctionType]}
+          </span>
+        </div>
+      </div>
+      {/* 썸네일 */}
+      <div style={{ width: 46, flexShrink: 0, overflow: 'hidden' }}>
+        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+      </div>
+    </button>
+  );
+}
+
+// ─── 부채꼴 카드 핸드 ─────────────────────────────────────────
+function FanHand({ cards, onSelect }: { cards: Card[]; onSelect: (id: string) => void }) {
+  const [raisedId, setRaisedId] = useState<string | null>(null);
+  const n = cards.length;
+  const CARD_W = 96;
+  const CARD_H = 140;
+  const maxAngle = Math.min(20, n * 3.2);
+  const spreadPerCard = n <= 1 ? 0 : Math.min(38, 280 / (n - 1));
+  const totalSpread = spreadPerCard * (n - 1);
+  const containerW = totalSpread + CARD_W;
+  const containerH = CARD_H + 64; // 64 = raised headroom
+
+  const raisedCard = raisedId ? cards.find(c => c.id === raisedId) : null;
+  const raisedArtist = raisedCard ? getArtistById(raisedCard.artistId) : null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* 선택된 카드 정보 패널 */}
+      <div style={{
+        minHeight: 64,
+        borderRadius: 12, marginBottom: 8,
+        padding: '10px 14px',
+        background: raisedArtist ? raisedArtist.color + '14' : 'var(--surface-2)',
+        border: `1.5px solid ${raisedArtist ? raisedArtist.color + '50' : 'var(--line)'}`,
+        transition: 'all .25s',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        {raisedCard && raisedArtist ? (
+          <>
+            <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `2px solid ${raisedArtist.color}60` }}>
+              <ArtworkImage artistId={raisedArtist.id} avatar={raisedArtist.avatar} artworkIndex={raisedCard.artworkIndex} className="w-full h-full" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 900, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {getArtworkTitle(raisedCard.artistId, raisedCard.artworkIndex) || raisedArtist.name}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, color: raisedArtist.color, fontWeight: 700 }}>{raisedArtist.avatar} {raisedArtist.name}</span>
+                <span style={{ width: 1, height: 10, background: 'var(--line-2)', flexShrink: 0 }} />
+                <span style={{ fontSize: 9, background: AUCTION_TYPE_COLORS[raisedCard.auctionType] + 'dd', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--f-kr)', fontWeight: 700, flexShrink: 0 }}>
+                  {AUCTION_TYPE_ICONS[raisedCard.auctionType]} {AUCTION_TYPE_LABELS[raisedCard.auctionType]}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => onSelect(raisedCard.id)}
+              className="arc-btn"
+              style={{ padding: '10px 14px', fontSize: 13, flexShrink: 0 }}
+            >
+              경매 올리기
+            </button>
+          </>
+        ) : (
+          <div style={{ flex: 1, textAlign: 'center', fontFamily: 'var(--f-kr)', fontSize: 12, color: 'var(--faint)' }}>
+            카드를 눌러 선택하세요
+          </div>
+        )}
+      </div>
+
+      {/* 부채꼴 카드 영역 */}
+      <div style={{ position: 'relative', width: containerW, height: containerH, margin: '0 auto', flexShrink: 0 }}>
+        {cards.map((card, i) => {
+          const artist = getArtistById(card.artistId);
+          const normI = n <= 1 ? 0 : (i / (n - 1)) * 2 - 1; // -1 ~ 1
+          const angle = normI * maxAngle;
+          const xPos = i * spreadPerCard;
+          const isRaised = card.id === raisedId;
+          return (
+            <button
+              key={card.id}
+              onClick={() => setRaisedId(isRaised ? null : card.id)}
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: xPos,
+                width: CARD_W,
+                height: CARD_H,
+                padding: 0,
+                appearance: 'none',
+                cursor: 'pointer',
+                border: `2px solid ${isRaised ? artist.color : artist.color + '70'}`,
+                borderRadius: 10,
+                overflow: 'hidden',
+                background: 'transparent',
+                transform: `rotate(${angle}deg) translateY(${isRaised ? -54 : 0}px)`,
+                transformOrigin: '50% 145%',
+                transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .2s, border-color .2s',
+                zIndex: isRaised ? 100 : i,
+                boxShadow: isRaised ? `0 8px 24px ${artist.color}60, 0 0 0 2px ${artist.color}` : `0 2px 8px rgba(0,0,0,0.4)`,
+              }}
+            >
+              {/* 헤더 */}
+              <div style={{
+                background: artist.color,
+                padding: '5px 7px',
+                display: 'flex', flexDirection: 'column', gap: 1,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 11 }}>{artist.avatar}</span>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, lineHeight: 1, color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{artist.name}</span>
+                </div>
+                <div style={{ fontFamily: 'var(--f-kr)', fontSize: 8, color: '#000', opacity: 0.7, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {getArtworkTitle(card.artistId, card.artworkIndex)}
+                </div>
+              </div>
+              {/* 이미지 */}
+              <div style={{ flex: 1, width: '100%', height: CARD_H - 42, overflow: 'hidden', background: artist.color + '18' }}>
+                <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+              </div>
+              {/* 경매 타입 푸터 */}
+              <div style={{
+                background: AUCTION_TYPE_COLORS[card.auctionType] + 'cc',
+                padding: '3px 5px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
+              }}>
+                <span style={{ fontSize: 10 }}>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
+                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: '#fff', fontWeight: 700 }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -192,15 +371,37 @@ function GameLayout({ gs, children }: { gs: GameState; children: ReactNode }) {
       {/* 헤더 */}
       <header style={{
         borderBottom: '1.5px solid var(--line)', background: 'rgba(0,0,0,0.3)',
-        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, zIndex: 10,
+        padding: '8px 16px 10px', flexShrink: 0, zIndex: 10,
       }}>
-        <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, letterSpacing: 2, color: 'var(--cyan)' }}>MODERN ART</span>
-        <span style={{ width: 1, height: 16, background: 'var(--line-2)' }} />
-        <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: 'var(--dim)' }}>R{gs.round}/{gs.maxRounds}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', animation: 'arcBlink 1.1s steps(2,jump-none) infinite', flexShrink: 0 }} />
-          <span style={{ fontFamily: 'var(--f-kr)', fontWeight: 700, color: 'var(--gold)', fontSize: 13 }}>{currentPlayer.name}</span>
-          <span style={{ color: 'var(--dim)', fontSize: 12, flexShrink: 0 }}>의 차례</span>
+        {/* Row 1: 타이틀 + 라운드 + 플레이어 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: 'var(--f-disp)', fontSize: 12, letterSpacing: 2, color: 'var(--cyan)' }}>MODERN ART</span>
+          <span style={{ width: 1, height: 14, background: 'var(--line-2)', flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: 'var(--dim)' }}>R{gs.round}/{gs.maxRounds}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--gold)', animation: 'arcBlink 1.1s steps(2,jump-none) infinite', flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--f-kr)', fontWeight: 700, color: 'var(--gold)', fontSize: 12 }}>{currentPlayer.name}</span>
+            <span style={{ fontFamily: 'var(--f-title)', fontSize: 13, color: 'var(--green)', fontWeight: 900 }}>{currentPlayer.cash}M</span>
+          </div>
+        </div>
+        {/* Row 2: 미니 시장 현황 */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 7 }}>
+          {ARTISTS.map(a => {
+            const count = gs.roundMarket[a.id] ?? 0;
+            const isClose = count >= 4;
+            const isDone = count >= 5;
+            return (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 3, flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 10, flexShrink: 0 }}>{a.avatar}</span>
+                <div style={{ flex: 1, height: 3, background: 'var(--surface-3)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(count / 5) * 100}%`, background: isDone ? 'var(--red)' : isClose ? '#ff8800' : a.color, borderRadius: 2, transition: 'width .4s' }} />
+                </div>
+                <span style={{ fontFamily: 'var(--f-pix)', fontSize: 7, color: isDone ? 'var(--red)' : isClose ? '#ff8800' : 'var(--faint)', flexShrink: 0, minWidth: 10, textAlign: 'right' }}>
+                  {count}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </header>
 
@@ -371,30 +572,98 @@ function ModernArtGame() {
 
   // ─── 턴 커버 ───────────────────────────────────────────────
   if (phase === 'turn-cover') {
+    const sortedPlayers = [...gs.players]
+      .map(p => {
+        const collVal = p.collection.reduce((s, c) => s + (gs.artistValues[c.artistId] ?? 0), 0);
+        return { ...p, collVal, total: p.cash + collVal };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    // 현재 플레이어 패 작가별 분포
+    const handDist = ARTISTS
+      .map(a => ({ artist: a, count: currentPlayer.hand.filter(c => c.artistId === a.id).length }))
+      .filter(g => g.count > 0);
+
     return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 28 }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', padding: '20px 18px 32px', gap: 16, overflowY: 'auto' }}>
         <div className="crt" />
-        <div style={{ textAlign: 'center' }}>
-          <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', letterSpacing: 2, marginBottom: 20 }}>
-            ROUND {gs.round} / {gs.maxRounds}
-          </p>
-          <div className="arc-panel ticks arc-pop" style={{ padding: '32px 40px', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            <p style={{ color: 'var(--dim)', fontSize: 13, margin: 0 }}>다음 차례</p>
-            <div style={{ fontFamily: 'var(--f-title)', fontSize: 42, color: 'var(--gold)' }}>{currentPlayer.name}</div>
-            <p style={{ color: 'var(--text-2)', fontSize: 15, margin: 0 }}>의 차례입니다</p>
-            <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--faint)', marginTop: 4 }}>
-              <span>패 {currentPlayer.hand.length}장</span>
-              <span>·</span>
-              <span>💰 {currentPlayer.cash}M</span>
+
+        {/* 라운드 표시 */}
+        <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', letterSpacing: 2, textAlign: 'center', margin: 0 }}>
+          ROUND {gs.round} / {gs.maxRounds}
+        </p>
+
+        {/* 플레이어 이름 + 보유 정보 */}
+        <div className="arc-panel ticks arc-pop" style={{ padding: '22px 20px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--dim)', fontSize: 12, margin: '0 0 4px' }}>다음 차례</p>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 40, color: 'var(--gold)', lineHeight: 1 }}>{currentPlayer.name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--green)' }}>{currentPlayer.cash}M</div>
+              <div style={{ fontFamily: 'var(--f-pix)', fontSize: 7, color: 'var(--faint)' }}>현금</div>
+            </div>
+            <div style={{ width: 1, height: 28, background: 'var(--line-2)' }} />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--text-2)' }}>{currentPlayer.hand.length}장</div>
+              <div style={{ fontFamily: 'var(--f-pix)', fontSize: 7, color: 'var(--faint)' }}>패</div>
+            </div>
+            <div style={{ width: 1, height: 28, background: 'var(--line-2)' }} />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--text-2)' }}>{currentPlayer.collection.length}장</div>
+              <div style={{ fontFamily: 'var(--f-pix)', fontSize: 7, color: 'var(--faint)' }}>수집</div>
             </div>
           </div>
+          {/* 패 작가 분포 힌트 */}
+          {handDist.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+              {handDist.map(({ artist, count }) => (
+                <span key={artist.id} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  padding: '3px 8px', borderRadius: 6,
+                  background: artist.color + '20', border: `1px solid ${artist.color}40`,
+                  fontFamily: 'var(--f-kr)', fontSize: 11, color: artist.color, fontWeight: 700,
+                }}>
+                  {artist.avatar} ×{count}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-        <button onClick={() => update(s => ({ ...s, phase: 'select-card' }))} className="arc-btn" style={{ maxWidth: 280, width: '100%', fontSize: 18 }}>
+
+        {/* 플레이어 순위 */}
+        <div>
+          <p className="arc-lbl" style={{ marginBottom: 8 }}>현재 자산 순위</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {sortedPlayers.map((p, i) => {
+              const isCurrent = p.id === currentPlayer.id;
+              return (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10,
+                  background: isCurrent ? 'rgba(255,183,43,0.08)' : 'var(--surface-2)',
+                  border: `1.5px solid ${isCurrent ? 'rgba(255,183,43,0.3)' : 'var(--line)'}`,
+                }}>
+                  <span style={{ fontFamily: 'var(--f-title)', fontSize: 13, color: i === 0 ? 'var(--gold)' : 'var(--faint)', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ flex: 1, fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 700, color: isCurrent ? 'var(--gold)' : 'var(--text-2)' }}>
+                    {isCurrent && <span style={{ fontFamily: 'var(--f-pix)', fontSize: 7, marginRight: 4 }}>▶</span>}
+                    {p.name}
+                  </span>
+                  <span style={{ color: 'var(--green)', fontWeight: 900, fontSize: 13, flexShrink: 0 }}>{p.cash}M</span>
+                  {p.collVal > 0 && <span style={{ color: 'var(--faint)', fontSize: 11, flexShrink: 0 }}>+{p.collVal}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 내 카드 보기 버튼 */}
+        <button onClick={() => update(s => ({ ...s, phase: 'select-card' }))} className="arc-btn" style={{ fontSize: 18 }}>
           <span style={{ fontFamily: 'var(--f-pix)', fontSize: 10, marginRight: 4 }}>▶</span>
-          카드 보기
+          내 카드 보기
         </button>
-        <div style={{ width: '100%', maxWidth: 360 }}>
-          <p className="arc-lbl" style={{ textAlign: 'center', marginBottom: 10 }}>이번 라운드 시장</p>
+
+        {/* 시장 현황 */}
+        <div>
+          <p className="arc-lbl" style={{ marginBottom: 10 }}>이번 라운드 시장</p>
           <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} />
         </div>
       </div>
@@ -407,16 +676,15 @@ function ModernArtGame() {
     if (hand.length === 0) { update(s => acknowledgeResult(s)); return null; }
     return (
       <GameLayout gs={gs}>
-        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <p style={{ color: 'var(--dim)', fontSize: 13, margin: 0 }}>경매에 올릴 카드를 선택하세요</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {hand.map(card => (
-              <ArtCard key={card.id} card={card} onClick={() => update(s => selectCard(s, card.id))} />
-            ))}
+        <div style={{ padding: '14px 16px 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ color: 'var(--dim)', fontSize: 13, margin: 0, fontFamily: 'var(--f-kr)' }}>경매에 올릴 카드를 선택하세요</p>
+            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: 'var(--faint)' }}>{hand.length}장</span>
           </div>
-          <div style={{ paddingTop: 12, borderTop: '1.5px solid var(--line)' }}>
+          <FanHand cards={hand} onSelect={id => update(s => selectCard(s, id))} />
+          <div>
             <p className="arc-lbl" style={{ marginBottom: 8 }}>이번 라운드 시장</p>
-            <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} />
+            <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} compact />
           </div>
         </div>
       </GameLayout>
@@ -430,17 +698,24 @@ function ModernArtGame() {
     const sameArtist = currentPlayer.hand.filter(c => c.id !== firstCardId && c.artistId === firstCard.artistId && c.auctionType !== 'double');
     return (
       <GameLayout gs={gs}>
-        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--red)', marginBottom: 4 }}>🎴 더블 경매</div>
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--f-title)', fontSize: 20, color: 'var(--red)', marginBottom: 2 }}>🎴 더블 경매</div>
             <p style={{ color: 'var(--dim)', fontSize: 13, margin: 0 }}>같은 작가의 카드를 하나 더 선택하세요</p>
           </div>
-          <div style={{ width: 96 }}><ArtCard card={firstCard} selected /></div>
-          <p style={{ color: 'var(--faint)', fontSize: 12, margin: 0 }}>+ 아래 중 하나 선택</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%' }}>
-            {sameArtist.map(card => (
-              <ArtCard key={card.id} card={card} onClick={() => update(s => selectDoubleSecond(s, card.id))} />
-            ))}
+          <div>
+            <p style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--faint)', margin: '0 0 6px', paddingLeft: 2 }}>선택된 첫 번째 카드</p>
+            <HandCardRow card={firstCard} selected dimmed />
+          </div>
+          <div>
+            <p style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--dim)', margin: '0 0 6px', paddingLeft: 2 }}>
+              두 번째 카드 선택 ({sameArtist.length}장)
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {sameArtist.map(card => (
+                <HandCardRow key={card.id} card={card} onClick={() => update(s => selectDoubleSecond(s, card.id))} />
+              ))}
+            </div>
           </div>
         </div>
       </GameLayout>
@@ -452,70 +727,73 @@ function ModernArtGame() {
     const seller = getPlayerById(gs, currentAuction.sellerId)!;
     const auctionColor = AUCTION_TYPE_COLORS[currentAuction.type];
     const auctionIcon = AUCTION_TYPE_ICONS[currentAuction.type];
-    const auctionLabel = AUCTION_TYPE_LABELS[currentAuction.type];
     const aCards = (currentAuction as OpenAuction | FixedAuction | SecretAuction | OnceAroundAuction).cards;
+    const isDoubleAuction = aCards.length === 2;
+    const auctionLabel = isDoubleAuction
+      ? `🎴 더블 + ${AUCTION_TYPE_LABELS[currentAuction.type]}`
+      : AUCTION_TYPE_LABELS[currentAuction.type];
 
-    // 공통: 경매 타입 헤더 + 카드
+    // 공통: 경매 타입 헤더 + 카드 (컴팩트)
     const auctionTopBar = (
       <>
         <div className="crt" />
         <div style={{
-          background: auctionColor + '18', borderBottom: `2px solid ${auctionColor}35`,
-          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+          background: auctionColor + '14', borderBottom: `2px solid ${auctionColor}30`,
+          padding: '10px 14px', flexShrink: 0,
         }}>
-          <span style={{ fontSize: 26 }}>{auctionIcon}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 16, color: auctionColor }}>{auctionLabel}</div>
-            <div style={{ color: 'var(--dim)', fontSize: 12 }}>판매자: {seller.name}</div>
+          {/* 경매 타입 + 판매자 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>{auctionIcon}</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontFamily: 'var(--f-kr)', fontWeight: 900, fontSize: 15, color: auctionColor }}>{auctionLabel}</span>
+              <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--dim)', marginLeft: 8 }}>· {seller.name} 판매</span>
+            </div>
+            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: 'var(--faint)', flexShrink: 0 }}>R{gs.round}/{gs.maxRounds}</span>
           </div>
-          <div style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: 'var(--faint)' }}>R{gs.round}/{gs.maxRounds}</div>
-        </div>
-        <div style={{
-          background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid var(--line)',
-          padding: '14px 16px', display: 'flex', justifyContent: 'center', gap: 14, flexShrink: 0,
-        }}>
-          {aCards.map((card, idx) => {
-            const a = getArtistById(card.artistId);
-            const isDouble = aCards.length === 2;
-            return (
-              <div key={card.id} style={{
-                width: isDouble ? 108 : 148, borderRadius: 14,
-                border: `2px solid ${idx === 0 && isDouble ? a.color + '70' : a.color}`,
-                overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                boxShadow: `0 0 40px ${a.color}30, 0 4px 16px ${a.color}18`,
-              }}>
-                <div style={{ background: a.color, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 11 }}>{a.avatar}</span>
-                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, color: '#000' }}>{a.name}</span>
-                </div>
-                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5', position: 'relative' }}>
-                  <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-                  <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
-                    padding: '12px 5px 3px',
-                  }}>
-                    <div style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: 'white', textAlign: 'center', fontWeight: 700, lineHeight: 1.2 }}>
-                      {getArtworkTitle(card.artistId, card.artworkIndex)}
+          {/* 카드 목록 (컴팩트 썸네일 행) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {aCards.map((card, idx) => {
+              const a = getArtistById(card.artistId);
+              const title = getArtworkTitle(card.artistId, card.artworkIndex);
+              const isDoubleFirst = aCards.length === 2 && idx === 0;
+              return (
+                <div key={card.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 8px', borderRadius: 8,
+                  background: isDoubleFirst ? a.color + '0a' : a.color + '16',
+                  border: `1.5px solid ${a.color}${isDoubleFirst ? '28' : '55'}`,
+                  opacity: isDoubleFirst ? 0.6 : 1,
+                  animationName: 'arcRise', animationDuration: '.45s', animationTimingFunction: 'cubic-bezier(.34,1.56,.64,1)', animationFillMode: 'both',
+                  animationDelay: `${idx * 0.08}s`,
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: a.color + '20' }}>
+                    <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 900, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {title || a.name}
                     </div>
+                    <div style={{ fontFamily: 'var(--f-kr)', fontSize: 10, color: a.color, fontWeight: 700, marginTop: 1 }}>{a.avatar} {a.name}</div>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    {isDoubleFirst ? (
+                      <span style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: 'var(--faint)', background: 'var(--surface-3)', padding: '2px 6px', borderRadius: 4 }}>더블 카드</span>
+                    ) : (
+                      <span style={{ fontSize: 9, background: AUCTION_TYPE_COLORS[card.auctionType] + 'cc', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--f-kr)', fontWeight: 700 }}>
+                        {AUCTION_TYPE_ICONS[card.auctionType]} {AUCTION_TYPE_LABELS[card.auctionType]}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div style={{
-                  background: AUCTION_TYPE_COLORS[card.auctionType] + 'cc', padding: '4px 8px',
-                  textAlign: 'center', display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: 11 }}>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
-                  <span style={{ color: '#fff', fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700 }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </>
     );
 
     // ── 공개 / 더블 ─────────────────────────────────────────
-    if (currentAuction.type === 'open' || currentAuction.type === 'double') {
+    if (currentAuction.type === 'open') {
       const a = currentAuction as OpenAuction;
       const currentBidderId = a.activeBidderIds[a.currentBidderIndex];
       const currentBidder = getPlayerById(gs, currentBidderId)!;
@@ -528,7 +806,7 @@ function ModernArtGame() {
             {/* 최고 입찰 */}
             <div className="arc-panel-inset" style={{ padding: '14px', textAlign: 'center' }}>
               <div className="arc-lbl" style={{ marginBottom: 4 }}>최고 입찰</div>
-              <div style={{ fontFamily: 'var(--f-title)', fontSize: 38, color: 'var(--gold)', lineHeight: 1 }}>{a.currentBid}M</div>
+              <div className={a.currentBid > 0 ? 'pulse-glow' : ''} style={{ fontFamily: 'var(--f-title)', fontSize: 38, color: 'var(--gold)', lineHeight: 1 }}>{a.currentBid}M</div>
               <div style={{ color: 'var(--dim)', fontSize: 12, marginTop: 4 }}>
                 {a.currentWinnerId ? `👑 ${getPlayerById(gs, a.currentWinnerId)?.name}` : '아직 입찰 없음'}
               </div>
@@ -604,7 +882,7 @@ function ModernArtGame() {
             {/* 지정 가격 */}
             <div className="arc-panel-inset" style={{ padding: '14px', textAlign: 'center' }}>
               <div className="arc-lbl" style={{ marginBottom: 4 }}>지정 가격</div>
-              <div style={{ fontFamily: 'var(--f-title)', fontSize: 48, color: auctionColor, lineHeight: 1 }}>{a.fixedPrice}M</div>
+              <div className="pulse-glow" style={{ fontFamily: 'var(--f-title)', fontSize: 48, color: auctionColor, lineHeight: 1 }}>{a.fixedPrice}M</div>
             </div>
             {/* 제안 현황 */}
             <div className="arc-lbl">제안 현황</div>
@@ -819,32 +1097,30 @@ function ModernArtGame() {
             </>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, width: '100%', maxWidth: 340 }}>
           {lastAuctionResult.cards.map(card => {
             const a = getArtistById(card.artistId);
+            const title = getArtworkTitle(card.artistId, card.artworkIndex);
             return (
               <div key={card.id} style={{
-                width: lastAuctionResult.cards.length === 2 ? 110 : 150,
-                borderRadius: 14, border: `2px solid ${a.color}`,
-                overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                boxShadow: `0 0 40px ${a.color}30`,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 10px', borderRadius: 10,
+                border: `2px solid ${a.color}70`,
+                background: a.color + '12',
+                boxShadow: `0 0 20px ${a.color}20`,
               }}>
-                <div style={{ background: a.color, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 11 }}>{a.avatar}</span>
-                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 900, color: '#000' }}>{a.name}</span>
-                </div>
-                <div style={{ overflow: 'hidden', background: a.color + '12', aspectRatio: '3/5', position: 'relative' }}>
+                <div style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0, boxShadow: `0 0 12px ${a.color}40` }}>
                   <ArtworkImage artistId={a.id} avatar={a.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-                  <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
-                    padding: '12px 5px 3px',
-                  }}>
-                    <div style={{ fontFamily: 'var(--f-kr)', fontSize: 9, color: 'white', textAlign: 'center', fontWeight: 700, lineHeight: 1.2 }}>
-                      {getArtworkTitle(card.artistId, card.artworkIndex)}
-                    </div>
-                  </div>
                 </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--f-kr)', fontSize: 14, fontWeight: 900, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {title || a.name}
+                  </div>
+                  <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: a.color, fontWeight: 700, marginTop: 2 }}>{a.avatar} {a.name}</div>
+                </div>
+                <span style={{ fontSize: 10, background: AUCTION_TYPE_COLORS[card.auctionType] + 'cc', color: '#fff', padding: '2px 7px', borderRadius: 4, fontFamily: 'var(--f-kr)', fontWeight: 700, flexShrink: 0 }}>
+                  {AUCTION_TYPE_ICONS[card.auctionType]}
+                </span>
               </div>
             );
           })}
@@ -986,13 +1262,20 @@ function ModernArtGame() {
 
           <div>
             <p className="arc-lbl" style={{ marginBottom: 12 }}>최종 작가 가치</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-              {ARTISTS.map(a => (
-                <div key={a.id} className="arc-panel-inset" style={{ padding: '10px 6px', textAlign: 'center', borderColor: a.color + '30', background: a.color + '10' }}>
-                  <span style={{ fontSize: 22, display: 'block', marginBottom: 4 }}>{a.avatar}</span>
-                  <span style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: a.color }}>{gs.artistValues[a.id] ?? 0}M</span>
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {ARTISTS.map(a => {
+                const val = gs.artistValues[a.id] ?? 0;
+                return (
+                  <div key={a.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                    borderRadius: 10, background: a.color + '10', border: `1px solid ${a.color}30`,
+                  }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{a.avatar}</span>
+                    <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 700, color: a.color, flex: 1 }}>{a.name}</span>
+                    <span style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: val > 0 ? a.color : 'var(--faint)' }}>{val}M</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

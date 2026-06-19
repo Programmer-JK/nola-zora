@@ -51,6 +51,7 @@ export function sanitizeGameState(raw: unknown): AbraGameState {
     log: toArr(gs.log),
     pendingCast: sanitizeCast(gs.pendingCast),
     roundScores: gs.roundScores ? toArr(gs.roundScores) : null,
+    castCounts: toArr(gs.castCounts),
   };
 }
 

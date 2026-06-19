@@ -54,4 +54,5 @@ export type AbraGameState = {
   pendingCast: AbraCastResult | null;
   phase: AbraPhase;
   roundScores: number[] | null; // set by scoreRound, cleared on new round
+  castCounts: number[];         // castCounts[i] = times spell (i+1) declared successfully this round
 };
