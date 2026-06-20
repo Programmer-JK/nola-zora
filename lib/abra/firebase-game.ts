@@ -1,4 +1,4 @@
-import { ref, set, update, onValue, get } from 'firebase/database';
+import { ref, set, update, onValue, get, remove, onDisconnect } from 'firebase/database';
 import { getDb } from '@/lib/firebase';
 import { AbraGameState, AbraPlayer, AbraLogEntry, AbraCastResult } from './types';
 import { createGame } from './game-logic';
@@ -18,6 +18,8 @@ export type AbraOnlineRoom = {
   maxRounds: number;
   gameState: AbraGameState | null;
   createdAt: number;
+  presence?: Record<string, boolean>;
+  leftPlayerName?: string;
 };
 
 // ─── Sanitize (Firebase object → typed arrays) ──────────────
@@ -122,8 +124,17 @@ export async function updateGameState(code: string, gs: AbraGameState): Promise<
   await update(roomRef(code), { gameState: gs });
 }
 
-export async function finishGame(code: string): Promise<void> {
-  await update(roomRef(code), { status: 'finished' });
+export async function finishGame(code: string, leftPlayerName?: string): Promise<void> {
+  const data: Record<string, unknown> = { status: 'finished' };
+  if (leftPlayerName) data.leftPlayerName = leftPlayerName;
+  await update(roomRef(code), data);
+}
+
+export async function registerPresence(code: string, clientId: string): Promise<() => void> {
+  const pRef = ref(getDb(), `abra/rooms/${code}/presence/${clientId}`);
+  await set(pRef, true);
+  onDisconnect(pRef).remove();
+  return () => { remove(pRef); };
 }
 
 export function subscribeRoom(

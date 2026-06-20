@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getGuestUid } from '@/lib/auth';
 import {
-  subscribeRoom, updateGameState, finishGame,
+  subscribeRoom, updateGameState, finishGame, registerPresence,
   type AbraOnlineRoom,
 } from '@/lib/abra/firebase-game';
 import {
@@ -35,7 +35,7 @@ function SpellBoard({ castCounts }: { castCounts: number[] }) {
           }}>
             <div style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: done ? 'var(--faint)' : s.color, lineHeight: 1 }}>{s.num}</div>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 1 }}><SpellIcon num={s.num} size={13} /></div>
-            <div style={{ fontSize: 9, color: done ? 'var(--faint)' : 'var(--dim)', fontFamily: 'var(--f-pix)', lineHeight: 1 }}>
+            <div style={{ fontSize: 12, color: done ? 'var(--faint)' : 'var(--dim)', fontFamily: 'var(--f-pix)', lineHeight: 1 }}>
               {cast}/{total}
             </div>
           </div>
@@ -167,13 +167,13 @@ function CastOverlay({
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontFamily: 'var(--f-disp)', fontSize: 20, color: sp.color }}>{sp.num}</span>
-                  <span className="pix" style={{ fontSize: 7, color: sp.color }}>{sp.en}</span>
+                  <span className="pix" style={{ fontSize: 12, color: sp.color }}>{sp.en}</span>
                 </div>
                 <div className={`abra-cast-${cast.spellNum}`} style={{ filter: `drop-shadow(0 0 18px ${sp.color})` }}>
                   <SpellIcon num={cast.spellNum} size={48} />
                 </div>
                 <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--text)', textAlign: 'center', lineHeight: 1.15, wordBreak: 'keep-all' }}>{sp.kr}</span>
-                <span style={{ fontSize: 11, color: 'var(--dim)', textAlign: 'center', lineHeight: 1.35, wordBreak: 'keep-all' }}>{sp.effect}</span>
+                <span style={{ fontSize: 12, color: 'var(--dim)', textAlign: 'center', lineHeight: 1.35, wordBreak: 'keep-all' }}>{sp.effect}</span>
               </div>
             </div>
             <div style={{ fontFamily: 'var(--f-disp)', fontSize: 18, color: sp.color, marginBottom: 12, textShadow: `0 0 18px ${sp.color}` }}>
@@ -204,7 +204,7 @@ function CastOverlay({
             확인
           </button>
         ) : (
-          <p className="pix blink" style={{ fontSize: 8, color: 'var(--faint)' }}>다음 플레이어 확인 대기 중...</p>
+          <p className="pix blink" style={{ fontSize: 12, color: 'var(--faint)' }}>다음 플레이어 확인 대기 중...</p>
         )}
       </div>
     </div>
@@ -281,7 +281,7 @@ function SpellModal({
             background: `color-mix(in srgb, ${spell.color} 8%, rgba(0,0,0,.2))`,
             border: `1px solid ${spell.color}44`,
           }}>
-            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: 'var(--dim)', flexShrink: 0 }}>대상</span>
+            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 12, color: 'var(--dim)', flexShrink: 0 }}>대상</span>
             <span style={{ fontFamily: 'var(--f-title)', fontSize: 16, color: spell.color, fontWeight: 700 }}>{targetLine}</span>
           </div>
         )}
@@ -425,7 +425,7 @@ function OnlineGame({
               <thead>
                 <tr style={{ borderBottom: '1.5px solid var(--line)' }}>
                   {['순위', '플레이어', '이번 라운드', '총점'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontFamily: 'var(--f-pix)', fontSize: 8, color: 'var(--dim)', fontWeight: 400, textAlign: 'left' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 12px', fontFamily: 'var(--f-pix)', fontSize: 12, color: 'var(--dim)', fontWeight: 400, textAlign: 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -446,9 +446,9 @@ function OnlineGame({
                       <td style={{ padding: '10px 12px' }}>
                         <div style={{ color: p.roundScore > 0 ? 'var(--green)' : 'var(--dim)', fontWeight: 800 }}>+{p.roundScore}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
-                          {sp > 0 && <span style={{ fontSize: 7, color: 'var(--green)', background: 'rgba(126,217,87,.12)', padding: '1px 3px', borderRadius: 3 }}>생존</span>}
-                          {tp > 0 && <span style={{ fontSize: 7, color: 'var(--violet)', background: 'rgba(162,116,255,.12)', padding: '1px 3px', borderRadius: 3 }}>타일+{tp}</span>}
-                          {rp > 0 && <span style={{ fontSize: 7, color: 'var(--cyan)', background: 'rgba(54,224,207,.12)', padding: '1px 3px', borderRadius: 3 }}>천리안</span>}
+                          {sp > 0 && <span style={{ fontSize: 12, color: 'var(--green)', background: 'rgba(126,217,87,.12)', padding: '1px 4px', borderRadius: 3 }}>생존</span>}
+                          {tp > 0 && <span style={{ fontSize: 12, color: 'var(--violet)', background: 'rgba(162,116,255,.12)', padding: '1px 4px', borderRadius: 3 }}>타일+{tp}</span>}
+                          {rp > 0 && <span style={{ fontSize: 12, color: 'var(--cyan)', background: 'rgba(54,224,207,.12)', padding: '1px 4px', borderRadius: 3 }}>천리안</span>}
                         </div>
                       </td>
                       <td style={{ padding: '10px 12px', color: 'var(--coin)', fontWeight: 800 }}>{p.total}</td>
@@ -464,7 +464,7 @@ function OnlineGame({
               {reached ? '🏆 최종 결과!' : `라운드 ${G.round + 1}/${G.maxRounds} 시작 →`}
             </button>
           ) : (
-            <p className="pix blink" style={{ fontSize: 8, color: 'var(--dim)', textAlign: 'center' }}>
+            <p className="pix blink" style={{ fontSize: 12, color: 'var(--dim)', textAlign: 'center' }}>
               호스트가 다음 라운드를 시작하길 기다리는 중...
             </p>
           )}
@@ -506,7 +506,7 @@ function OnlineGame({
               <thead>
                 <tr style={{ borderBottom: '1.5px solid var(--line)' }}>
                   {['순위', '플레이어', '최종 점수'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontFamily: 'var(--f-pix)', fontSize: 8, color: 'var(--dim)', fontWeight: 400, textAlign: 'left' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 12px', fontFamily: 'var(--f-pix)', fontSize: 12, color: 'var(--dim)', fontWeight: 400, textAlign: 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -528,7 +528,7 @@ function OnlineGame({
           </div>
 
           <button className="arc-btn-ghost" onClick={onHome} style={{ width: '100%' }}>🚪 홈으로</button>
-          <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 18, lineHeight: 1.8 }}>GOOD GAME · 한 판 더?</p>
+          <p className="pix" style={{ fontSize: 12, color: 'var(--faint)', textAlign: 'center', marginTop: 18, lineHeight: 1.8 }}>GOOD GAME · 한 판 더?</p>
         </div>
       </div>
     );
@@ -565,7 +565,7 @@ function OnlineGame({
             <div style={{ fontSize: 36 }}>🚪</div>
             <div>
               <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: 'var(--text)', marginBottom: 6 }}>게임을 나가시겠습니까?</div>
-              <div className="pix" style={{ fontSize: 8, color: 'var(--faint)', lineHeight: 1.8 }}>현재 게임 진행이 종료됩니다</div>
+              <div className="pix" style={{ fontSize: 12, color: 'var(--faint)', lineHeight: 1.8 }}>현재 게임 진행이 종료됩니다</div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="arc-btn-ghost" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>취소</button>
@@ -580,13 +580,13 @@ function OnlineGame({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0 8px' }}>
           <button className="arc-btn-ghost" onClick={() => setShowExitModal(true)} style={{ fontSize: 13, padding: '8px 12px' }}>✕</button>
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <span className="pix" style={{ fontSize: 8, color: 'var(--violet)' }}>ROUND {G.round}/{G.maxRounds}</span>
+            <span className="pix" style={{ fontSize: 12, color: 'var(--violet)' }}>ROUND {G.round}/{G.maxRounds}</span>
             <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: isMyTurn ? 'var(--violet)' : 'var(--text)' }}>
               {isMyTurn ? '내 차례!' : `${currentPlayer.name}의 차례`}
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span className="pix" style={{ fontSize: 7, color: 'var(--faint)' }}>생존 {alive}명</span>
+            <span className="pix" style={{ fontSize: 12, color: 'var(--faint)' }}>생존 {alive}명</span>
             <Hearts hp={myPlayer.hp} max={G.maxHp} />
           </div>
         </div>
@@ -595,7 +595,7 @@ function OnlineGame({
         <div className="arc-panel-inset" style={{ marginBottom: 12, padding: '10px 10px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
             <span className="arc-lbl">주문 현황</span>
-            <span className="pix" style={{ fontSize: 7, color: 'var(--faint)' }}>덱 {G.deck.length} · 비밀 {G.secretPile.length}</span>
+            <span className="pix" style={{ fontSize: 12, color: 'var(--faint)' }}>덱 {G.deck.length} · 비밀 {G.secretPile.length}</span>
           </div>
           <SpellBoard castCounts={G.castCounts} />
         </div>
@@ -605,8 +605,8 @@ function OnlineGame({
           <div style={{ margin: '0 0 8px', padding: '7px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(162,116,255,.1)', border: '1px solid rgba(162,116,255,.3)' }}>
             <span style={{ fontFamily: 'var(--f-disp)', fontSize: 28, color: 'var(--violet)', lineHeight: 1 }}>{G.combo}</span>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--violet)', fontWeight: 700 }}>콤보 진행 중</div>
-              <div style={{ fontSize: 10, color: 'var(--dim)' }}>{G.combo} 이하 선언 · 또는 턴 종료</div>
+              <div style={{ fontSize: 12, color: 'var(--violet)', fontWeight: 700 }}>콤보 진행 중</div>
+              <div style={{ fontSize: 12, color: 'var(--dim)' }}>{G.combo} 이하 선언 · 또는 턴 종료</div>
             </div>
           </div>
         )}
@@ -629,15 +629,15 @@ function OnlineGame({
                 } as React.CSSProperties}
               >
                 {neighborTag && (
-                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 6, color: 'var(--cyan)', marginBottom: 4 }}>{neighborTag}</div>
+                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 12, color: 'var(--cyan)', marginBottom: 4 }}>{neighborTag}</div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: p.dot, boxShadow: `0 0 7px ${p.dot}`, display: 'inline-block' }} />
-                  <span style={{ fontWeight: 700, fontSize: 12, color: isMe ? p.dot : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: p.dot, boxShadow: `0 0 7px ${p.dot}`, display: 'inline-block', marginTop: 3 }} />
+                  <span style={{ fontWeight: 700, fontSize: 12, color: isMe ? p.dot : 'var(--text)', flex: 1, wordBreak: 'break-all', lineHeight: 1.3 }}>
                     {p.name}{isMe && ' (나)'}
                   </span>
-                  {isCurrent && <span className="pix" style={{ fontSize: 5.5, color: p.dot, flexShrink: 0 }}>NOW</span>}
-                  {p.eliminated && <span style={{ fontSize: 11, marginLeft: 'auto' }}>💀</span>}
+                  {isCurrent && <span className="pix" style={{ fontSize: 12, color: p.dot, flexShrink: 0 }}>NOW</span>}
+                  {p.eliminated && <span style={{ fontSize: 11 }}>💀</span>}
                 </div>
                 <Hearts hp={p.hp} max={G.maxHp} />
                 <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 7 }}>
@@ -647,7 +647,7 @@ function OnlineGame({
                   {p.secretRevealed.map((t, ti) => <SecretTile key={`s${ti}`} num={t} />)}
                 </div>
                 {p.secretRevealed.length > 0 && (
-                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 6, color: 'var(--cyan)', marginTop: 4 }}>
+                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 12, color: 'var(--cyan)', marginTop: 4 }}>
                     👁 비밀 {p.secretRevealed.length}개
                   </div>
                 )}
@@ -732,8 +732,8 @@ function OnlineGame({
                 )}
                 <span style={{ fontFamily: 'var(--f-disp)', fontSize: 20, color: locked ? 'var(--faint)' : s.color, lineHeight: 1, textShadow: locked ? 'none' : `0 0 10px ${s.color}88` }}>{s.num}</span>
                 <SpellIcon num={s.num} size={18} />
-                <span style={{ fontSize: 8, fontWeight: 700, color: locked ? 'var(--faint)' : 'var(--dim)', whiteSpace: 'nowrap', lineHeight: 1 }}>{s.kr}</span>
-                <span style={{ fontSize: 6, color: locked ? 'var(--faint)' : s.color + 'bb', lineHeight: 1 }}>{TG[s.targeting]}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: locked ? 'var(--faint)' : 'var(--dim)', whiteSpace: 'nowrap', lineHeight: 1 }}>{s.kr}</span>
+                <span style={{ fontSize: 12, color: locked ? 'var(--faint)' : s.color + 'bb', lineHeight: 1 }}>{TG[s.targeting]}</span>
               </button>
             );
           })}
@@ -747,7 +747,7 @@ function OnlineGame({
             </button>
           )
         ) : (
-          <p className="pix blink" style={{ fontSize: 8, color: 'var(--dim)', textAlign: 'center', marginBottom: 10 }}>
+          <p className="pix blink" style={{ fontSize: 12, color: 'var(--dim)', textAlign: 'center', marginBottom: 10 }}>
             {currentPlayer.name}의 차례입니다...
           </p>
         )}
@@ -791,16 +791,63 @@ export default function AbraOnlinePage() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const [room, setRoom] = useState<AbraOnlineRoom | null>(null);
+  const [leftPlayerName, setLeftPlayerName] = useState<string | null>(null);
+  const allPresentRef = useRef(false);
 
   const uid = getGuestUid() ?? '';
+
+  // Presence 등록: 연결 끊기면 Firebase가 자동 제거
+  useEffect(() => {
+    if (!uid) return;
+    let cleanup: (() => void) | undefined;
+    registerPresence(code, uid).then(fn => { cleanup = fn; });
+    return () => { cleanup?.(); };
+  }, [code, uid]);
 
   useEffect(() => {
     const unsub = subscribeRoom(code, r => {
       if (!r) { router.replace('/abra'); return; }
       setRoom(r);
+
+      // 상대 나가기 감지
+      if (r.status === 'playing' && r.presence) {
+        const allPresent = r.players.every(p => r.presence![p.clientId]);
+        if (allPresent) allPresentRef.current = true;
+
+        if (allPresentRef.current) {
+          const missing = r.players.find(p => p.clientId !== uid && !r.presence![p.clientId]);
+          if (missing) {
+            setLeftPlayerName(missing.name);
+            finishGame(code, missing.name);
+          }
+        }
+      }
+
+      // 다른 클라이언트가 먼저 감지한 경우
+      if (r.status === 'finished' && r.leftPlayerName && r.gameState?.phase !== 'game-end') {
+        setLeftPlayerName(r.leftPlayerName);
+      }
     });
     return unsub;
-  }, [code, router]);
+  }, [code, router, uid]);
+
+  if (leftPlayerName) {
+    return (
+      <div className="cabinet">
+        <div className="crt" />
+        <div className="arc-screen" style={{ justifyContent: 'center', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+          <div style={{ fontSize: 52 }}>🚪</div>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 22, color: 'var(--text)', lineHeight: 1.3 }}>
+            {leftPlayerName}님이<br />게임을 나갔습니다
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--dim)', margin: 0 }}>게임이 종료되었습니다.</p>
+          <button className="arc-btn arc-btn--violet" onClick={() => router.replace('/abra')} style={{ marginTop: 8 }}>
+            홈으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!room || !room.gameState) {
     return (

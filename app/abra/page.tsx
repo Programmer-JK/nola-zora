@@ -40,7 +40,12 @@ function OnlineSetup({ maxRounds }: { maxRounds: number }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>내 닉네임</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span className="arc-lbl">내 닉네임 (최대 10글자)</span>
+          <span style={{ fontSize: 12, color: nickname.length >= 10 ? 'var(--red)' : 'var(--faint)' }}>
+            {nickname.length}/10
+          </span>
+        </div>
         <input
           type="text"
           value={nickname}
