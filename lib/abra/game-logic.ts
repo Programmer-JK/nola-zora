@@ -126,7 +126,7 @@ export function initRound(G: AbraGameState) {
 
 export function canDeclare(G: AbraGameState, playerIdx: number, num: number): boolean {
   if (G.players[playerIdx].eliminated) return false;
-  if (G.combo !== null && num > G.combo) return false;
+  if (G.combo !== null && num < G.combo) return false;
   return true;
 }
 
@@ -264,6 +264,7 @@ export function scoreRound(G: AbraGameState): number[] {
   G.players.forEach((p, i) => { if (!p.eliminated) round[i] += 1; });
   G.players.forEach((p, i) => { if (!p.eliminated && p.tiles.length === 0 && p.secretRevealed.length === 0) round[i] += 3; });
   G.players.forEach((p, i) => { if (p.usedICansee) round[i] += 1; });
+  G.players.forEach((p, i) => { if (!p.eliminated) round[i] += p.hp; });
   round.forEach((v, i) => { G.scores[i] = (G.scores[i] || 0) + v; });
   G.roundScores = round;
   G.phase = 'round-end';

@@ -14,6 +14,8 @@ import {
 } from '@/lib/abra/game-logic';
 import { AbraGameState, AbraCastResult, AbraSpell, AbraPlayer } from '@/lib/abra/types';
 import { SpellFX, DiceRoll3D } from '../_abra-fx';
+import { playSpell, playFail, playSelect } from '@/lib/abra/sounds';
+import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 
 const TG: Record<string, string> = { all_dice:'전체', all:'전체', self_dice:'자신', self:'자신', reveal:'비밀', neighbors:'←→', left:'←', right:'→' };
 
@@ -182,8 +184,13 @@ function CastOverlay({
           </>
         ) : (
           <>
-            <div style={{ fontSize: 64, marginBottom: 12 }}>💨</div>
-            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 22, color: accent, marginBottom: 8 }}>빗나감</div>
+            <div style={{ fontSize: 64, marginBottom: 8 }}>💨</div>
+            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 22, color: accent, marginBottom: 14 }}>빗나감</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14, opacity: 0.45 }}>
+              <span style={{ fontFamily: 'var(--f-disp)', fontSize: 20 }}>{sp.num}</span>
+              <SpellIcon num={cast.spellNum} size={32} />
+              <span style={{ fontFamily: 'var(--f-title)', fontSize: 18 }}>{sp.kr}</span>
+            </div>
           </>
         )}
 
@@ -314,6 +321,7 @@ function OnlineGame({
   const [lastResult, setLastResult] = useState<{ success: boolean; num: number } | null>(null);
   const [memo, setMemo] = useState<Record<number, 0 | 1 | 2>>({});
   const [showExitModal, setShowExitModal] = useState(false);
+  const { soundEnabled, toggleSound } = useSoundEnabled();
 
   // Sync from Firebase
   useEffect(() => {
@@ -337,9 +345,11 @@ function OnlineGame({
     const next = structuredClone(G);
     const { success } = resolveDeclaration(next, me, num);
     if (success) {
+      if (soundEnabled) playSpell(num);
       const eff = applyEffect(next, num, me);
       next.pendingCast = { spellNum: num, success: true, ...eff };
     } else {
+      if (soundEnabled) playFail();
       next.pendingCast = {
         spellNum: num, success: false,
         lines: ['체력 -1. 턴 종료.'], diceRoll: null, revealedTile: null,
@@ -348,7 +358,7 @@ function OnlineGame({
     setLastResult({ success, num });
     setG(next);
     await updateGameState(code, next);
-  }, [G, me, selected, isMyTurn, code]);
+  }, [G, me, selected, isMyTurn, code, soundEnabled]);
 
   // ── Close cast overlay (only current player) ─────────────────
   const handleCloseCast = useCallback(async () => {
@@ -432,8 +442,9 @@ function OnlineGame({
               <tbody>
                 {sorted.map((p, rank) => {
                   const sp = !p.eliminated ? 1 : 0;
+                  const tp = (!p.eliminated && p.tiles.length === 0 && p.secretRevealed.length === 0) ? 3 : 0;
                   const rp = p.usedICansee ? 1 : 0;
-                  const tp = Math.max(0, p.roundScore - sp - rp);
+                  const hp = !p.eliminated ? p.hp : 0;
                   return (
                     <tr key={p.i} style={{ borderBottom: '1px solid var(--line)', background: rank === 0 ? 'rgba(162,116,255,.07)' : undefined }}>
                       <td style={{ padding: '10px 12px' }}>{['🥇', '🥈', '🥉'][rank] ?? '🎮'}</td>
@@ -449,6 +460,7 @@ function OnlineGame({
                           {sp > 0 && <span style={{ fontSize: 12, color: 'var(--green)', background: 'rgba(126,217,87,.12)', padding: '1px 4px', borderRadius: 3 }}>생존</span>}
                           {tp > 0 && <span style={{ fontSize: 12, color: 'var(--violet)', background: 'rgba(162,116,255,.12)', padding: '1px 4px', borderRadius: 3 }}>타일+{tp}</span>}
                           {rp > 0 && <span style={{ fontSize: 12, color: 'var(--cyan)', background: 'rgba(54,224,207,.12)', padding: '1px 4px', borderRadius: 3 }}>천리안</span>}
+                          {hp > 0 && <span style={{ fontSize: 12, color: 'var(--red)', background: 'rgba(255,90,77,.12)', padding: '1px 4px', borderRadius: 3 }}>❤️+{hp}</span>}
                         </div>
                       </td>
                       <td style={{ padding: '10px 12px', color: 'var(--coin)', fontWeight: 800 }}>{p.total}</td>
@@ -579,6 +591,7 @@ function OnlineGame({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0 8px' }}>
           <button className="arc-btn-ghost" onClick={() => setShowExitModal(true)} style={{ fontSize: 13, padding: '8px 12px' }}>✕</button>
+          <button className="arc-btn-ghost" onClick={toggleSound} style={{ fontSize: 13, padding: '8px 10px' }}>{soundEnabled ? '🔊' : '🔇'}</button>
           <div style={{ flex: 1, textAlign: 'center' }}>
             <span className="pix" style={{ fontSize: 12, color: 'var(--violet)' }}>ROUND {G.round}/{G.maxRounds}</span>
             <div style={{ fontFamily: 'var(--f-title)', fontSize: 18, color: isMyTurn ? 'var(--violet)' : 'var(--text)' }}>
@@ -712,7 +725,7 @@ function OnlineGame({
               <button
                 key={s.num}
                 disabled={locked}
-                onClick={() => setSelected(s.num)}
+                onClick={() => { if (soundEnabled) playSelect(); setSelected(s.num); }}
                 style={{
                   position: 'relative', appearance: 'none',
                   border: `1.5px solid ${locked ? 'rgba(255,255,255,0.06)' : `${s.color}55`}`,
