@@ -226,6 +226,20 @@ export function openPass(state: GameState): GameState {
     });
   }
 
+  // 남은 플레이어가 1명이고 현재 입찰액 이상 지불 불가능하면 자동 종료
+  if (newActive.length === 1 && newActive[0] !== a.currentWinnerId) {
+    const lastBidder = state.players.find(p => p.id === newActive[0]);
+    if (lastBidder && lastBidder.cash <= a.currentBid) {
+      return resolveAuction(state, {
+        winnerId: a.currentWinnerId ?? a.sellerId,
+        price: a.currentBid,
+        cards: a.cards,
+        sellerId: a.sellerId,
+        noContest: !a.currentWinnerId,
+      });
+    }
+  }
+
   return {
     ...state,
     currentAuction: { ...a, activeBidderIds: newActive, currentBidderIndex: newIdx },
@@ -307,7 +321,9 @@ export function secretResolve(state: GameState): GameState {
   let maxBid = 0;
   let winnerId: string | null = null;
 
-  for (const [id, bid] of Object.entries(a.bids)) {
+  // bidOrder 순서로 순회해야 동점 시 먼저 낸 플레이어가 우선 낙찰됨
+  for (const id of a.bidOrder) {
+    const bid = a.bids[id] ?? -1;
     if (bid > maxBid) {
       maxBid = bid;
       winnerId = id;

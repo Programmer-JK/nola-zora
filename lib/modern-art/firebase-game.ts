@@ -1,4 +1,4 @@
-import { ref, set, update, onValue, get } from 'firebase/database';
+import { ref, set, update, onValue, get, remove, onDisconnect } from 'firebase/database';
 import { getDb } from '@/lib/firebase';
 import { createGame } from './game-logic';
 import {
@@ -21,6 +21,8 @@ export type OnlineRoom = {
   maxRounds: number;
   gameState: GameState | null;
   createdAt: number;
+  presence?: Record<string, boolean>;
+  leftPlayerName?: string;
 };
 
 // ─── 유틸 ────────────────────────────────────────────────────
@@ -148,8 +150,17 @@ export async function updateGameState(code: string, gs: GameState): Promise<void
   await update(roomRef(code), { gameState: gs });
 }
 
-export async function finishGame(code: string): Promise<void> {
-  await update(roomRef(code), { status: 'finished' });
+export async function finishGame(code: string, leftPlayerName?: string): Promise<void> {
+  const data: Record<string, unknown> = { status: 'finished' };
+  if (leftPlayerName) data.leftPlayerName = leftPlayerName;
+  await update(roomRef(code), data);
+}
+
+export async function registerPresence(code: string, clientId: string): Promise<() => void> {
+  const pRef = ref(getDb(), `modern-art/rooms/${code}/presence/${clientId}`);
+  await set(pRef, true);
+  onDisconnect(pRef).remove();
+  return () => { remove(pRef); };
 }
 
 export function subscribeRoom(code: string, cb: (room: OnlineRoom | null) => void): () => void {

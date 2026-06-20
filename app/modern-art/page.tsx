@@ -10,7 +10,6 @@ import { createRoom, joinRoom } from '@/lib/modern-art/firebase-game';
 
 
 const MAX_PLAYERS = 5;
-const MIN_PLAYERS = 2;
 const AUCTION_TYPES: AuctionType[] = ['open', 'fixed', 'secret', 'once-around', 'double'];
 
 const AUCTION_RULES: Record<AuctionType, { desc: string; detail: string }> = {
@@ -127,65 +126,10 @@ function RulesModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-type Mode = 'local' | 'online';
-
-function LocalSetup({ rounds }: { rounds: number }) {
+export default function ModernArtSetup() {
   const router = useRouter();
-  const [playerCount, setPlayerCount] = useState(3);
-  const [names, setNames] = useState<string[]>(['플레이어 1', '플레이어 2', '플레이어 3', '플레이어 4', '플레이어 5']);
-
-  const handleStart = () => {
-    const playerNames = names.slice(0, playerCount);
-    const params = new URLSearchParams({ players: playerNames.join(','), rounds: String(rounds) });
-    router.push(`/modern-art/game/local?${params.toString()}`);
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>플레이어 수</span>
-        <div className="arc-seg">
-          {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map(n => (
-            <button key={n} onClick={() => setPlayerCount(n)} className={playerCount === n ? 'on' : ''}>{n}명</button>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>플레이어 이름</span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {Array.from({ length: playerCount }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="arc-badge" style={{ background: 'var(--surface-3)', color: 'var(--dim)', flexShrink: 0 }}>{i + 1}</span>
-              <input
-                type="text"
-                value={names[i]}
-                onChange={e => { const next = [...names]; next[i] = e.target.value; setNames(next); }}
-                maxLength={10}
-                className="arc-field"
-                style={{ flex: 1, fontFamily: 'var(--f-body)', fontWeight: 600 }}
-                placeholder={`플레이어 ${i + 1}`}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--faint)' }}>
-        <span>💰 시작 자금: {STARTING_CASH}만원</span>
-        <span>🏆 작가 순위: 30/20/10만원</span>
-      </div>
-
-      <button onClick={handleStart} className="arc-btn arc-btn--cyan" style={{ fontSize: 18 }}>
-        <span style={{ fontFamily: 'var(--f-pix)', fontSize: 10, marginRight: 2 }}>▶</span>
-        게임 시작
-      </button>
-    </div>
-  );
-}
-
-function OnlineSetup({ rounds }: { rounds: number }) {
-  const router = useRouter();
+  const [rounds, setRounds] = useState(4);
+  const [showRules, setShowRules] = useState(false);
   const [nickname, setNickname] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
@@ -214,72 +158,6 @@ function OnlineSetup({ rounds }: { rounds: number }) {
     if (err) { setError(err); setLoading(null); return; }
     router.push(`/modern-art/room/${code}`);
   };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>내 닉네임</span>
-        <input
-          type="text"
-          value={nickname}
-          onChange={e => setNickname(e.target.value)}
-          maxLength={10}
-          placeholder="닉네임 입력..."
-          className="arc-field"
-          style={{ fontFamily: 'var(--f-body)', fontWeight: 600 }}
-        />
-      </section>
-
-      {error && (
-        <p style={{ color: 'var(--red)', fontSize: 13, margin: 0, background: 'rgba(255,90,77,0.08)', border: '1px solid rgba(255,90,77,0.25)', borderRadius: 12, padding: '10px 14px' }}>
-          {error}
-        </p>
-      )}
-
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>방 만들기</span>
-        <button onClick={handleCreate} disabled={loading !== null} className="arc-btn arc-btn--cyan">
-          {loading === 'create' ? 'LOADING...' : '새 방 만들기'}
-        </button>
-        <p style={{ color: 'var(--faint)', fontSize: 12, textAlign: 'center', marginTop: 8 }}>방을 만들고 친구에게 코드를 공유하세요</p>
-      </section>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-        <span style={{ color: 'var(--faint)', fontSize: 12 }}>또는</span>
-        <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-      </div>
-
-      <section>
-        <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>방 참가</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            value={joinCode}
-            onChange={e => setJoinCode(e.target.value.toUpperCase())}
-            maxLength={6}
-            placeholder="방 코드 6자리"
-            className="arc-field"
-            style={{ flex: 1, letterSpacing: 4, fontFamily: 'var(--f-pix)', fontSize: 12 }}
-          />
-          <button onClick={handleJoin} disabled={loading !== null} className="arc-btn-ghost" style={{ flexShrink: 0 }}>
-            {loading === 'join' ? '...' : '참가'}
-          </button>
-        </div>
-      </section>
-
-      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--faint)' }}>
-        <span>💰 시작 자금: {STARTING_CASH}만원</span>
-        <span>👥 2~5명</span>
-      </div>
-    </div>
-  );
-}
-
-export default function ModernArtSetup() {
-  const [mode, setMode] = useState<Mode>('local');
-  const [rounds, setRounds] = useState(4);
-  const [showRules, setShowRules] = useState(false);
 
   return (
     <div className="cabinet">
@@ -317,15 +195,6 @@ export default function ModernArtSetup() {
           </div>
         </div>
 
-        {/* 모드 탭 */}
-        <div className="arc-seg" style={{ marginBottom: 18 }}>
-          {(['local', 'online'] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)} className={mode === m ? 'on' : ''}>
-              {m === 'local' ? '🖥️ 로컬 플레이' : '🌐 온라인'}
-            </button>
-          ))}
-        </div>
-
         {/* 라운드 설정 */}
         <div className="arc-panel arc-rise" style={{ padding: '16px', marginBottom: 12 }}>
           <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>라운드 수</span>
@@ -336,12 +205,65 @@ export default function ModernArtSetup() {
           </div>
         </div>
 
-        {/* 모드별 UI */}
+        {/* 온라인 설정 */}
         <div className="arc-panel ticks arc-rise" style={{ padding: '20px 18px', animationDelay: '.08s' }}>
-          {mode === 'local'
-            ? <LocalSetup rounds={rounds} />
-            : <OnlineSetup rounds={rounds} />
-          }
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <section>
+              <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>내 닉네임</span>
+              <input
+                type="text"
+                value={nickname}
+                onChange={e => setNickname(e.target.value)}
+                maxLength={10}
+                placeholder="닉네임 입력..."
+                className="arc-field"
+                style={{ fontFamily: 'var(--f-body)', fontWeight: 600 }}
+              />
+            </section>
+
+            {error && (
+              <p style={{ color: 'var(--red)', fontSize: 13, margin: 0, background: 'rgba(255,90,77,0.08)', border: '1px solid rgba(255,90,77,0.25)', borderRadius: 12, padding: '10px 14px' }}>
+                {error}
+              </p>
+            )}
+
+            <section>
+              <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>방 만들기</span>
+              <button onClick={handleCreate} disabled={loading !== null} className="arc-btn arc-btn--cyan">
+                {loading === 'create' ? 'LOADING...' : '새 방 만들기'}
+              </button>
+              <p style={{ color: 'var(--faint)', fontSize: 12, textAlign: 'center', marginTop: 8 }}>방을 만들고 친구에게 코드를 공유하세요</p>
+            </section>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+              <span style={{ color: 'var(--faint)', fontSize: 12 }}>또는</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+            </div>
+
+            <section>
+              <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>방 참가</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  maxLength={6}
+                  placeholder="방 코드 6자리"
+                  className="arc-field"
+                  style={{ flex: 1, letterSpacing: 4, fontFamily: 'var(--f-pix)', fontSize: 12 }}
+                />
+                <button onClick={handleJoin} disabled={loading !== null} className="arc-btn-ghost" style={{ flexShrink: 0 }}>
+                  {loading === 'join' ? '...' : '참가'}
+                </button>
+              </div>
+            </section>
+
+            <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--faint)' }}>
+              <span>💰 시작 자금: {STARTING_CASH}만원</span>
+              <span>👥 2~5명</span>
+            </div>
+          </div>
         </div>
 
         {/* 하단 info */}
@@ -349,7 +271,7 @@ export default function ModernArtSetup() {
           <span className="arc-chip" style={{ fontSize: 11 }}>🎨 작가 5명</span>
           <span className="arc-chip" style={{ fontSize: 11 }}>🏷️ 경매 5종</span>
           <span className="arc-chip" style={{ fontSize: 11 }}>👥 2~5명</span>
-          <span className="arc-chip" style={{ fontSize: 11 }}>💰 {STARTING_CASH}만원</span>
+          <span className="arc-chip" style={{ fontSize: 11 }}>🌐 온라인</span>
         </div>
       </div>
     </div>

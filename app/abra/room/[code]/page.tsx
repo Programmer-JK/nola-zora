@@ -131,7 +131,7 @@ export default function AbraWaitingRoom() {
               {starting ? 'LOADING...' : canStart ? '게임 시작' : `최소 2명 필요 (현재 ${room.players.length}명)`}
             </button>
           ) : (
-            <p className="pix blink" style={{ fontSize: 8, color: 'var(--dim)', textAlign: 'center' }}>
+            <p className="pix blink" style={{ fontSize: 15, color: 'var(--dim)', textAlign: 'center' }}>
               호스트가 게임을 시작하길 기다리는 중...
             </p>
           )}

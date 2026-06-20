@@ -3,9 +3,9 @@
 import { useEffect, useCallback, useState, useRef, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getGuestUid } from '@/lib/auth';
-import { subscribeRoom, updateGameState, finishGame } from '@/lib/modern-art/firebase-game';
+import { subscribeRoom, updateGameState, finishGame, registerPresence } from '@/lib/modern-art/firebase-game';
 import {
-  ARTISTS, AUCTION_TYPE_ICONS, AUCTION_TYPE_LABELS, AUCTION_TYPE_COLORS, getArtistById,
+  ARTISTS, AUCTION_TYPES, AUCTION_TYPE_ICONS, AUCTION_TYPE_LABELS, AUCTION_TYPE_COLORS, getArtistById,
 } from '@/lib/modern-art/game-data';
 import {
   selectCard, selectDoubleSecond,
@@ -20,6 +20,15 @@ import {
   GameState, Card, OpenAuction, FixedAuction, SecretAuction, OnceAroundAuction,
 } from '@/lib/modern-art/types';
 
+// ─── 작품 제목 추출 ───────────────────────────────────────────
+function getArtworkTitle(artistId: string, artworkIndex: number): string {
+  const artist = getArtistById(artistId);
+  const src = artist.images[artworkIndex % artist.images.length];
+  if (!src) return '';
+  const filename = (src.split('/').pop() ?? '').replace(/\.[^.]+$/, '');
+  return artist.titles?.[filename] ?? filename;
+}
+
 // ─── 공유 UI 컴포넌트 ─────────────────────────────────────────
 function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   artistId: string; avatar: string; artworkIndex: number; className?: string;
@@ -29,8 +38,8 @@ function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   const src = artist.images[artworkIndex % artist.images.length];
   if (err || !src) {
     return (
-      <div className={`flex items-center justify-center ${className ?? ''}`}>
-        <span className="text-5xl">{avatar}</span>
+      <div className={className ?? ''} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: '2rem' }}>{avatar}</span>
       </div>
     );
   }
@@ -38,7 +47,7 @@ function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
     <img
       src={src}
       alt={`${artistId}-${artworkIndex}`}
-      className={`object-cover ${className ?? ''}`}
+      className={className ?? ''}
       onError={() => setErr(true)}
     />
   );
@@ -49,33 +58,25 @@ function ArtCard({ card, selected, onClick, dimmed }: {
 }) {
   const artist = getArtistById(card.artistId);
   const auctionColor = AUCTION_TYPE_COLORS[card.auctionType];
+  const title = getArtworkTitle(card.artistId, card.artworkIndex);
   return (
     <button
       onClick={onClick}
       disabled={dimmed}
-      className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-200 w-full aspect-[3/5]
-        ${selected ? 'scale-105 shadow-2xl' : ''}
-        ${dimmed ? 'opacity-30 cursor-not-allowed' : 'hover:scale-105 hover:shadow-xl active:scale-95 cursor-pointer'}
-      `}
+      className={`ma-card ${onClick ? 'tap' : ''} ${selected ? 'sel' : ''} ${dimmed ? 'opacity-30 cursor-not-allowed' : ''}`}
       style={{
         borderColor: selected ? artist.color : artist.color + '50',
         boxShadow: selected ? `0 0 24px ${artist.color}50` : undefined,
       }}
     >
-      {/* 작가 헤더 바 */}
-      <div className="flex items-center gap-1 flex-shrink-0" style={{ padding: '5px 8px', background: artist.color, color: '#000' }}>
-        <span style={{ fontSize: 12 }}>{artist.avatar}</span>
-        <span className="font-black text-[11px] leading-none" style={{ fontFamily: 'var(--f-kr)' }}>{artist.name}</span>
+      <div className="ma-card-head" style={{ background: artist.color }}>
+        <span className="ma-card-artist">{artist.avatar} {artist.name}</span>
       </div>
-      {/* 이미지 */}
-      <div className="flex-1 w-full overflow-hidden" style={{ background: artist.color + '12' }}>
-        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-      </div>
-      {/* 경매 타입 푸터 바 */}
-      <div className="flex items-center justify-center gap-1 flex-shrink-0 text-white"
-        style={{ padding: '4px 8px', background: auctionColor + 'cc' }}>
-        <span style={{ fontSize: 11 }}>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
-        <span className="font-bold text-[10px]" style={{ fontFamily: 'var(--f-kr)' }}>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
+      <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="ma-card-art" />
+      {title && <div className="ma-card-title">{title}</div>}
+      <div className="ma-card-foot" style={{ background: auctionColor + 'cc', color: '#0c0a12' }}>
+        <span>{AUCTION_TYPE_ICONS[card.auctionType]}</span>
+        <span>{AUCTION_TYPE_LABELS[card.auctionType]}</span>
       </div>
     </button>
   );
@@ -85,27 +86,25 @@ function MarketBoard({ roundMarket, artistValues }: {
   roundMarket: Record<string, number>; artistValues: Record<string, number>;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="ma-market-row">
       {ARTISTS.map(a => {
         const count = roundMarket[a.id] ?? 0;
         const value = artistValues[a.id] ?? 0;
         const pct = (count / 5) * 100;
         const isClose = count >= 4;
         return (
-          <div key={a.id} className="flex items-center gap-2">
-            <span className="text-base w-6 text-center flex-shrink-0">{a.avatar}</span>
-            <div className="flex-1">
-              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${pct}%`, background: isClose ? '#ef4444' : a.color }} />
-              </div>
+          <div key={a.id} className="ma-mk" style={{ borderColor: isClose ? '#ef4444' : a.color + '50' }}>
+            <div className="ma-mk-top">
+              <span className="ma-mk-av">{a.avatar}</span>
+              <span className="ma-mk-name" style={{ color: a.color }}>{a.name}</span>
+              <span className="ma-mk-val" style={{ color: isClose ? '#ef4444' : value > 0 ? 'var(--gold)' : 'var(--faint)' }}>
+                {value > 0 ? `${value}` : '--'}
+              </span>
             </div>
-            <span className={`text-xs font-bold w-7 text-right flex-shrink-0 ${isClose ? 'text-red-400' : 'text-white/50'}`}>
-              {count}/5
-            </span>
-            {value > 0
-              ? <span className="text-[11px] font-bold w-8 text-right flex-shrink-0" style={{ color: a.color }}>{value}M</span>
-              : <span className="w-8 flex-shrink-0" />}
+            <div className="ma-mk-bar">
+              <div className="ma-mk-fill" style={{ width: `${pct}%`, background: isClose ? '#ef4444' : a.color }} />
+            </div>
+            <div className="ma-mk-count" style={{ color: isClose ? '#ef4444' : 'var(--faint)' }}>{count}/5</div>
           </div>
         );
       })}
@@ -113,44 +112,63 @@ function MarketBoard({ roundMarket, artistValues }: {
   );
 }
 
-function BidInput({ minBid, maxBid, onSubmit, label = '입찰' }: {
-  minBid: number; maxBid: number; onSubmit: (v: number) => void; label?: string;
+function BidInput({ minBid, maxBid, onSubmit, label = '입찰', accentColor, playerCash }: {
+  minBid: number; maxBid: number; onSubmit: (v: number) => void; label?: string; accentColor?: string; playerCash?: number;
 }) {
   const [val, setVal] = useState(minBid);
   const adjust = (d: number) => setVal(v => Math.min(maxBid, Math.max(minBid, v + d)));
   const presets = [10, 20, 50, 100].filter(v => v > minBid && v <= maxBid);
+  const color = accentColor ?? 'var(--gold)';
+  const remaining = playerCash !== undefined ? playerCash - val : null;
+  const isBroke = remaining === 0;
+  const isLow = remaining !== null && remaining > 0 && remaining < 10;
   return (
     <div className="space-y-3">
       {/* 금액 표시 */}
-      <div className="flex items-center justify-center bg-white/8 border border-white/15 rounded-2xl py-3">
-        <div className="text-5xl font-black text-amber-400 leading-none">{val}</div>
+      <div className="arc-panel-inset flex items-center justify-center py-3">
+        <div className="text-5xl font-black leading-none" style={{ fontFamily: 'var(--f-title)', color }}>{val}</div>
         <div className="text-white/30 text-lg ml-1 mt-2">M</div>
       </div>
+      {/* 잔고 경고 */}
+      {remaining !== null && (
+        <div style={{ textAlign: 'center', fontSize: 11, fontFamily: 'var(--f-kr)', color: isBroke ? '#ef4444' : isLow ? '#f59e0b' : 'var(--dim)' }}>
+          입찰 후 잔고: {remaining}M{isBroke ? ' ⚠️ 잔금 없음' : isLow ? ' ⚠️' : ''}
+        </div>
+      )}
+      {/* 슬라이더 */}
+      {maxBid > minBid && (
+        <input
+          type="range"
+          className="ma-range"
+          min={minBid}
+          max={maxBid}
+          value={val}
+          onChange={e => setVal(Number(e.target.value))}
+          style={{ '--range-c': color } as React.CSSProperties}
+        />
+      )}
       {/* ±버튼 */}
       <div className="flex gap-1.5 justify-center">
-        {([-5, -1, 1, 5] as const).map(d => (
-          <button key={d} onClick={() => adjust(d)}
-            className="w-14 h-9 rounded-xl bg-white/8 hover:bg-white/14 text-white/60 hover:text-white/80 font-bold transition-colors text-sm">
+        {([-10, -1, 1, 10] as const).map(d => (
+          <button key={d} onClick={() => adjust(d)} className="arc-btn-ghost" style={{ width: 56, padding: '8px 0', fontSize: 14 }}>
             {d > 0 ? `+${d}` : d}
           </button>
         ))}
       </div>
-      {(presets.length > 0 || maxBid >= minBid) && (
+      {presets.length > 0 && (
         <div className="flex gap-1.5">
           {presets.map(v => (
-            <button key={v} onClick={() => setVal(v)}
-              className="flex-1 py-2 rounded-xl bg-white/6 hover:bg-white/12 text-white/50 hover:text-white/80 text-xs font-bold transition-colors">
+            <button key={v} onClick={() => setVal(v)} className="arc-btn-ghost" style={{ flex: 1, fontSize: 12, padding: '7px 0' }}>
               {v}M
             </button>
           ))}
-          <button onClick={() => setVal(maxBid)}
-            className="flex-1 py-2 rounded-xl bg-white/6 hover:bg-white/12 text-white/50 hover:text-white/80 text-xs font-bold transition-colors">
+          <button onClick={() => setVal(maxBid)} className="arc-btn-ghost" style={{ flex: 1, fontSize: 12, padding: '7px 0' }}>
             MAX
           </button>
         </div>
       )}
-      <button onClick={() => onSubmit(val)} disabled={val > maxBid || val < minBid}
-        className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-black font-black text-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+      <button onClick={() => onSubmit(val)} disabled={val > maxBid || val < minBid} className="arc-btn"
+        style={accentColor ? { '--c': accentColor, '--c-lo': accentColor + 'aa', color: '#fff' } as React.CSSProperties : undefined}>
         {label} — {val}M
       </button>
     </div>
@@ -160,27 +178,25 @@ function BidInput({ minBid, maxBid, onSubmit, label = '입찰' }: {
 function AuctionCardDisplay({ cards }: { cards: Card[] }) {
   const isDouble = cards.length === 2;
   return (
-    <div className="flex gap-4 justify-center py-2">
+    <div className="ma-hero">
       {cards.map((card, idx) => {
         const artist = getArtistById(card.artistId);
         const auctionColor = AUCTION_TYPE_COLORS[card.auctionType];
+        const title = getArtworkTitle(card.artistId, card.artworkIndex);
         return (
-          <div key={card.id} className="rounded-3xl border-2 overflow-hidden flex-shrink-0 flex flex-col"
+          <div key={card.id} className="ma-hero-card"
             style={{
               borderColor: idx === 0 && isDouble ? artist.color + 'aa' : artist.color,
-              boxShadow: `0 0 60px ${artist.color}35, 0 8px 32px ${artist.color}20`,
-              width: isDouble ? '140px' : '180px',
+              boxShadow: `0 0 40px ${artist.color}30, 0 14px 40px -10px rgba(0,0,0,.7)`,
+              width: isDouble ? '150px' : '190px',
             }}>
-            <div className="flex-1 w-full relative" style={{ aspectRatio: '3/5', background: `linear-gradient(145deg, ${artist.color}28, ${artist.color}08)` }}>
-              <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-              <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full font-bold"
-                style={{ background: auctionColor + 'cc', color: 'white' }}>
-                {AUCTION_TYPE_ICONS[card.auctionType]}
-              </span>
-            </div>
-            <div className="px-3 py-2 text-center" style={{ background: `${artist.color}20` }}>
-              <div className="font-black text-sm leading-tight" style={{ color: artist.color }}>{artist.name}</div>
-              <div className="text-[11px] text-white/40 mt-0.5">{AUCTION_TYPE_LABELS[card.auctionType]}</div>
+            <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="ma-hero-art" />
+            <div className="ma-hero-meta">
+              {title && <div className="ma-hero-title">{title}</div>}
+              <div className="ma-hero-artist" style={{ color: artist.color }}>
+                {artist.avatar} {artist.name}
+                <span className="ml-1.5 text-[10px] opacity-60">{AUCTION_TYPE_ICONS[card.auctionType]} {AUCTION_TYPE_LABELS[card.auctionType]}</span>
+              </div>
             </div>
           </div>
         );
@@ -189,105 +205,138 @@ function AuctionCardDisplay({ cards }: { cards: Card[] }) {
   );
 }
 
-// ─── 미니 카드 (사이드바용) ───────────────────────────────────
-function MiniArtCard({ card }: { card: Card }) {
-  const artist = getArtistById(card.artistId);
-  const auctionColor = AUCTION_TYPE_COLORS[card.auctionType];
-  return (
-    <div style={{
-      borderRadius: 6, border: `1.5px solid ${artist.color}60`,
-      overflow: 'hidden', aspectRatio: '3/5',
-      display: 'flex', flexDirection: 'column',
-      background: artist.color + '10',
-    }}>
-      <div style={{ background: artist.color, padding: '2px 4px', fontSize: 9, lineHeight: 1.2, flexShrink: 0 }}>
-        {artist.avatar}
-      </div>
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="w-full h-full" />
-      </div>
-      <div style={{ background: auctionColor + 'cc', padding: '2px 4px', fontSize: 8, textAlign: 'center', flexShrink: 0 }}>
-        {AUCTION_TYPE_ICONS[card.auctionType]}
-      </div>
-    </div>
-  );
-}
+// ─── 플레이어 인덱스별 색상 ──────────────────────────────────
+const PLAYER_COLORS = ['#ffb72b', '#36e0cf', '#ff5da2', '#a274ff', '#7ed957'];
 
-// ─── 게임 레이아웃 (온라인용: 모든 플레이어 강조 없음) ────────
+// ─── 게임 레이아웃 (온라인용) ─────────────────────────────────
 function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: string; children: ReactNode }) {
   const [handOpen, setHandOpen] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
   const currentPlayer = gs.players[gs.currentPlayerIndex];
   const myPlayer = gs.players.find(p => p.clientId === myClientId) ?? null;
+  const isMyTurnLayout = currentPlayer?.clientId === myClientId;
+  const showHandBar = myPlayer && myPlayer.hand.length > 0 && gs.phase !== 'game-over';
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] flex flex-col">
-      <header className="border-b border-white/10 bg-black/30 px-4 md:px-6 py-3 flex items-center gap-4 flex-shrink-0">
-        <span className="text-amber-400 font-black text-sm tracking-widest">MODERN ART</span>
-        <div className="hidden md:block h-4 w-px bg-white/20" />
-        <span className="hidden md:block text-white/40 text-sm">라운드 {gs.round} / {gs.maxRounds}</span>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
-          <span className="text-amber-400 text-sm font-bold truncate">{currentPlayer.name}</span>
-          <span className="text-white/40 text-xs flex-shrink-0">의 차례</span>
+    <div className="ma-game">
+      {/* HUD */}
+      <div className="ma-hud">
+        <span className="ma-hud-mark">MODERN ART</span>
+        <span className="ma-hud-round">R{gs.round}/{gs.maxRounds}</span>
+        <div className="ma-hud-right">
+          {gs.roundResults.length > 0 && (
+            <button onClick={() => setHistOpen(v => !v)} className="ma-hud-icon-btn" title="라운드 기록">
+              📊
+            </button>
+          )}
+          {myPlayer && (
+            <span className="ma-hud-cash">{myPlayer.cash}M</span>
+          )}
         </div>
-      </header>
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden md:flex flex-col w-56 flex-shrink-0 border-r border-white/8 bg-black/15 overflow-y-auto">
-          <div className="p-4 border-b border-white/8">
-            <div className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-3">플레이어</div>
-            <div className="space-y-2">
-              {gs.players.map(p => {
-                const isCurrent = p.id === currentPlayer.id;
-                const isMe = p.clientId === myClientId;
-                const collVal = p.collection.reduce((s, c) => s + (gs.artistValues[c.artistId] ?? 0), 0);
-                return (
-                  <div key={p.id} className={`rounded-xl p-2.5 border transition-colors ${
-                    isCurrent ? 'bg-amber-500/12 border-amber-500/30' : 'bg-white/4 border-transparent'
-                  }`}>
-                    <div className={`text-xs font-bold truncate flex items-center gap-1 ${isCurrent ? 'text-amber-400' : 'text-white/60'}`}>
-                      {isCurrent && <span className="text-[8px]">▶</span>}
-                      {p.name}
-                      {isMe && <span className="text-[9px] text-white/30 ml-1">(나)</span>}
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-green-400 text-sm font-black">{p.cash}M</span>
-                      {collVal > 0 && <span className="text-white/35 text-[10px]">+{collVal}</span>}
-                    </div>
-                    <div className="text-white/25 text-[10px] mt-0.5">패 {p.hand.length}장 · 수집 {p.collection.length}장</div>
-                    {/* 내 패 미니 카드 */}
-                    {isMe && p.hand.length > 0 && (
-                      <div className="grid grid-cols-4 gap-1 mt-2">
-                        {p.hand.map(card => <MiniArtCard key={card.id} card={card} />)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="p-4">
-            <div className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-3">라운드 {gs.round} 시장</div>
-            <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} />
-          </div>
-        </aside>
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
       </div>
 
-      {/* 모바일 하단 내 패 토글 */}
-      {myPlayer && myPlayer.hand.length > 0 && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
-          <button
-            onClick={() => setHandOpen(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-t border-white/10"
-          >
-            <span className="text-white/60 text-sm font-semibold">내 패 ({myPlayer.hand.length}장)</span>
-            <span className="text-white/30 text-xs">{handOpen ? '▼ 닫기' : '▲ 보기'}</span>
+      {/* 플레이어 레일 */}
+      <div className="ma-rail">
+        {gs.players.map((p, idx) => {
+          const isCurrent = p.id === currentPlayer.id;
+          const isMe = p.clientId === myClientId;
+          const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+          const collVal = p.collection.reduce((s, c) => s + (gs.artistValues[c.artistId] ?? 0), 0);
+          return (
+            <div key={p.id} className={`ma-railchip ${isCurrent ? 'turn' : ''} ${isMe ? 'me' : ''}`}
+              style={{ borderColor: isCurrent ? color : color + '30' }}>
+              <div className="ma-railchip-av" style={{ background: color + '22' }}>
+                <span style={{ fontSize: 15 }}>{p.name.charAt(0)}</span>
+              </div>
+              <div className="ma-railchip-info">
+                <span className="ma-railchip-name">{p.name}{isMe ? ' (나)' : ''}</span>
+                <span className="ma-railchip-cash">{p.cash}{collVal > 0 ? `+${collVal}` : ''}M</span>
+              </div>
+              {isCurrent && <span className="ma-railchip-dot" />}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 마켓 */}
+      <div className="ma-marketwrap">
+        <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} />
+      </div>
+
+      {/* 턴 바 */}
+      <div className={`ma-turnbar ${isMyTurnLayout ? 'mine' : ''}`}>
+        {isMyTurnLayout ? '✨ 내 차례' : `${currentPlayer.name}의 차례`}
+      </div>
+
+      {/* 메인 */}
+      <div className="ma-main" style={showHandBar ? { paddingBottom: handOpen ? 280 : 58 } : undefined}>
+        {children}
+      </div>
+
+      {/* 내 패 드로어 */}
+      {showHandBar && (
+        <div className="ma-hand-bar">
+          <button className="ma-hand-toggle" onClick={() => setHandOpen(v => !v)}>
+            <span style={{ fontFamily: 'var(--f-kr)', fontSize: 12, fontWeight: 700, color: 'var(--cyan)' }}>
+              내 패 ({myPlayer!.hand.length}장)
+            </span>
+            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: 'var(--dim)' }}>{handOpen ? '▼ 닫기' : '▲ 보기'}</span>
           </button>
           {handOpen && (
-            <div className="bg-[#1a1a2e] border-t border-white/8 px-3 py-3 grid grid-cols-5 gap-2 max-h-52 overflow-y-auto">
-              {myPlayer.hand.map(card => <MiniArtCard key={card.id} card={card} />)}
+            <div className="ma-hand-cards">
+              {ARTISTS.filter(a => myPlayer!.hand.some(c => c.artistId === a.id)).map(artist => (
+                <div key={artist.id} style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                    <span style={{ fontSize: 12 }}>{artist.avatar}</span>
+                    <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700, color: artist.color }}>{artist.name}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
+                    {myPlayer!.hand.filter(c => c.artistId === artist.id).map(card => (
+                      <ArtCard key={card.id} card={card} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 라운드 기록 오버레이 */}
+      {histOpen && (
+        <div className="ma-hist-overlay">
+          <div className="ma-hist-head">
+            <span style={{ fontFamily: 'var(--f-kr)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>라운드 기록</span>
+            <button onClick={() => setHistOpen(false)} className="ma-hist-close">✕</button>
+          </div>
+          <div className="ma-hist-body">
+            {gs.roundResults.map(rr => (
+              <div key={rr.round}>
+                <div style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: 'var(--dim)', letterSpacing: '1.5px', marginBottom: 8 }}>
+                  ROUND {rr.round}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {rr.rankings.filter(r => r.count > 0).map(r => {
+                    const artist = getArtistById(r.artistId);
+                    return (
+                      <div key={r.artistId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 10, background: artist.color + '12', borderLeft: `2px solid ${artist.color}` }}>
+                        <span style={{ fontSize: 14 }}>{artist.avatar}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: artist.color, flex: 1, fontFamily: 'var(--f-kr)' }}>{artist.name}</span>
+                        <span style={{ fontSize: 10, color: 'var(--dim)' }}>{r.count}장</span>
+                        {r.rank ? (
+                          <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--gold)', fontFamily: 'var(--f-title)' }}>
+                            {r.rank}위 +{r.addedValue} → {r.cumulativeValue}M
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 10, color: 'var(--faint)' }}>순위 외</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -338,9 +387,8 @@ function CurrentBidDisplay({ bid, winnerName }: { bid: number; winnerName?: stri
 
 function PlayerTurnBanner({ name, cash, badge, isMe }: { name: string; cash: number; badge?: string; isMe?: boolean }) {
   return (
-    <div className={`border rounded-xl p-4 flex items-center justify-between ${
-      isMe ? 'bg-green-500/10 border-green-500/30' : 'bg-amber-500/10 border-amber-500/25'
-    }`}>
+    <div className={`border rounded-xl p-4 flex items-center justify-between ${isMe ? 'bg-green-500/10 border-green-500/30' : 'bg-amber-500/10 border-amber-500/25'
+      }`}>
       <div>
         <div className={`font-black text-base ${isMe ? 'text-green-400' : 'text-amber-400'}`}>
           {isMe ? '내 차례!' : name}{badge ? ` ${badge}` : ''}
@@ -364,9 +412,8 @@ function BidderProgress({ playerIds, players, currentId }: {
         const p = players.find(pl => pl.id === id)!;
         const isCurrent = id === currentId;
         return (
-          <span key={id} className={`text-xs px-3 py-1.5 rounded-full font-semibold border ${
-            isCurrent ? 'bg-amber-500/25 text-amber-300 border-amber-500/40' : 'bg-white/8 text-white/40 border-transparent'
-          }`}>
+          <span key={id} className={`text-xs px-3 py-1.5 rounded-full font-semibold border ${isCurrent ? 'bg-amber-500/25 text-amber-300 border-amber-500/40' : 'bg-white/8 text-white/40 border-transparent'
+            }`}>
             {isCurrent && '▶ '}{p.name}
           </span>
         );
@@ -385,11 +432,10 @@ function OnceAroundProgress({ bidOrder, currentIdx, players }: {
         const done = i < currentIdx;
         const current = i === currentIdx;
         return (
-          <span key={id} className={`text-xs px-3 py-1.5 rounded-full font-semibold border ${
-            current ? 'bg-amber-500/25 text-amber-300 border-amber-500/40' :
-            done ? 'bg-white/4 text-white/20 border-transparent line-through' :
-            'bg-white/8 text-white/45 border-transparent'
-          }`}>
+          <span key={id} className={`text-xs px-3 py-1.5 rounded-full font-semibold border ${current ? 'bg-amber-500/25 text-amber-300 border-amber-500/40' :
+              done ? 'bg-white/4 text-white/20 border-transparent line-through' :
+                'bg-white/8 text-white/45 border-transparent'
+            }`}>
             {current && '▶ '}{p.name}
           </span>
         );
@@ -403,17 +449,46 @@ export default function OnlineModernArtGame() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const [gs, setGs] = useState<GameState | null>(null);
+  const [leftPlayerName, setLeftPlayerName] = useState<string | null>(null);
   const finishedRef = useRef(false);
+  const allPresentRef = useRef(false);
 
   const myClientId = typeof window !== 'undefined' ? (getGuestUid() ?? '') : '';
+
+  // Presence 등록: 연결 끊기면 Firebase가 자동 제거
+  useEffect(() => {
+    if (!myClientId) return;
+    let cleanup: (() => void) | undefined;
+    registerPresence(code, myClientId).then(fn => { cleanup = fn; });
+    return () => { cleanup?.(); };
+  }, [code, myClientId]);
 
   useEffect(() => {
     const unsub = subscribeRoom(code, room => {
       if (!room) { router.replace('/modern-art'); return; }
       if (room.gameState) setGs(room.gameState);
+
+      // 상대 나가기 감지
+      if (room.status === 'playing' && room.presence) {
+        const allPresent = room.players.every(p => room.presence![p.clientId]);
+        if (allPresent) allPresentRef.current = true;
+
+        if (allPresentRef.current) {
+          const missing = room.players.find(p => p.clientId !== myClientId && !room.presence![p.clientId]);
+          if (missing) {
+            setLeftPlayerName(missing.name);
+            finishGame(code, missing.name);
+          }
+        }
+      }
+
+      // 다른 클라이언트가 먼저 감지한 경우
+      if (room.status === 'finished' && room.leftPlayerName && room.gameState?.phase !== 'game-over') {
+        setLeftPlayerName(room.leftPlayerName);
+      }
     });
     return unsub;
-  }, [code, router]);
+  }, [code, router, myClientId]);
 
   // 낙관적 업데이트 + Firebase 동기화
   const perform = useCallback((fn: (s: GameState) => GameState) => {
@@ -432,6 +507,24 @@ export default function OnlineModernArtGame() {
       finishGame(code);
     }
   }, [gs?.phase, code]);
+
+  if (leftPlayerName) {
+    return (
+      <div className="min-h-screen bg-[#0d0d1a] flex flex-col items-center justify-center gap-4 text-center px-6">
+        <div className="text-5xl">🚪</div>
+        <div className="text-white text-xl font-bold leading-snug">
+          {leftPlayerName}님이<br />게임을 나갔습니다
+        </div>
+        <p className="text-white/40 text-sm">게임이 종료되었습니다.</p>
+        <button
+          onClick={() => router.replace('/modern-art')}
+          className="mt-2 px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm transition-colors"
+        >
+          홈으로 돌아가기
+        </button>
+      </div>
+    );
+  }
 
   if (!gs) {
     return (
@@ -467,17 +560,28 @@ export default function OnlineModernArtGame() {
     }
     return (
       <GameLayout gs={gs} myClientId={myClientId}>
-        <div className="p-4 md:p-6 space-y-4">
-          <div className="text-white/50 text-sm">경매에 올릴 카드를 선택하세요</div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
-            {myPlayer.hand.map(card => (
-              <ArtCard key={card.id} card={card} onClick={() => perform(s => selectCard(s, card.id))} />
-            ))}
+        <div className="space-y-5">
+          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>
+            경매에 올릴 작품을 선택하세요
           </div>
-          <div className="md:hidden pt-3 border-t border-white/10">
-            <div className="text-xs text-white/30 mb-2">이번 라운드 시장</div>
-            <MarketBoard roundMarket={gs.roundMarket} artistValues={gs.artistValues} />
-          </div>
+          {AUCTION_TYPES.map(type => {
+            const cards = myPlayer.hand.filter(c => c.auctionType === type);
+            if (cards.length === 0) return null;
+            return (
+              <div key={type}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <span style={{ fontSize: 14 }}>{AUCTION_TYPE_ICONS[type]}</span>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700, color: AUCTION_TYPE_COLORS[type] }}>{AUCTION_TYPE_LABELS[type]}</span>
+                  <span style={{ fontSize: 9, color: 'var(--dim)', fontFamily: 'var(--f-kr)' }}>({cards.length}장)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {cards.map(card => (
+                    <ArtCard key={card.id} card={card} onClick={() => perform(s => selectCard(s, card.id))} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </GameLayout>
     );
@@ -497,14 +601,14 @@ export default function OnlineModernArtGame() {
     const sameArtist = myPlayer.hand.filter(c => c.id !== firstCardId && c.artistId === firstCard.artistId);
     return (
       <GameLayout gs={gs} myClientId={myClientId}>
-        <div className="p-4 md:p-6 space-y-6">
+        <div className="space-y-4">
           <div className="text-center">
             <div className="text-red-400 font-black text-xl mb-1">🎴 더블 경매</div>
             <div className="text-white/50 text-sm">같은 작가의 카드를 하나 더 선택하세요</div>
           </div>
-          <div className="flex justify-center"><div className="w-24 md:w-32"><ArtCard card={firstCard} selected /></div></div>
+          <div className="flex justify-center"><div style={{ width: 96 }}><ArtCard card={firstCard} selected /></div></div>
           <div className="text-white/30 text-xs text-center">+ 아래 중 하나 선택</div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 md:gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {sameArtist.map(card => (
               <ArtCard key={card.id} card={card} onClick={() => perform(s => selectDoubleSecond(s, card.id))} />
             ))}
@@ -514,15 +618,51 @@ export default function OnlineModernArtGame() {
     );
   }
 
-  // ─── 턴 커버 (온라인: 현재 플레이어가 자동 진행) ───────────
+  // ─── 턴 커버: 패 확인 후 경매 시작 ───────────────────────────
   if (phase === 'turn-cover') {
-    if (isMyTurn) {
+    if (!isMyTurn) {
+      return (
+        <GameLayout gs={gs} myClientId={myClientId}>
+          <WaitingForPlayer name={currentPlayer.name} detail="패를 확인 중..." />
+        </GameLayout>
+      );
+    }
+    if (!myPlayer || myPlayer.hand.length === 0) {
       perform(s => ({ ...s, phase: 'select-card' as const }));
       return null;
     }
     return (
       <GameLayout gs={gs} myClientId={myClientId}>
-        <WaitingForPlayer name={currentPlayer.name} detail="다음 턴 준비 중..." />
+        <div className="space-y-4">
+          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 700, color: 'var(--dim)' }}>
+            내 패 확인
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {ARTISTS.filter(a => myPlayer.hand.some(c => c.artistId === a.id)).map(artist => (
+              <div key={artist.id}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12 }}>{artist.avatar}</span>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700, color: artist.color }}>{artist.name}</span>
+                  <span style={{ fontSize: 9, color: 'var(--dim)' }}>({myPlayer.hand.filter(c => c.artistId === artist.id).length}장)</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
+                  {myPlayer.hand.filter(c => c.artistId === artist.id).map(card => (
+                    <ArtCard key={card.id} card={card} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ position: 'sticky', bottom: 0, paddingBottom: 4 }}>
+            <button
+              onClick={() => perform(s => ({ ...s, phase: 'select-card' as const }))}
+              className="arc-btn w-full"
+              style={{ fontSize: 15, padding: '14px' }}
+            >
+              🎨 경매에 작품 올리기
+            </button>
+          </div>
+        </div>
       </GameLayout>
     );
   }
@@ -545,7 +685,7 @@ export default function OnlineModernArtGame() {
 
       return (
         <GameLayout gs={gs} myClientId={myClientId}>
-          <div className="p-4 md:p-6 space-y-4">
+          <div className="space-y-4">
             <AuctionHeader icon={auctionIcon} label={auctionLabel} sellerName={seller.name} color={auctionColor} />
             <AuctionCardDisplay cards={a.cards} />
             <CurrentBidDisplay bid={a.currentBid} winnerName={a.currentWinnerId ? getPlayerById(gs, a.currentWinnerId)?.name : undefined} />
@@ -553,7 +693,7 @@ export default function OnlineModernArtGame() {
             {amIBidder ? (
               <div className="space-y-2">
                 <BidInput minBid={a.currentBid + 1} maxBid={currentBidder.cash}
-                  onSubmit={v => perform(s => openBid(s, v))} label="입찰" />
+                  onSubmit={v => perform(s => openBid(s, v))} label="입찰" accentColor={auctionColor} playerCash={currentBidder.cash} />
                 {isWinner ? (
                   <button onClick={() => perform(s => openStand(s))}
                     className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black transition-colors">
@@ -584,7 +724,7 @@ export default function OnlineModernArtGame() {
       if (a.subPhase === 'setting') {
         return (
           <GameLayout gs={gs} myClientId={myClientId}>
-            <div className="p-4 md:p-6 space-y-4">
+            <div className="space-y-4">
               <AuctionHeader icon="🏷️" label="지정가 경매" sellerName={seller.name} color={fixedColor} />
               <AuctionCardDisplay cards={a.cards} />
               {amISeller ? (
@@ -594,7 +734,7 @@ export default function OnlineModernArtGame() {
                     <span className="text-xl">💰</span>
                     <div className="text-white/60 text-sm">판매 가격을 설정하세요</div>
                   </div>
-                  <BidInput minBid={1} maxBid={999} onSubmit={v => perform(s => fixedSetPrice(s, v))} label="가격 설정" />
+                  <BidInput minBid={1} maxBid={999} onSubmit={v => perform(s => fixedSetPrice(s, v))} label="가격 설정" accentColor={fixedColor} />
                 </>
               ) : (
                 <WaitingForPlayer name={seller.name} detail="판매 가격 설정 중..." />
@@ -610,7 +750,7 @@ export default function OnlineModernArtGame() {
 
       return (
         <GameLayout gs={gs} myClientId={myClientId}>
-          <div className="p-4 md:p-6 space-y-4">
+          <div className="space-y-4">
             <AuctionHeader icon="🏷️" label="지정가 경매" sellerName={seller.name} color={fixedColor} />
             <AuctionCardDisplay cards={a.cards} />
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
@@ -654,7 +794,7 @@ export default function OnlineModernArtGame() {
 
         return (
           <GameLayout gs={gs} myClientId={myClientId}>
-            <div className="p-4 md:p-6 space-y-4">
+            <div className="space-y-4">
               <AuctionHeader icon="🤫" label="비밀 경매" sellerName={seller.name} color={secretColor} />
               <AuctionCardDisplay cards={a.cards} />
               <PlayerTurnBanner name={bidder.name} cash={bidder.cash} isMe={amIBidder} />
@@ -664,7 +804,7 @@ export default function OnlineModernArtGame() {
                     비밀 입찰 금액을 입력하세요 (다른 플레이어에게 보이지 않습니다)
                   </div>
                   <BidInput minBid={0} maxBid={bidder.cash}
-                    onSubmit={v => perform(s => secretSubmitBid(s, v))} label="비밀 입찰" />
+                    onSubmit={v => perform(s => secretSubmitBid(s, v))} label="비밀 입찰" accentColor={secretColor} playerCash={bidder.cash} />
                 </>
               ) : (
                 <WaitingForPlayer name={bidder.name} detail="비밀 입찰 중..." />
@@ -687,14 +827,13 @@ export default function OnlineModernArtGame() {
 
       return (
         <GameLayout gs={gs} myClientId={myClientId}>
-          <div className="p-4 md:p-6 space-y-4">
+          <div className="space-y-4">
             <AuctionHeader icon="🤫" label="비밀 경매 — 결과 공개" sellerName={seller.name} color={secretColor} />
             <AuctionCardDisplay cards={a.cards} />
             <div className="space-y-2">
               {entries.map((e, i) => (
-                <div key={e.player.id} className={`flex items-center justify-between p-4 rounded-xl border ${
-                  i === 0 ? 'bg-amber-500/15 border-amber-500/40' : 'bg-white/4 border-transparent'
-                }`}>
+                <div key={e.player.id} className={`flex items-center justify-between p-4 rounded-xl border ${i === 0 ? 'bg-amber-500/15 border-amber-500/40' : 'bg-white/4 border-transparent'
+                  }`}>
                   <span className={`font-bold ${i === 0 ? 'text-amber-400' : 'text-white/60'}`}>
                     {i === 0 && '🏆 '}{e.player.name}
                     {e.player.clientId === myClientId && <span className="text-white/30 text-xs ml-1">(나)</span>}
@@ -728,7 +867,7 @@ export default function OnlineModernArtGame() {
 
       return (
         <GameLayout gs={gs} myClientId={myClientId}>
-          <div className="p-4 md:p-6 space-y-4">
+          <div className="space-y-4">
             <AuctionHeader icon="🔄" label="한 바퀴 경매" sellerName={seller.name} color={onceColor} />
             <AuctionCardDisplay cards={a.cards} />
             <CurrentBidDisplay bid={a.currentBid} winnerName={a.currentWinnerId ? getPlayerById(gs, a.currentWinnerId)?.name : undefined} />
@@ -737,7 +876,7 @@ export default function OnlineModernArtGame() {
             {amIBidder ? (
               <div className="space-y-2">
                 <BidInput minBid={a.currentBid + 1} maxBid={currentOfferPlayer.cash}
-                  onSubmit={v => perform(s => onceAroundBid(s, v))} label="입찰" />
+                  onSubmit={v => perform(s => onceAroundBid(s, v))} label="입찰" accentColor={onceColor} playerCash={currentOfferPlayer.cash} />
                 <button onClick={() => perform(s => onceAroundPass(s))}
                   className="w-full py-3 rounded-xl bg-white/8 hover:bg-white/12 text-white/60 font-bold transition-colors border border-white/10">
                   {isSeller && !a.currentWinnerId ? '가져가기 (공짜)' : '패스'}
@@ -792,6 +931,29 @@ export default function OnlineModernArtGame() {
           )}
         </div>
         <AuctionCardDisplay cards={lastAuctionResult.cards} />
+        {/* 나의 거래 결과 */}
+        {myPlayer && (() => {
+          const { winnerId, sellerId, price, noContest } = lastAuctionResult;
+          const isWinner = winnerId === myPlayer.id;
+          const isSeller = sellerId === myPlayer.id;
+          if (isWinner && !isSeller && !noContest) {
+            return (
+              <div className="w-full max-w-sm" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (낙찰)</span>
+                <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#ef4444' }}>-{price}M</span>
+              </div>
+            );
+          }
+          if (isSeller && winnerId !== myPlayer.id && !noContest) {
+            return (
+              <div className="w-full max-w-sm" style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (판매)</span>
+                <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#10b981' }}>+{price}M</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
         <div className="w-full max-w-sm space-y-1.5">
           {gs.players.map(p => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2.5 bg-white/4 rounded-xl border border-white/8">
@@ -863,9 +1025,8 @@ export default function OnlineModernArtGame() {
                 })
                 .sort((a, b) => b.total - a.total)
                 .map((p, i) => (
-                  <div key={p.id} className={`flex items-center gap-3 p-4 rounded-xl border ${
-                    i === 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-white/4 border-transparent'
-                  }`}>
+                  <div key={p.id} className={`flex items-center gap-3 p-4 rounded-xl border ${i === 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-white/4 border-transparent'
+                    }`}>
                     <span className={`text-lg font-black w-6 text-center ${i === 0 ? 'text-amber-400' : 'text-white/30'}`}>{i + 1}</span>
                     <span className={`flex-1 font-bold ${i === 0 ? 'text-white' : 'text-white/70'}`}>
                       {p.name}{p.clientId === myClientId && <span className="text-white/35 text-xs ml-1">(나)</span>}
@@ -901,9 +1062,8 @@ export default function OnlineModernArtGame() {
           </div>
           <div className="space-y-3">
             {finalScores.map((p, i) => (
-              <div key={p.id} className={`rounded-2xl p-5 border ${
-                i === 0 ? 'bg-amber-500/12 border-amber-500/30' : 'bg-white/4 border-white/8'
-              }`}>
+              <div key={p.id} className={`rounded-2xl p-5 border ${i === 0 ? 'bg-amber-500/12 border-amber-500/30' : 'bg-white/4 border-white/8'
+                }`}>
                 <div className="flex items-center gap-3 mb-3">
                   <span className={`text-2xl font-black w-10 ${i === 0 ? 'text-amber-400' : 'text-white/30'}`}>{i + 1}위</span>
                   <span className={`flex-1 font-black text-lg ${i === 0 ? 'text-amber-300' : 'text-white/80'}`}>

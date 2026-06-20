@@ -11,6 +11,7 @@ export type Artist = {
   avatar: string;
   color: string;
   images: string[];
+  titles?: Record<string, string>;
 };
 
 export type Card = {
