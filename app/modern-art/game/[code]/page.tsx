@@ -29,6 +29,14 @@ function getArtworkTitle(artistId: string, artworkIndex: number): string {
   return artist.titles?.[filename] ?? filename;
 }
 
+const AUCTION_TYPE_DESC: Record<string, string> = {
+  'open': '순서대로 돌아가며 자유롭게 입찰',
+  'fixed': '판매자가 가격을 정하고 순서대로 수락/거절',
+  'secret': '모두 동시에 비밀 입찰, 최고가 낙찰',
+  'once-around': '한 번씩만 기회, 최고가 낙찰',
+  'double': '같은 작가 카드 두 장을 동시 경매',
+};
+
 // ─── 공유 UI 컴포넌트 ─────────────────────────────────────────
 function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
   artistId: string; avatar: string; artworkIndex: number; className?: string;
@@ -116,6 +124,18 @@ function BidInput({ minBid, maxBid, onSubmit, label = '입찰', accentColor, pla
   minBid: number; maxBid: number; onSubmit: (v: number) => void; label?: string; accentColor?: string; playerCash?: number;
 }) {
   const [val, setVal] = useState(minBid);
+  // minBid가 올라가면 val도 올림 (다른 사람이 입찰한 경우)
+  useEffect(() => { setVal(v => Math.max(v, minBid)); }, [minBid]);
+
+  if (minBid > maxBid) {
+    return (
+      <div className="text-center py-4 rounded-xl border border-red-500/30 bg-red-500/10">
+        <div className="text-red-400 font-bold text-sm">잔고 부족 — 입찰 불가</div>
+        <div className="text-white/30 text-xs mt-1">현재 잔고: {maxBid}M</div>
+      </div>
+    );
+  }
+
   const adjust = (d: number) => setVal(v => Math.min(maxBid, Math.max(minBid, v + d)));
   const presets = [10, 20, 50, 100].filter(v => v > minBid && v <= maxBid);
   const color = accentColor ?? 'var(--gold)';
@@ -393,7 +413,7 @@ function PlayerTurnBanner({ name, cash, badge, isMe }: { name: string; cash: num
         <div className={`font-black text-base ${isMe ? 'text-green-400' : 'text-amber-400'}`}>
           {isMe ? '내 차례!' : name}{badge ? ` ${badge}` : ''}
         </div>
-        <div className="text-white/40 text-xs">의 차례</div>
+        {!isMe && <div className="text-white/40 text-xs">의 차례</div>}
       </div>
       <div className="text-right">
         <div className="text-green-400 font-black text-xl">{cash}M</div>
@@ -422,8 +442,8 @@ function BidderProgress({ playerIds, players, currentId }: {
   );
 }
 
-function OnceAroundProgress({ bidOrder, currentIdx, players }: {
-  bidOrder: string[]; currentIdx: number; players: GameState['players'];
+function OnceAroundProgress({ bidOrder, currentIdx, players, sellerId }: {
+  bidOrder: string[]; currentIdx: number; players: GameState['players']; sellerId?: string;
 }) {
   return (
     <div className="flex gap-2 flex-wrap">
@@ -431,12 +451,13 @@ function OnceAroundProgress({ bidOrder, currentIdx, players }: {
         const p = players.find(pl => pl.id === id)!;
         const done = i < currentIdx;
         const current = i === currentIdx;
+        const isSeller = id === sellerId;
         return (
           <span key={id} className={`text-xs px-3 py-1.5 rounded-full font-semibold border ${current ? 'bg-amber-500/25 text-amber-300 border-amber-500/40' :
               done ? 'bg-white/4 text-white/20 border-transparent line-through' :
                 'bg-white/8 text-white/45 border-transparent'
             }`}>
-            {current && '▶ '}{p.name}
+            {current && '▶ '}{p.name}{isSeller && <span className="opacity-50 ml-0.5">(판)</span>}
           </span>
         );
       })}
@@ -569,10 +590,13 @@ export default function OnlineModernArtGame() {
             if (cards.length === 0) return null;
             return (
               <div key={type}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontSize: 14 }}>{AUCTION_TYPE_ICONS[type]}</span>
-                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700, color: AUCTION_TYPE_COLORS[type] }}>{AUCTION_TYPE_LABELS[type]}</span>
-                  <span style={{ fontSize: 9, color: 'var(--dim)', fontFamily: 'var(--f-kr)' }}>({cards.length}장)</span>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 14 }}>{AUCTION_TYPE_ICONS[type]}</span>
+                    <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700, color: AUCTION_TYPE_COLORS[type] }}>{AUCTION_TYPE_LABELS[type]}</span>
+                    <span style={{ fontSize: 9, color: 'var(--dim)', fontFamily: 'var(--f-kr)' }}>({cards.length}장)</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--f-kr)', fontSize: 10, color: 'var(--faint)', marginTop: 2, paddingLeft: 20 }}>{AUCTION_TYPE_DESC[type]}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {cards.map(card => (
@@ -773,8 +797,8 @@ export default function OnlineModernArtGame() {
               <WaitingForPlayer name={offerTo.name} detail={`${a.fixedPrice}M 수락/거절 대기 중`} />
             )}
             {nonSellers.slice(a.currentOfferIndex + 1).length > 0 && (
-              <div className="text-white/25 text-xs text-center">
-                다음 제안: {nonSellers.slice(a.currentOfferIndex + 1).map(p => p.name).join(', ')}
+              <div className="text-white/45 text-xs text-center">
+                다음 제안: {nonSellers.slice(a.currentOfferIndex + 1).map(p => p.name).join(' → ')}
               </div>
             )}
           </div>
@@ -809,11 +833,12 @@ export default function OnlineModernArtGame() {
               ) : (
                 <WaitingForPlayer name={bidder.name} detail="비밀 입찰 중..." />
               )}
-              {a.currentBidderIndex > 0 && (
-                <div className="text-white/25 text-xs text-center">
-                  완료: {a.bidOrder.slice(0, a.currentBidderIndex).map(id => getPlayerById(gs, id)?.name).join(', ')}
-                </div>
-              )}
+              <div className="text-white/40 text-xs text-center">
+                입찰 완료: {a.currentBidderIndex}/{a.bidOrder.length}명
+                {a.currentBidderIndex > 0 && (
+                  <span className="text-white/25"> — {a.bidOrder.slice(0, a.currentBidderIndex).map(id => getPlayerById(gs, id)?.name).join(', ')}</span>
+                )}
+              </div>
             </div>
           </GameLayout>
         );
@@ -885,7 +910,7 @@ export default function OnlineModernArtGame() {
             ) : (
               <WaitingForPlayer name={currentOfferPlayer.name} />
             )}
-            <OnceAroundProgress bidOrder={a.bidOrder} currentIdx={a.currentOfferIndex} players={gs.players} />
+            <OnceAroundProgress bidOrder={a.bidOrder} currentIdx={a.currentOfferIndex} players={gs.players} sellerId={a.sellerId} />
           </div>
         </GameLayout>
       );
@@ -905,76 +930,78 @@ export default function OnlineModernArtGame() {
     const canAdvance = myPlayerIndex === nextIndex || myPlayerIndex === gs.currentPlayerIndex;
 
     return (
-      <main className="min-h-screen bg-[#0d0d1a] flex flex-col items-center justify-center p-6 gap-6">
-        {triggerArtist && (
-          <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center w-full max-w-sm">
-            <div className="text-red-400 font-black text-lg">⚠️ 라운드 종료!</div>
-            <div className="text-white/60 text-sm mt-1">{triggerArtist.avatar} {triggerArtist.name} 5장 달성</div>
+      <GameLayout gs={gs} myClientId={myClientId}>
+        <div className="flex flex-col items-center gap-4">
+          {triggerArtist && (
+            <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center w-full">
+              <div className="text-red-400 font-black text-lg">⚠️ 라운드 종료!</div>
+              <div className="text-white/60 text-sm mt-1">{triggerArtist.avatar} {triggerArtist.name} 5장 달성</div>
+            </div>
+          )}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center w-full">
+            {isNoContest ? (
+              <>
+                <div className="text-white/40 text-sm mb-2">낙찰자 없음</div>
+                <div className="text-amber-400 text-2xl font-black">{seller.name}</div>
+                <div className="text-white/60 mt-1">이 가져갑니다</div>
+              </>
+            ) : (
+              <>
+                <div className="text-white/40 text-sm mb-1">낙찰!</div>
+                <div className="text-amber-400 text-3xl font-black">{winner.name}</div>
+                <div className="text-white/60 mt-2 text-xl font-black">{lastAuctionResult.price}M</div>
+                {winner.id !== seller.id && (
+                  <div className="text-green-400/80 text-sm mt-2 font-semibold">판매자: {seller.name} +{lastAuctionResult.price}M</div>
+                )}
+              </>
+            )}
           </div>
-        )}
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-center w-full max-w-sm">
-          {isNoContest ? (
-            <>
-              <div className="text-white/40 text-sm mb-2">낙찰자 없음</div>
-              <div className="text-amber-400 text-2xl font-black">{seller.name}</div>
-              <div className="text-white/60 mt-1">이 가져갑니다</div>
-            </>
+          <AuctionCardDisplay cards={lastAuctionResult.cards} />
+          {/* 나의 거래 결과 */}
+          {myPlayer && (() => {
+            const { winnerId, sellerId, price, noContest } = lastAuctionResult;
+            const isWinner = winnerId === myPlayer.id;
+            const isSeller = sellerId === myPlayer.id;
+            if (isWinner && !isSeller && !noContest) {
+              return (
+                <div className="w-full" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (낙찰)</span>
+                  <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#ef4444' }}>-{price}M</span>
+                </div>
+              );
+            }
+            if (isSeller && winnerId !== myPlayer.id && !noContest) {
+              return (
+                <div className="w-full" style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (판매)</span>
+                  <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#10b981' }}>+{price}M</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+          <div className="w-full space-y-1.5">
+            {gs.players.map(p => (
+              <div key={p.id} className="flex items-center justify-between px-4 py-2.5 bg-white/4 rounded-xl border border-white/8">
+                <span className="text-white/60 text-sm font-semibold">
+                  {p.name}{p.clientId === myClientId && <span className="text-white/30 text-xs ml-1">(나)</span>}
+                </span>
+                <span className="text-green-400 font-black">{p.cash}M</span>
+              </div>
+            ))}
+          </div>
+          {canAdvance ? (
+            <button onClick={() => perform(s => acknowledgeResult(s))}
+              className="px-10 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-lg w-full transition-colors">
+              {triggerArtist ? '라운드 채점 보기' : '다음 턴'}
+            </button>
           ) : (
-            <>
-              <div className="text-white/40 text-sm mb-2">낙찰!</div>
-              <div className="text-amber-400 text-3xl font-black">{winner.name}</div>
-              <div className="text-white/60 mt-2 text-lg">{lastAuctionResult.price}M</div>
-              {winner.id !== seller.id && (
-                <div className="text-white/35 text-sm mt-1">판매자 {seller.name} +{lastAuctionResult.price}M</div>
-              )}
-            </>
+            <div className="text-white/35 text-sm">
+              {gs.players[nextIndex]?.name}님이 확인 중...
+            </div>
           )}
         </div>
-        <AuctionCardDisplay cards={lastAuctionResult.cards} />
-        {/* 나의 거래 결과 */}
-        {myPlayer && (() => {
-          const { winnerId, sellerId, price, noContest } = lastAuctionResult;
-          const isWinner = winnerId === myPlayer.id;
-          const isSeller = sellerId === myPlayer.id;
-          if (isWinner && !isSeller && !noContest) {
-            return (
-              <div className="w-full max-w-sm" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (낙찰)</span>
-                <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#ef4444' }}>-{price}M</span>
-              </div>
-            );
-          }
-          if (isSeller && winnerId !== myPlayer.id && !noContest) {
-            return (
-              <div className="w-full max-w-sm" style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (판매)</span>
-                <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#10b981' }}>+{price}M</span>
-              </div>
-            );
-          }
-          return null;
-        })()}
-        <div className="w-full max-w-sm space-y-1.5">
-          {gs.players.map(p => (
-            <div key={p.id} className="flex items-center justify-between px-4 py-2.5 bg-white/4 rounded-xl border border-white/8">
-              <span className="text-white/60 text-sm font-semibold">
-                {p.name}{p.clientId === myClientId && <span className="text-white/30 text-xs ml-1">(나)</span>}
-              </span>
-              <span className="text-green-400 font-black">{p.cash}M</span>
-            </div>
-          ))}
-        </div>
-        {canAdvance ? (
-          <button onClick={() => perform(s => acknowledgeResult(s))}
-            className="px-10 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-lg w-full max-w-sm transition-colors">
-            {triggerArtist ? '라운드 채점 보기' : '다음 턴'}
-          </button>
-        ) : (
-          <div className="text-white/35 text-sm">
-            {gs.players[nextIndex]?.name}님이 확인 중...
-          </div>
-        )}
-      </main>
+      </GameLayout>
     );
   }
 
@@ -984,8 +1011,8 @@ export default function OnlineModernArtGame() {
     const isLastRound = gs.round >= gs.maxRounds;
 
     return (
-      <main className="min-h-screen bg-[#0d0d1a] p-4 md:p-8 pb-10">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <GameLayout gs={gs} myClientId={myClientId}>
+        <div className="space-y-6">
           <div className="text-center pt-2">
             <div className="text-white/30 text-sm tracking-widest uppercase mb-1">라운드 {gs.round} 종료</div>
             <div className="text-white font-black text-2xl">작가 순위 및 가치</div>
@@ -1045,7 +1072,7 @@ export default function OnlineModernArtGame() {
             {isLastRound ? '최종 결과 보기' : `라운드 ${gs.round + 1} 시작`}
           </button>
         </div>
-      </main>
+      </GameLayout>
     );
   }
 
