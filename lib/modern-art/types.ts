@@ -57,8 +57,7 @@ export type SecretAuction = {
   cards: Card[];
   sellerId: string;
   bids: Record<string, number>; // playerId → bid amount (-1 = not bid yet)
-  bidOrder: string[];
-  currentBidderIndex: number;
+  bidOrder: string[]; // clockwise from seller, excluding seller
   subPhase: 'collecting' | 'revealing';
 };
 
@@ -84,7 +83,8 @@ export type AuctionResult = {
   price: number;
   cards: Card[];
   sellerId: string;
-  noContest: boolean; // true if seller wins by default
+  noContest: boolean; // true if seller wins by default (free)
+  sellerPaysBank?: boolean; // true if seller must pay bank (fixed auction all-decline)
 };
 
 export type RoundRanking = {
@@ -104,6 +104,7 @@ export type GamePhase =
   | 'turn-cover'
   | 'select-card'
   | 'double-select-second'
+  | 'double-pass-second'
   | 'auction'
   | 'auction-result'
   | 'round-scoring'
@@ -121,6 +122,7 @@ export type GameState = {
   roundResults: RoundResult[];
   currentAuction: AuctionState | null;
   pendingDoubleCardId: string | null;
+  pendingDoublePassPlayerIdx: number | null; // double-pass-second: index of player being asked
   lastAuctionResult: AuctionResult | null;
   roundEndArtistId: string | null;
 };

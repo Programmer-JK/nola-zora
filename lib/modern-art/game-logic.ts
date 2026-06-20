@@ -32,6 +32,7 @@ export function createGame(
     roundResults: [],
     currentAuction: null,
     pendingDoubleCardId: null,
+    pendingDoublePassPlayerIdx: null,
     lastAuctionResult: null,
     roundEndArtistId: null,
   };
@@ -66,8 +67,14 @@ export function selectCard(state: GameState, cardId: string): GameState {
     if (sameArtist.length > 0) {
       return { ...state, pendingDoubleCardId: cardId, phase: 'double-select-second' };
     }
-    // 유효한 두 번째 카드 없으면 공개 경매로 처리
-    return beginAuction(state, [card]);
+    // 본인에게 두 번째 카드 없음 → 다음 플레이어에게 제공 기회 전달
+    const nextPlayerIdx = (state.currentPlayerIndex + 1) % state.players.length;
+    return {
+      ...state,
+      pendingDoubleCardId: cardId,
+      pendingDoublePassPlayerIdx: nextPlayerIdx,
+      phase: 'double-pass-second',
+    };
   }
 
   if (card.auctionType === 'fixed') {
@@ -92,6 +99,83 @@ export function selectDoubleSecond(state: GameState, secondCardId: string): Game
   const first = player.hand.find(c => c.id === firstCardId)!;
   const second = player.hand.find(c => c.id === secondCardId)!;
   return beginAuction({ ...state, pendingDoubleCardId: null }, [first, second]);
+}
+
+// 더블 경매 패스: 다른 플레이어가 두 번째 카드 제공
+export function doublePassOffer(state: GameState, secondCardId: string): GameState {
+  const firstCardId = state.pendingDoubleCardId!;
+  const originalSeller = state.players[state.currentPlayerIndex];
+  const offeringPlayer = state.players[state.pendingDoublePassPlayerIdx!];
+
+  const first = originalSeller.hand.find(c => c.id === firstCardId)!;
+  const second = offeringPlayer.hand.find(c => c.id === secondCardId)!;
+
+  // 제공자의 패에서 두 번째 카드 제거
+  const players = state.players.map(p =>
+    p.id === offeringPlayer.id ? { ...p, hand: p.hand.filter(c => c.id !== secondCardId) } : p
+  );
+
+  const newState = {
+    ...state,
+    players,
+    pendingDoubleCardId: null,
+    pendingDoublePassPlayerIdx: null,
+  };
+  // beginAuction이 originalSeller의 패에서 first를 제거하고 경매 시작
+  return beginAuction(newState, [first, second]);
+}
+
+// 더블 경매 패스: 현재 플레이어가 두 번째 카드 거절 → 다음 플레이어에게 넘기거나 종료
+export function doublePassDecline(state: GameState): GameState {
+  const n = state.players.length;
+  const currentAskIdx = state.pendingDoublePassPlayerIdx!;
+  const originalSellerIdx = state.currentPlayerIndex;
+
+  const nextAskIdx = (currentAskIdx + 1) % n;
+
+  if (nextAskIdx === originalSellerIdx) {
+    // 모든 플레이어 거절 → 판매자가 더블 카드를 무료로 자기 컬렉션에
+    const firstCardId = state.pendingDoubleCardId!;
+    const originalSeller = state.players[originalSellerIdx];
+    const firstCard = originalSeller.hand.find(c => c.id === firstCardId)!;
+
+    const players = state.players.map(p =>
+      p.id === originalSeller.id
+        ? { ...p, hand: p.hand.filter(c => c.id !== firstCardId), collection: [...p.collection, firstCard] }
+        : p
+    );
+
+    const roundMarket = { ...state.roundMarket };
+    roundMarket[firstCard.artistId] = (roundMarket[firstCard.artistId] ?? 0) + 1;
+
+    let roundEndArtistId: string | null = null;
+    for (const [artistId, count] of Object.entries(roundMarket)) {
+      if (count >= ROUND_END_COUNT) { roundEndArtistId = artistId; break; }
+    }
+
+    return {
+      ...state,
+      players,
+      roundMarket,
+      roundEndArtistId,
+      pendingDoubleCardId: null,
+      pendingDoublePassPlayerIdx: null,
+      lastAuctionResult: {
+        winnerId: originalSeller.id,
+        price: 0,
+        cards: [firstCard],
+        sellerId: originalSeller.id,
+        noContest: true,
+      },
+      phase: 'auction-result',
+    };
+  }
+
+  // 다음 플레이어에게 기회 전달
+  return {
+    ...state,
+    pendingDoublePassPlayerIdx: nextAskIdx,
+  };
 }
 
 // ─── 경매 시작 ────────────────────────────────────────────────
@@ -132,7 +216,7 @@ function beginAuction(state: GameState, cards: Card[]): GameState {
       currentOfferIndex: 0,
     } as FixedAuction;
   } else if (effectiveType === 'secret') {
-    // 판매자 제외, 판매자 다음 플레이어부터 순서
+    // 판매자 제외, 판매자 다음 플레이어부터 시계방향 순서 (동점 우선순위용)
     const bidOrder = [
       ...state.players.slice(sellerIdx + 1).map(p => p.id),
       ...state.players.slice(0, sellerIdx).map(p => p.id),
@@ -143,7 +227,6 @@ function beginAuction(state: GameState, cards: Card[]): GameState {
       sellerId: player.id,
       bids: Object.fromEntries(bidOrder.map(id => [id, -1])),
       bidOrder,
-      currentBidderIndex: 0,
       subPhase: 'collecting',
     } as SecretAuction;
   } else { // once-around
@@ -281,13 +364,14 @@ export function fixedDecline(state: GameState): GameState {
   const nextIdx = a.currentOfferIndex + 1;
 
   if (nextIdx >= nonSellers.length) {
-    // 모두 거절 → 판매자가 직접 구매 (공짜로 컬렉션에)
+    // 모두 거절 → 판매자가 은행에 고정가 지불 후 강제 낙찰
     return resolveAuction(state, {
       winnerId: a.sellerId,
-      price: 0,
+      price: a.fixedPrice,
       cards: a.cards,
       sellerId: a.sellerId,
-      noContest: true,
+      noContest: false,
+      sellerPaysBank: true,
     });
   }
 
@@ -295,21 +379,22 @@ export function fixedDecline(state: GameState): GameState {
 }
 
 // ─── 비밀 경매 ───────────────────────────────────────────────
-export function secretSubmitBid(state: GameState, amount: number): GameState {
+// 동시 입찰: 각 플레이어가 자신의 ID로 독립적으로 입찰
+export function secretSubmitBid(state: GameState, amount: number, bidderId: string): GameState {
   const a = state.currentAuction as SecretAuction;
   if (!a || a.type !== 'secret') return state;
+  if (!(bidderId in a.bids)) return state; // 참여 불가 (판매자 등)
+  if ((a.bids[bidderId] ?? -1) >= 0) return state; // 이미 입찰함
 
-  const bidderId = a.bidOrder[a.currentBidderIndex];
-  const nextIdx = a.currentBidderIndex + 1;
-  const done = nextIdx >= a.bidOrder.length;
+  const newBids = { ...a.bids, [bidderId]: amount };
+  const allSubmitted = Object.values(newBids).every(b => b >= 0);
 
   return {
     ...state,
     currentAuction: {
       ...a,
-      bids: { ...a.bids, [bidderId]: amount },
-      currentBidderIndex: nextIdx,
-      subPhase: done ? 'revealing' : 'collecting',
+      bids: newBids,
+      subPhase: allSubmitted ? 'revealing' : 'collecting',
     },
   };
 }
@@ -318,10 +403,10 @@ export function secretResolve(state: GameState): GameState {
   const a = state.currentAuction as SecretAuction;
   if (!a || a.type !== 'secret') return state;
 
-  let maxBid = 0;
+  // bidOrder(시계방향) 순서로 순회 → 동점 시 판매자에게 가장 가까운 플레이어 우선
+  let maxBid = -1;
   let winnerId: string | null = null;
 
-  // bidOrder 순서로 순회해야 동점 시 먼저 낸 플레이어가 우선 낙찰됨
   for (const id of a.bidOrder) {
     const bid = a.bids[id] ?? -1;
     if (bid > maxBid) {
@@ -330,12 +415,13 @@ export function secretResolve(state: GameState): GameState {
     }
   }
 
+  const finalPrice = Math.max(0, maxBid);
   return resolveAuction(state, {
     winnerId: winnerId ?? a.sellerId,
-    price: maxBid,
+    price: finalPrice,
     cards: a.cards,
     sellerId: a.sellerId,
-    noContest: !winnerId || maxBid === 0,
+    noContest: winnerId === null,
   });
 }
 
@@ -391,13 +477,16 @@ export function onceAroundPass(state: GameState): GameState {
 
 // ─── 경매 낙찰 처리 ──────────────────────────────────────────
 function resolveAuction(state: GameState, result: AuctionResult): GameState {
-  const { winnerId, price, cards, sellerId, noContest } = result;
+  const { winnerId, price, cards, sellerId, noContest, sellerPaysBank } = result;
 
   let players = state.players.map(p => {
     let cash = p.cash;
     let collection = p.collection;
 
-    if (!noContest && winnerId !== sellerId) {
+    if (sellerPaysBank) {
+      // 고정가 경매 전원 거절: 판매자가 은행에 고정가 지불
+      if (p.id === sellerId) cash -= price;
+    } else if (!noContest && winnerId !== sellerId) {
       if (p.id === winnerId) cash -= price;
       if (p.id === sellerId) cash += price;
     }

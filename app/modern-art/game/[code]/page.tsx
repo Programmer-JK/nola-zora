@@ -8,7 +8,7 @@ import {
   ARTISTS, AUCTION_TYPES, AUCTION_TYPE_ICONS, AUCTION_TYPE_LABELS, AUCTION_TYPE_COLORS, getArtistById,
 } from '@/lib/modern-art/game-data';
 import {
-  selectCard, selectDoubleSecond,
+  selectCard, selectDoubleSecond, doublePassOffer, doublePassDecline,
   openBid, openPass, openStand,
   fixedSetPrice, fixedAccept, fixedDecline,
   secretSubmitBid, secretResolve,
@@ -231,11 +231,17 @@ const PLAYER_COLORS = ['#ffb72b', '#36e0cf', '#ff5da2', '#a274ff', '#7ed957'];
 // ─── 게임 레이아웃 (온라인용) ─────────────────────────────────
 function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: string; children: ReactNode }) {
   const [handOpen, setHandOpen] = useState(false);
+  const [handView, setHandView] = useState<'hand' | 'collection'>('hand');
   const [histOpen, setHistOpen] = useState(false);
   const currentPlayer = gs.players[gs.currentPlayerIndex];
   const myPlayer = gs.players.find(p => p.clientId === myClientId) ?? null;
   const isMyTurnLayout = currentPlayer?.clientId === myClientId;
-  const showHandBar = myPlayer && myPlayer.hand.length > 0 && gs.phase !== 'game-over';
+  const showHandBar = myPlayer && (myPlayer.hand.length > 0 || myPlayer.collection.length > 0) && gs.phase !== 'game-over';
+
+  const openTab = (view: 'hand' | 'collection') => {
+    if (handOpen && handView === view) { setHandOpen(false); }
+    else { setHandOpen(true); setHandView(view); }
+  };
 
   return (
     <div className="ma-game">
@@ -293,22 +299,47 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
         {children}
       </div>
 
-      {/* 내 패 드로어 */}
+      {/* 내 패 / 컬렉션 드로어 */}
       {showHandBar && (
         <div className="ma-hand-bar">
-          <button className="ma-hand-toggle" onClick={() => setHandOpen(v => !v)}>
-            <span style={{ fontFamily: 'var(--f-kr)', fontSize: 12, fontWeight: 700, color: 'var(--cyan)' }}>
+          {/* 탭 */}
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <button
+              onClick={() => openTab('hand')}
+              style={{
+                flex: 1, padding: '10px 0', fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700,
+                color: handOpen && handView === 'hand' ? 'var(--cyan)' : 'var(--dim)',
+                background: 'none', border: 'none',
+                borderBottom: handOpen && handView === 'hand' ? '2px solid var(--cyan)' : '2px solid transparent',
+                cursor: 'pointer',
+              }}>
               내 패 ({myPlayer!.hand.length}장)
-            </span>
-            <span style={{ fontFamily: 'var(--f-pix)', fontSize: 9, color: 'var(--dim)' }}>{handOpen ? '▼ 닫기' : '▲ 보기'}</span>
-          </button>
-          {handOpen && (
+            </button>
+            <button
+              onClick={() => openTab('collection')}
+              style={{
+                flex: 1, padding: '10px 0', fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700,
+                color: handOpen && handView === 'collection' ? 'var(--gold)' : 'var(--dim)',
+                background: 'none', border: 'none',
+                borderBottom: handOpen && handView === 'collection' ? '2px solid var(--gold)' : '2px solid transparent',
+                cursor: 'pointer',
+              }}>
+              🎨 컬렉션 ({myPlayer!.collection.length}장)
+            </button>
+          </div>
+          {/* 내 패 */}
+          {handOpen && handView === 'hand' && (
             <div className="ma-hand-cards">
-              {ARTISTS.filter(a => myPlayer!.hand.some(c => c.artistId === a.id)).map(artist => (
+              {myPlayer!.hand.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--faint)', fontSize: 11, padding: '20px 0' }}>
+                  패가 없습니다
+                </div>
+              ) : ARTISTS.filter(a => myPlayer!.hand.some(c => c.artistId === a.id)).map(artist => (
                 <div key={artist.id} style={{ gridColumn: '1 / -1' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
                     <span style={{ fontSize: 12 }}>{artist.avatar}</span>
                     <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700, color: artist.color }}>{artist.name}</span>
+                    <span style={{ fontSize: 9, color: 'var(--dim)' }}>({myPlayer!.hand.filter(c => c.artistId === artist.id).length}장)</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
                     {myPlayer!.hand.filter(c => c.artistId === artist.id).map(card => (
@@ -317,6 +348,40 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {/* 컬렉션 */}
+          {handOpen && handView === 'collection' && (
+            <div className="ma-hand-cards">
+              {myPlayer!.collection.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--faint)', fontSize: 11, padding: '20px 0' }}>
+                  아직 구매한 작품이 없습니다
+                </div>
+              ) : ARTISTS.filter(a => myPlayer!.collection.some(c => c.artistId === a.id)).map(artist => {
+                const artistCards = myPlayer!.collection.filter(c => c.artistId === artist.id);
+                const value = gs.artistValues[artist.id] ?? 0;
+                const total = artistCards.length * value;
+                return (
+                  <div key={artist.id} style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                      <span style={{ fontSize: 12 }}>{artist.avatar}</span>
+                      <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700, color: artist.color }}>{artist.name}</span>
+                      <span style={{ fontSize: 9, color: 'var(--dim)' }}>({artistCards.length}장)</span>
+                      {value > 0 && (
+                        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--gold)', fontFamily: 'var(--f-title)', fontWeight: 900 }}>
+                          {value}M × {artistCards.length} = {total}M
+                        </span>
+                      )}
+                      {value === 0 && (
+                        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--faint)' }}>미평가</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
+                      {artistCards.map(card => <ArtCard key={card.id} card={card} />)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -642,6 +707,52 @@ export default function OnlineModernArtGame() {
     );
   }
 
+  // ─── 더블: 다른 플레이어에게 두 번째 카드 요청 ────────────────
+  if (phase === 'double-pass-second') {
+    const askPlayerIdx = gs.pendingDoublePassPlayerIdx!;
+    const askPlayer = gs.players[askPlayerIdx];
+    const isAskPlayer = askPlayer.clientId === myClientId;
+    const firstCardId = gs.pendingDoubleCardId!;
+    const firstCard = gs.players[gs.currentPlayerIndex].hand.find(c => c.id === firstCardId)!;
+    const sameArtistCards = askPlayer.hand.filter(
+      c => c.artistId === firstCard.artistId && c.auctionType !== 'double'
+    );
+
+    return (
+      <GameLayout gs={gs} myClientId={myClientId}>
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="text-red-400 font-black text-xl mb-1">🎴 더블 경매</div>
+            <div className="text-white/50 text-sm">{currentPlayer.name}님의 더블 카드 — 두 번째 카드 요청</div>
+          </div>
+          {firstCard && <div className="flex justify-center"><div style={{ width: 96 }}><ArtCard card={firstCard} selected /></div></div>}
+          <PlayerTurnBanner name={askPlayer.name} cash={askPlayer.cash} isMe={isAskPlayer} />
+          {isAskPlayer ? (
+            <>
+              <div className="text-white/50 text-sm text-center">
+                같은 작가 카드를 추가하시겠습니까?
+              </div>
+              {sameArtistCards.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {sameArtistCards.map(card => (
+                    <ArtCard key={card.id} card={card}
+                      onClick={() => perform(s => doublePassOffer(s, card.id))} />
+                  ))}
+                </div>
+              )}
+              <button onClick={() => perform(s => doublePassDecline(s))}
+                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/60 font-bold transition-colors">
+                패스
+              </button>
+            </>
+          ) : (
+            <WaitingForPlayer name={askPlayer.name} detail="두 번째 카드 제공 여부 결정 중..." />
+          )}
+        </div>
+      </GameLayout>
+    );
+  }
+
   // ─── 턴 커버: 패 확인 후 경매 시작 ───────────────────────────
   if (phase === 'turn-cover') {
     if (!isMyTurn) {
@@ -812,33 +923,40 @@ export default function OnlineModernArtGame() {
       const secretColor = AUCTION_TYPE_COLORS['secret'];
 
       if (a.subPhase === 'collecting') {
-        const bidderId = a.bidOrder[a.currentBidderIndex];
-        const bidder = getPlayerById(gs, bidderId)!;
-        const amIBidder = isMyPlayerId(bidderId);
+        const myPlayerId = myPlayer?.id;
+        const iAmSeller = isMyPlayerId(a.sellerId);
+        const hasIBid = myPlayerId ? (a.bids[myPlayerId] ?? -1) >= 0 : false;
+        const submittedIds = a.bidOrder.filter(id => (a.bids[id] ?? -1) >= 0);
+        const pendingNames = a.bidOrder.filter(id => (a.bids[id] ?? -1) < 0).map(id => getPlayerById(gs, id)?.name).filter(Boolean);
 
         return (
           <GameLayout gs={gs} myClientId={myClientId}>
             <div className="space-y-4">
               <AuctionHeader icon="🤫" label="비밀 경매" sellerName={seller.name} color={secretColor} />
               <AuctionCardDisplay cards={a.cards} />
-              <PlayerTurnBanner name={bidder.name} cash={bidder.cash} isMe={amIBidder} />
-              {amIBidder ? (
+              {iAmSeller ? (
+                <div className="text-center py-3 text-white/40 text-sm">판매자 — 모든 플레이어의 입찰 대기 중</div>
+              ) : hasIBid ? (
+                <div className="text-center py-3 text-green-400/70 text-sm font-semibold">✓ 입찰 완료 — 다른 플레이어 대기 중</div>
+              ) : (
                 <>
                   <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center text-white/50 text-sm">
                     비밀 입찰 금액을 입력하세요 (다른 플레이어에게 보이지 않습니다)
                   </div>
-                  <BidInput minBid={0} maxBid={bidder.cash}
-                    onSubmit={v => perform(s => secretSubmitBid(s, v))} label="비밀 입찰" accentColor={secretColor} playerCash={bidder.cash} />
+                  <BidInput minBid={0} maxBid={myPlayer!.cash}
+                    onSubmit={v => perform(s => secretSubmitBid(s, v, myPlayer!.id))}
+                    label="비밀 입찰" accentColor={secretColor} playerCash={myPlayer!.cash} />
                 </>
-              ) : (
-                <WaitingForPlayer name={bidder.name} detail="비밀 입찰 중..." />
               )}
               <div className="text-white/40 text-xs text-center">
-                입찰 완료: {a.currentBidderIndex}/{a.bidOrder.length}명
-                {a.currentBidderIndex > 0 && (
-                  <span className="text-white/25"> — {a.bidOrder.slice(0, a.currentBidderIndex).map(id => getPlayerById(gs, id)?.name).join(', ')}</span>
+                입찰 완료: {submittedIds.length}/{a.bidOrder.length}명
+                {submittedIds.length > 0 && (
+                  <span className="text-white/25"> — {submittedIds.map(id => getPlayerById(gs, id)?.name).join(', ')}</span>
                 )}
               </div>
+              {pendingNames.length > 0 && (
+                <div className="text-white/25 text-xs text-center">대기 중: {pendingNames.join(', ')}</div>
+              )}
             </div>
           </GameLayout>
         );

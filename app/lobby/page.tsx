@@ -59,6 +59,19 @@ const GAMES = [
     desc: '숨겨진 타일을 추리하며 주문을 선언하고\n라이벌 마법사를 쓰러뜨려라',
     href: '/abra',
   },
+  {
+    id: 'yacht',
+    kr: '요트',
+    latin: 'YACHT',
+    tag: 'DICE GAME',
+    emoji: '⛵',
+    accent: 'var(--green)',
+    accentHex: '#7ed957',
+    players: '1–6인',
+    kind: '주사위 족보',
+    desc: '주사위 5개로 12가지 족보를 채워\n최고 합계를 기록하라',
+    href: '/yacht',
+  },
 ]
 
 function GameCard({ game, onPick }: { game: (typeof GAMES)[number]; onPick: () => void }) {
@@ -184,7 +197,7 @@ export default function LobbyPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
-          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>04</span>
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>05</span>
         </div>
 
         {/* 게임 카드 */}
