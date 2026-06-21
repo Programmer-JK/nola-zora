@@ -71,7 +71,7 @@ export default function LoginPage() {
             ARCADE
           </div>
           <p className="pix" style={{ fontSize: 9, color: 'var(--dim)', marginTop: 14, letterSpacing: 1.5 }}>
-            BOARD GAME ARCADE · 3 GAMES
+            BOARD GAME ARCADE · 5 GAMES
           </p>
           <div style={{ marginTop: 10 }}>
             <Bulbs n={11} />

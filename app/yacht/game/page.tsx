@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
-  yScore, yUpperSum, yLowerSum, yTotal, yFilled,
+  yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
   rollDie,
 } from '@/lib/yacht/game-logic';
 import type { YachtPlayer, YachtCatId, PlayerSetup } from '@/lib/yacht/types';
@@ -219,12 +219,6 @@ function YachtGame({ players: initPlayers, onQuit }: {
   // const [mode, setMode] = useState<'hold' | 'move'>('hold');
   const [swapSrc, setSwapSrc] = useState<number | null>(null);
   const ivRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const rollRef = useRef<() => void>(() => { });
-  const lastShakeTime = useRef(0);
-  const motionHandlerRef = useRef<((e: DeviceMotionEvent) => void) | null>(null);
-  const dragShakeRef = useRef({ active: false, lastX: 0, lastTime: 0, dir: 0, reversals: 0, windowStart: 0 });
-  const [shakeEnabled, setShakeEnabled] = useState(false);
-  const [iosNeedsPerm, setIosNeedsPerm] = useState(false);
 
   const n = players.length;
   const me = players[turnIdx];
@@ -232,76 +226,6 @@ function YachtGame({ players: initPlayers, onQuit }: {
   const canScore = rolled && !rolling;
 
   useEffect(() => () => { if (ivRef.current) clearInterval(ivRef.current); }, []);
-
-  // Cleanup DeviceMotion listener on unmount
-  useEffect(() => () => {
-    if (motionHandlerRef.current) window.removeEventListener('devicemotion', motionHandlerRef.current);
-  }, []);
-
-  // Setup shake-to-roll (non-iOS)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('DeviceMotionEvent' in window)) return;
-    if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
-      setIosNeedsPerm(true); // iOS 13+ — needs user gesture to request permission
-      return;
-    }
-    const handler = (e: DeviceMotionEvent) => {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
-      const mag = Math.abs(acc.x ?? 0) + Math.abs(acc.y ?? 0) + Math.abs(acc.z ?? 0);
-      const now = Date.now();
-      if (mag > 30 && now - lastShakeTime.current > 1200) {
-        lastShakeTime.current = now;
-        rollRef.current();
-      }
-    };
-    motionHandlerRef.current = handler;
-    window.addEventListener('devicemotion', handler);
-    setShakeEnabled(true);
-  }, []);
-
-  const enableIosShake = async () => {
-    try {
-      const perm = await (DeviceMotionEvent as any).requestPermission();
-      if (perm !== 'granted') return;
-      const handler = (e: DeviceMotionEvent) => {
-        const acc = e.accelerationIncludingGravity;
-        if (!acc) return;
-        const mag = Math.abs(acc.x ?? 0) + Math.abs(acc.y ?? 0) + Math.abs(acc.z ?? 0);
-        const now = Date.now();
-        if (mag > 30 && now - lastShakeTime.current > 1200) {
-          lastShakeTime.current = now;
-          rollRef.current();
-        }
-      };
-      if (motionHandlerRef.current) window.removeEventListener('devicemotion', motionHandlerRef.current);
-      motionHandlerRef.current = handler;
-      window.addEventListener('devicemotion', handler);
-      setShakeEnabled(true);
-      setIosNeedsPerm(false);
-    } catch { /* user denied */ }
-  };
-
-  // Drag-to-roll (PC) — detect rapid left-right motion while pointer is held down
-  const handleTrayPointerMove = (e: React.PointerEvent) => {
-    const s = dragShakeRef.current;
-    if (!s.active) return;
-    const now = Date.now();
-    const dx = e.clientX - s.lastX;
-    const dt = now - s.lastTime;
-    if (dt < 16) return;
-    const speed = Math.abs(dx) / Math.max(dt, 1) * 1000; // px/s
-    const dir = dx > 3 ? 1 : dx < -3 ? -1 : 0;
-    if (now - s.windowStart > 700) { s.reversals = 0; s.windowStart = now; s.dir = dir; }
-    if (dir !== 0 && dir !== s.dir && speed > 180) {
-      s.dir = dir; s.reversals++;
-      if (s.reversals >= 4) {
-        s.reversals = 0; s.windowStart = now;
-        rollRef.current();
-      }
-    }
-    s.lastX = e.clientX; s.lastTime = now;
-  };
 
   const roll = () => {
     if (rollsLeft <= 0 || rolling) return;
@@ -323,7 +247,6 @@ function YachtGame({ players: initPlayers, onQuit }: {
       }
     }, 65);
   };
-  rollRef.current = roll; // Always keep ref pointing to latest roll
 
   const handleDieClick = (i: number) => {
     if (!rolled || rolling) return;
@@ -517,8 +440,8 @@ function YachtGame({ players: initPlayers, onQuit }: {
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '6px 10px', borderRight: '1px solid var(--line)',
       }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', lineHeight: 1.15 }}>{cat.kr}</span>
-        <span style={{ fontSize: 8, color: 'var(--faint)', marginTop: 2 }}>{cat.sub}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', lineHeight: 1.15 }}>{cat.kr}</span>
+        <span style={{ fontSize: 12, color: 'var(--dim)', marginTop: 2, lineHeight: 1.3 }}>{cat.sub}</span>
       </div>
       {players.map((p, i) => {
         const filled = p.scores[cat.id] !== undefined;
@@ -550,13 +473,45 @@ function YachtGame({ players: initPlayers, onQuit }: {
     </div>
   );
 
-  const sectionLabel = (txt: string) => (
+  const sectionLabel = (txt: string, border = false) => (
     <div style={{
       gridColumn: `1 / span ${n + 1}`,
       position: 'sticky', left: 0,
       padding: '5px 10px', background: 'var(--bg)',
-      fontFamily: 'var(--f-pix)', fontSize: 6.5, letterSpacing: 1, color: 'var(--dim)',
+      fontFamily: 'var(--f-pix)', fontSize: 12, letterSpacing: 1, color: 'var(--dim)',
+      borderTop: border ? '1px solid var(--line-2)' : 'none',
     }}>{txt}</div>
+  );
+
+  const bonusRow = () => (
+    <div style={{ display: 'contents' }}>
+      <div style={{
+        position: 'sticky', left: 0, zIndex: 2,
+        background: 'var(--bg)',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '5px 10px',
+        borderRight: '1px solid var(--line)', borderTop: '1px solid var(--line-2)',
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', fontFamily: 'var(--f-body)' }}>보너스</span>
+        <span style={{ fontSize: 8, color: 'var(--faint)', fontFamily: 'var(--f-pix)', marginTop: 2 }}>≥63 → +35</span>
+      </div>
+      {players.map((p, i) => {
+        const upper = yUpperSum(p.scores);
+        const got = upper >= 63;
+        return (
+          <div key={i} style={{
+            background: 'var(--bg)',
+            borderTop: '1px solid var(--line-2)',
+            borderRight: i === n - 1 ? 'none' : '1px solid var(--line)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px',
+          }}>
+            {got
+              ? <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: 'var(--green)' }}>+35</span>
+              : <span style={{ fontSize: 14, color: 'var(--faint)' }}>{upper}/63</span>
+            }
+          </div>
+        );
+      })}
+    </div>
   );
 
   const totalRow = (label: string, fn: (s: Partial<Record<YachtCatId, number>>) => number, strong: boolean) => (
@@ -588,52 +543,52 @@ function YachtGame({ players: initPlayers, onQuit }: {
 
   /* ── Game UI ── */
   return (
-    <div className="cabinet" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+    <div className="cabinet">
       <div className="crt" />
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 640, flex: 1, position: 'relative', zIndex: 1 }}>
 
-      {/* Header */}
-      <header style={{
-        position: 'relative', zIndex: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <button className="arc-btn-ghost" onClick={onQuit} style={{ fontSize: 13, padding: '9px 14px' }}>
-          ← 나가기
-        </button>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--f-disp)', fontSize: 16, letterSpacing: 1, color: ACCENT, textShadow: '0 0 12px rgba(126,217,87,.4)' }}>
-            ⛵ YACHT
-          </div>
-          <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', marginTop: 2 }}>
-            ROUND {turnNo} / 12 · {n}P
-          </div>
-        </div>
-        <div style={{ width: 80 }} />
-      </header>
-
-      <div style={{ position: 'relative', zIndex: 1, flex: 1, overflow: 'auto', padding: '14px 12px 24px' }}>
-        {/* Turn banner */}
-        <div className="arc-pop" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          padding: '11px 14px', borderRadius: 13, marginBottom: 14,
-          background: `color-mix(in srgb, ${me.color} 14%, var(--surface))`,
-          border: `1.5px solid ${me.color}`,
+        {/* Header */}
+        <header style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', borderBottom: '1px solid var(--line)',
         }}>
-          <span style={{ width: 13, height: 13, borderRadius: '50%', background: me.color, boxShadow: `0 0 9px ${me.color}` }} />
-          <span style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)', whiteSpace: 'nowrap' }}>
-            {me.name}<span style={{ color: 'var(--dim)', fontSize: 13 }}> 님 차례</span>
-          </span>
-          {!rolled && (
-            <span className="blink" style={{ color: ACCENT, fontSize: 11, fontFamily: 'var(--f-pix)', marginLeft: 4 }}>ROLL!</span>
-          )}
-        </div>
+          <button className="arc-btn-ghost" onClick={onQuit} style={{ fontSize: 13, padding: '9px 14px' }}>
+            ← 나가기
+          </button>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--f-disp)', fontSize: 16, letterSpacing: 1, color: ACCENT, textShadow: '0 0 12px rgba(126,217,87,.4)' }}>
+              ⛵ YACHT
+            </div>
+            <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', marginTop: 2 }}>
+              ROUND {turnNo} / 12 · {n}P
+            </div>
+          </div>
+          <div style={{ width: 80 }} />
+        </header>
 
-        {/* Dice tray */}
-        <div className="arc-panel ticks" style={{ padding: '18px 16px 16px', marginBottom: 16 }}>
-          {/* Mode toggle + sort */}
-          {rolled && !rolling && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              {/* <div className="arc-seg" style={{ flex: 1 }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '14px 12px 24px' }}>
+          {/* Turn banner */}
+          <div className="arc-pop" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '11px 14px', borderRadius: 13, marginBottom: 14,
+            background: `color-mix(in srgb, ${me.color} 14%, var(--surface))`,
+            border: `1.5px solid ${me.color}`,
+          }}>
+            <span style={{ width: 13, height: 13, borderRadius: '50%', background: me.color, boxShadow: `0 0 9px ${me.color}` }} />
+            <span style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+              {me.name}<span style={{ color: 'var(--dim)', fontSize: 13 }}> 님 차례</span>
+            </span>
+            {!rolled && (
+              <span className="blink" style={{ color: ACCENT, fontSize: 11, fontFamily: 'var(--f-pix)', marginLeft: 4 }}>ROLL!</span>
+            )}
+          </div>
+
+          {/* Dice tray */}
+          <div className="arc-panel ticks" style={{ padding: '18px 16px 16px', marginBottom: 16 }}>
+            {/* Mode toggle + sort */}
+            {rolled && !rolling && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                {/* <div className="arc-seg" style={{ flex: 1 }}>
                 <button
                   className={mode === 'hold' ? 'on' : ''}
                   onClick={() => { setMode('hold'); setSwapSrc(null); }}
@@ -649,150 +604,121 @@ function YachtGame({ players: initPlayers, onQuit }: {
                   ↔ 이동
                 </button>
               </div> */}
-              <button
-                className="arc-btn-ghost"
-                onClick={sortDice}
-                style={{ fontSize: 12, padding: '7px 12px', '--c': ACCENT } as React.CSSProperties}
-                title="눈 숫자 오름차순 정렬"
-              >
-                ↑↓ 정렬
-              </button>
-            </div>
-          )}
-
-          <div
-            className={rolling ? 'dice-tray-shake' : ''}
-            style={{
-              display: 'flex', justifyContent: 'center', gap: 10, minHeight: 76, alignItems: 'center',
-              cursor: rollsLeft > 0 && !rolling ? 'ew-resize' : 'default',
-              userSelect: 'none',
-            }}
-            onPointerDown={e => {
-              const s = dragShakeRef.current;
-              s.active = true; s.lastX = e.clientX; s.lastTime = Date.now();
-              s.reversals = 0; s.windowStart = Date.now(); s.dir = 0;
-            }}
-            onPointerUp={() => { dragShakeRef.current.active = false; }}
-            onPointerLeave={() => { dragShakeRef.current.active = false; }}
-            onPointerMove={handleTrayPointerMove}
-          >
-            {dice.map((d, i) => (
-              rolling && !held[i]
-                ? <Die3D key={i} index={i} />
-                : <YachtDie
-                  key={i}
-                  value={d}
-                  held={held[i]}
-                  rolling={rolling}
-                  onClick={() => handleDieClick(i)}
-                  inactive={!rolled || rolling}
-                  selected={swapSrc === i}
-                />
-            ))}
-          </div>
-
-          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
-            {!rolled
-              ? '🎲 굴려서 턴을 시작하세요'
-              : rollsLeft > 0
-                ? '남기고 싶은 주사위를 탭해 고정(HOLD)'
-                : '굴림 끝! 아래 점수표에서 족보를 선택하세요'}
-          </p>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              className="arc-btn"
-              onClick={roll}
-              disabled={rollsLeft <= 0 || rolling}
-              style={{ flex: 1, fontSize: 18, background: 'var(--green)', color: '#06230a', borderColor: 'var(--green)' }}
-            >
-              🎲 {rolled ? '다시 굴리기' : '굴리기'}
-            </button>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 48 }}>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {[0, 1, 2].map(k => (
-                  <span key={k} style={{
-                    width: 9, height: 9, borderRadius: '50%',
-                    background: k < rollsLeft ? 'var(--green)' : 'rgba(255,255,255,.12)',
-                    boxShadow: k < rollsLeft ? '0 0 7px var(--green)' : 'none',
-                    transition: 'all .2s',
-                  }} />
-                ))}
+                <button
+                  className="arc-btn-ghost"
+                  onClick={sortDice}
+                  style={{ fontSize: 12, padding: '7px 12px', '--c': ACCENT } as React.CSSProperties}
+                  title="눈 숫자 오름차순 정렬"
+                >
+                  ↑↓ 정렬
+                </button>
               </div>
-              <span className="pix" style={{ fontSize: 6, color: 'var(--faint)' }}>ROLLS</span>
-            </div>
-          </div>
-
-          {suggestion && (
-            <p className="arc-rise" style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '12px 0 0' }}>
-              💡 최고 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b>
-            </p>
-          )}
-
-          {/* Shake / drag-to-roll hint */}
-          <div style={{ textAlign: 'center', marginTop: 10 }}>
-            {iosNeedsPerm ? (
-              <button
-                className="arc-btn-ghost"
-                onClick={enableIosShake}
-                style={{ fontSize: 11, padding: '5px 12px', '--c': ACCENT } as React.CSSProperties}
-              >
-                📳 흔들어 굴리기 활성화
-              </button>
-            ) : shakeEnabled ? (
-              <span className="pix" style={{ fontSize: 7, color: 'var(--faint)', letterSpacing: 1 }}>
-                📳 SHAKE TO ROLL
-              </span>
-            ) : (
-              <span className="pix" style={{ fontSize: 7, color: 'var(--faint)', letterSpacing: 1 }}>
-                🖱 DRAG TO ROLL
-              </span>
             )}
+
+            <div
+              className={rolling ? 'dice-tray-shake' : ''}
+              style={{ display: 'flex', justifyContent: 'center', gap: 10, minHeight: 76, alignItems: 'center' }}
+            >
+              {dice.map((d, i) => (
+                rolling && !held[i]
+                  ? <Die3D key={i} index={i} />
+                  : <YachtDie
+                    key={i}
+                    value={d}
+                    held={held[i]}
+                    rolling={rolling}
+                    onClick={() => handleDieClick(i)}
+                    inactive={!rolled || rolling}
+                    selected={swapSrc === i}
+                  />
+              ))}
+            </div>
+
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
+              {!rolled
+                ? '🎲 굴려서 턴을 시작하세요'
+                : rollsLeft > 0
+                  ? '남기고 싶은 주사위를 탭해 고정(HOLD)'
+                  : '굴림 끝! 아래 점수표에서 족보를 선택하세요'}
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                className="arc-btn"
+                onClick={roll}
+                disabled={rollsLeft <= 0 || rolling}
+                style={{ flex: 1, fontSize: 18, background: 'var(--green)', color: '#06230a', borderColor: 'var(--green)' }}
+              >
+                🎲 {rolled ? '다시 굴리기' : '굴리기'}
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 48 }}>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {[0, 1, 2].map(k => (
+                    <span key={k} style={{
+                      width: 9, height: 9, borderRadius: '50%',
+                      background: k < rollsLeft ? 'var(--green)' : 'rgba(255,255,255,.12)',
+                      boxShadow: k < rollsLeft ? '0 0 7px var(--green)' : 'none',
+                      transition: 'all .2s',
+                    }} />
+                  ))}
+                </div>
+                <span className="pix" style={{ fontSize: 6, color: 'var(--faint)' }}>ROLLS</span>
+              </div>
+            </div>
+
+            {suggestion && (
+              <p className="arc-rise" style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 0' }}>
+                💡 최고 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b>
+              </p>
+            )}
+
           </div>
-        </div>
 
-        {/* Scoresheet */}
-        <div className="arc-panel" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: colTmpl, minWidth: 'min-content' }}>
-              {/* Header row */}
-              <div style={{
-                position: 'sticky', left: 0, zIndex: 3, background: 'var(--surface)',
-                display: 'flex', alignItems: 'flex-end', padding: '8px 10px',
-                borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line-2)',
-              }}>
-                <span className="pix" style={{ fontSize: 6.5, color: 'var(--dim)', letterSpacing: 1 }}>족보</span>
+          {/* Scoresheet */}
+          <div className="arc-panel" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ overflow: 'auto', maxHeight: '55vh' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: colTmpl, minWidth: 'min-content' }}>
+                {/* Header row — sticky top + left */}
+                <div style={{
+                  position: 'sticky', top: 0, left: 0, zIndex: 4, background: 'var(--surface)',
+                  display: 'flex', alignItems: 'flex-end', padding: '8px 10px',
+                  borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line-2)',
+                }}>
+                  <span className="pix" style={{ fontSize: 18, color: 'var(--dim)', letterSpacing: 1 }}>족보</span>
+                </div>
+                <div style={{
+                  position: 'sticky', top: 0, zIndex: 3,
+                  gridColumn: `2 / span ${n}`,
+                  display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`,
+                  borderBottom: '1px solid var(--line-2)', background: 'var(--surface)',
+                }}>
+                  {players.map((p, i) => headerCell(p, i))}
+                </div>
+
+                {sectionLabel('▲ 상단 — 같은 눈의 합')}
+                {Y_UPPER.map(catRow)}
+                {totalRow('상단 합', yUpperSum, false)}
+                {bonusRow()}
+
+                {sectionLabel('▼ 하단 — 족보', true)}
+                {Y_LOWER.map(catRow)}
+
+                {totalRow('합계 TOTAL', yTotal, true)}
               </div>
-              <div style={{
-                gridColumn: `2 / span ${n}`,
-                display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`,
-                borderBottom: '1px solid var(--line-2)', background: 'var(--surface)',
-              }}>
-                {players.map((p, i) => headerCell(p, i))}
-              </div>
-
-              {sectionLabel('▲ 상단 — 같은 눈의 합')}
-              {Y_UPPER.map(catRow)}
-              {totalRow('상단 합', yUpperSum, false)}
-
-              {sectionLabel('▼ 하단 — 족보')}
-              {Y_LOWER.map(catRow)}
-
-              {totalRow('합계 TOTAL', yTotal, true)}
             </div>
           </div>
-        </div>
 
-        <button
-          className="arc-btn-ghost"
-          onClick={() => setResult(players)}
-          style={{ marginTop: 14, width: '100%', '--c': ACCENT, color: ACCENT, borderColor: `color-mix(in srgb, var(--green) 40%, transparent)` } as React.CSSProperties}
-        >
-          🏁 게임 종료 — 결과 보기
-        </button>
-        <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 10, lineHeight: 1.8 }}>
-          TAP A GREEN CELL TO SCORE · 0점으로 버릴 수도 있어요
-        </p>
+          <button
+            className="arc-btn-ghost"
+            onClick={() => setResult(players)}
+            style={{ marginTop: 14, width: '100%', '--c': ACCENT, color: ACCENT, borderColor: `color-mix(in srgb, var(--green) 40%, transparent)` } as React.CSSProperties}
+          >
+            🏁 게임 종료 — 결과 보기
+          </button>
+          <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 10, lineHeight: 1.8 }}>
+            TAP A GREEN CELL TO SCORE · 0점으로 버릴 수도 있어요
+          </p>
+        </div>
       </div>
     </div>
   );

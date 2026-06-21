@@ -58,8 +58,11 @@ export const yUpperSum = (scores: Partial<Record<YachtCatId, number>>) =>
 export const yLowerSum = (scores: Partial<Record<YachtCatId, number>>) =>
   Y_LOWER.reduce((t, c) => t + (scores[c.id] ?? 0), 0);
 
+export const yUpperBonus = (scores: Partial<Record<YachtCatId, number>>) =>
+  yUpperSum(scores) >= 63 ? 35 : 0;
+
 export const yTotal = (scores: Partial<Record<YachtCatId, number>>) =>
-  yUpperSum(scores) + yLowerSum(scores);
+  yUpperSum(scores) + yUpperBonus(scores) + yLowerSum(scores);
 
 export const yFilled = (scores: Partial<Record<YachtCatId, number>>) =>
   Y_CATS.filter(c => scores[c.id] !== undefined).length;

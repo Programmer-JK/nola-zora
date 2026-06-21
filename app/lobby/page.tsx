@@ -7,6 +7,19 @@ import { logoutGuest } from '@/lib/auth'
 
 const GAMES = [
   {
+    id: 'yacht',
+    kr: '요트',
+    latin: 'YACHT',
+    tag: 'DICE GAME',
+    emoji: '⛵',
+    accent: 'var(--green)',
+    accentHex: '#7ed957',
+    players: '1–6인',
+    kind: '주사위 족보',
+    desc: '주사위 5개로 12가지 족보를 채워\n최고 합계를 기록하라',
+    href: '/yacht',
+  },
+  {
     id: 'las-vegas',
     kr: '라스베가스',
     latin: 'LAS VEGAS',
@@ -58,19 +71,6 @@ const GAMES = [
     kind: '마법 블러핑',
     desc: '숨겨진 타일을 추리하며 주문을 선언하고\n라이벌 마법사를 쓰러뜨려라',
     href: '/abra',
-  },
-  {
-    id: 'yacht',
-    kr: '요트',
-    latin: 'YACHT',
-    tag: 'DICE GAME',
-    emoji: '⛵',
-    accent: 'var(--green)',
-    accentHex: '#7ed957',
-    players: '1–6인',
-    kind: '주사위 족보',
-    desc: '주사위 5개로 12가지 족보를 채워\n최고 합계를 기록하라',
-    href: '/yacht',
   },
 ]
 
