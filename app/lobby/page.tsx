@@ -7,6 +7,19 @@ import { logoutGuest } from '@/lib/auth'
 
 const GAMES = [
   {
+    id: 'liar',
+    kr: '라이어 게임',
+    latin: 'LIAR GAME',
+    tag: 'PARTY GAME',
+    emoji: '🕵️',
+    accent: '#e84242',
+    accentHex: '#e84242',
+    players: '3–8인',
+    kind: '소셜 디덕션',
+    desc: '단어를 모르는 라이어를 찾아내라!\n거짓말쟁이를 꿰뚫어보는 눈치게임',
+    href: '/liar',
+  },
+  {
     id: 'yacht',
     kr: '요트',
     latin: 'YACHT',
@@ -197,7 +210,7 @@ export default function LobbyPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
-          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>05</span>
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>06</span>
         </div>
 
         {/* 게임 카드 */}
