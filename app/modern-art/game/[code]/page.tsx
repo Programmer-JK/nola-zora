@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useCallback, useState, useRef, createContext, useContext, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getGuestUid } from '@/lib/auth';
 import { subscribeRoom, updateGameState, finishGame, registerPresence } from '@/lib/modern-art/firebase-game';
@@ -36,6 +36,9 @@ const AUCTION_TYPE_DESC: Record<string, string> = {
   'once-around': '한 번씩만 기회, 최고가 낙찰',
   'double': '같은 작가 카드 두 장을 동시 경매',
 };
+
+// ─── 줌 컨텍스트 ──────────────────────────────────────────────
+const ZoomCardCtx = createContext<((card: Card) => void) | null>(null);
 
 // ─── 공유 UI 컴포넌트 ─────────────────────────────────────────
 function ArtworkImage({ artistId, avatar, artworkIndex, className }: {
@@ -196,6 +199,7 @@ function BidInput({ minBid, maxBid, onSubmit, label = '입찰', accentColor, pla
 }
 
 function AuctionCardDisplay({ cards }: { cards: Card[] }) {
+  const zoomCard = useContext(ZoomCardCtx);
   const isDouble = cards.length === 2;
   return (
     <div className="ma-hero">
@@ -205,10 +209,12 @@ function AuctionCardDisplay({ cards }: { cards: Card[] }) {
         const title = getArtworkTitle(card.artistId, card.artworkIndex);
         return (
           <div key={card.id} className="ma-hero-card"
+            onClick={zoomCard ? () => zoomCard(card) : undefined}
             style={{
               borderColor: idx === 0 && isDouble ? artist.color + 'aa' : artist.color,
               boxShadow: `0 0 40px ${artist.color}30, 0 14px 40px -10px rgba(0,0,0,.7)`,
               width: isDouble ? '150px' : '190px',
+              cursor: zoomCard ? 'pointer' : 'default',
             }}>
             <ArtworkImage artistId={artist.id} avatar={artist.avatar} artworkIndex={card.artworkIndex} className="ma-hero-art" />
             <div className="ma-hero-meta">
@@ -233,17 +239,26 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
   const [handOpen, setHandOpen] = useState(false);
   const [handView, setHandView] = useState<'hand' | 'collection'>('hand');
   const [histOpen, setHistOpen] = useState(false);
+  const [collOpen, setCollOpen] = useState(false);
+  const [collViewPlayerId, setCollViewPlayerId] = useState<string | null>(null);
+  const [zoomedCard, setZoomedCard] = useState<Card | null>(null);
   const currentPlayer = gs.players[gs.currentPlayerIndex];
   const myPlayer = gs.players.find(p => p.clientId === myClientId) ?? null;
   const isMyTurnLayout = currentPlayer?.clientId === myClientId;
   const showHandBar = myPlayer && (myPlayer.hand.length > 0 || myPlayer.collection.length > 0) && gs.phase !== 'game-over';
 
+  const collViewPlayer = gs.players.find(p => p.id === collViewPlayerId)
+    ?? gs.players.find(p => p.clientId === myClientId)
+    ?? gs.players[0];
+
   const openTab = (view: 'hand' | 'collection') => {
+    if (view === 'collection') { setCollOpen(true); return; }
     if (handOpen && handView === view) { setHandOpen(false); }
     else { setHandOpen(true); setHandView(view); }
   };
 
   return (
+    <ZoomCardCtx.Provider value={setZoomedCard}>
     <div className="ma-game">
       {/* HUD */}
       <div className="ma-hud">
@@ -255,6 +270,9 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
               📊
             </button>
           )}
+          <button onClick={() => setCollOpen(v => !v)} className="ma-hud-icon-btn" title="컬렉션 보기">
+            🎨
+          </button>
           {myPlayer && (
             <span className="ma-hud-cash">{myPlayer.cash}M</span>
           )}
@@ -270,7 +288,8 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
           const collVal = p.collection.reduce((s, c) => s + (gs.artistValues[c.artistId] ?? 0), 0);
           return (
             <div key={p.id} className={`ma-railchip ${isCurrent ? 'turn' : ''} ${isMe ? 'me' : ''}`}
-              style={{ borderColor: isCurrent ? color : color + '30' }}>
+              style={{ borderColor: isCurrent ? color : color + '30', cursor: 'pointer' }}
+              onClick={() => { setCollViewPlayerId(p.id); setCollOpen(true); }}>
               <div className="ma-railchip-av" style={{ background: color + '22' }}>
                 <span style={{ fontSize: 15 }}>{p.name.charAt(0)}</span>
               </div>
@@ -319,9 +338,9 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
               onClick={() => openTab('collection')}
               style={{
                 flex: 1, padding: '10px 0', fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700,
-                color: handOpen && handView === 'collection' ? 'var(--gold)' : 'var(--dim)',
+                color: collOpen ? 'var(--gold)' : 'var(--dim)',
                 background: 'none', border: 'none',
-                borderBottom: handOpen && handView === 'collection' ? '2px solid var(--gold)' : '2px solid transparent',
+                borderBottom: collOpen ? '2px solid var(--gold)' : '2px solid transparent',
                 cursor: 'pointer',
               }}>
               🎨 컬렉션 ({myPlayer!.collection.length}장)
@@ -350,42 +369,144 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
               ))}
             </div>
           )}
-          {/* 컬렉션 */}
-          {handOpen && handView === 'collection' && (
-            <div className="ma-hand-cards">
-              {myPlayer!.collection.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--faint)', fontSize: 11, padding: '20px 0' }}>
-                  아직 구매한 작품이 없습니다
-                </div>
-              ) : ARTISTS.filter(a => myPlayer!.collection.some(c => c.artistId === a.id)).map(artist => {
-                const artistCards = myPlayer!.collection.filter(c => c.artistId === artist.id);
-                const value = gs.artistValues[artist.id] ?? 0;
-                const total = artistCards.length * value;
-                return (
-                  <div key={artist.id} style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-                      <span style={{ fontSize: 12 }}>{artist.avatar}</span>
-                      <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700, color: artist.color }}>{artist.name}</span>
-                      <span style={{ fontSize: 9, color: 'var(--dim)' }}>({artistCards.length}장)</span>
-                      {value > 0 && (
-                        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--gold)', fontFamily: 'var(--f-title)', fontWeight: 900 }}>
-                          {value}M × {artistCards.length} = {total}M
-                        </span>
-                      )}
-                      {value === 0 && (
-                        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--faint)' }}>미평가</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
-                      {artistCards.map(card => <ArtCard key={card.id} card={card} />)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
+
+      {/* 컬렉션 오버레이 */}
+      {collOpen && (
+        <div className="ma-coll-overlay">
+          <div className="ma-hist-head">
+            <span style={{ fontFamily: 'var(--f-kr)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>컬렉션</span>
+            <button onClick={() => { setCollOpen(false); setZoomedCard(null); }} className="ma-hist-close">✕</button>
+          </div>
+          {/* 플레이어 탭 */}
+          <div className="ma-coll-tabs">
+            {gs.players.map((p, idx) => {
+              const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+              const isMe = p.clientId === myClientId;
+              const isSelected = p.id === collViewPlayer.id;
+              const collVal = p.collection.reduce((s, c) => s + (gs.artistValues[c.artistId] ?? 0), 0);
+              return (
+                <button key={p.id} onClick={() => setCollViewPlayerId(p.id)}
+                  style={{
+                    flex: 1, minWidth: 64, padding: '8px 6px',
+                    fontFamily: 'var(--f-kr)', fontSize: 10, fontWeight: 700,
+                    color: isSelected ? color : 'var(--dim)',
+                    background: 'none', border: 'none',
+                    borderBottom: isSelected ? `2px solid ${color}` : '2px solid transparent',
+                    cursor: 'pointer', lineHeight: 1.3,
+                  }}>
+                  <div>{p.name}{isMe ? ' (나)' : ''}</div>
+                  <div style={{ fontFamily: 'var(--f-title)', fontSize: 10, fontWeight: 900, color: collVal > 0 ? 'var(--gold)' : 'var(--faint)', marginTop: 2 }}>
+                    {collVal > 0 ? `${collVal}M` : '0M'}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {/* 컬렉션 내용 */}
+          <div className="ma-coll-body">
+            {collViewPlayer.collection.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--faint)', fontSize: 11, padding: '40px 0' }}>
+                아직 구매한 작품이 없습니다
+              </div>
+            ) : (
+              <>
+                {(() => {
+                  const totalVal = collViewPlayer.collection.reduce((s, c) => s + (gs.artistValues[c.artistId] ?? 0), 0);
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 12, background: 'rgba(255,183,43,.08)', border: '1px solid rgba(255,183,43,.2)' }}>
+                      <span style={{ fontFamily: 'var(--f-kr)', fontSize: 12, color: 'var(--dim)' }}>
+                        {collViewPlayer.name} · {collViewPlayer.collection.length}장
+                      </span>
+                      <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: 'var(--gold)' }}>{totalVal}M</span>
+                    </div>
+                  );
+                })()}
+                {ARTISTS.filter(a => collViewPlayer.collection.some(c => c.artistId === a.id)).map(artist => {
+                  const artistCards = collViewPlayer.collection.filter(c => c.artistId === artist.id);
+                  const value = gs.artistValues[artist.id] ?? 0;
+                  const total = artistCards.length * value;
+                  return (
+                    <div key={artist.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <span style={{ fontSize: 14 }}>{artist.avatar}</span>
+                        <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 700, color: artist.color }}>{artist.name}</span>
+                        <span style={{ fontSize: 9, color: 'var(--dim)' }}>({artistCards.length}장)</span>
+                        {value > 0 ? (
+                          <span style={{ marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--f-title)', fontWeight: 900, color: 'var(--gold)' }}>
+                            {value}M × {artistCards.length} = {total}M
+                          </span>
+                        ) : (
+                          <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--faint)' }}>미평가</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+                        {artistCards.map(card => <ArtCard key={card.id} card={card} onClick={() => setZoomedCard(card)} />)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 작품 확대 라이트박스 */}
+      {zoomedCard && (() => {
+        const artist = getArtistById(zoomedCard.artistId);
+        const title = getArtworkTitle(zoomedCard.artistId, zoomedCard.artworkIndex);
+        const value = gs.artistValues[zoomedCard.artistId] ?? 0;
+        const auctionColor = AUCTION_TYPE_COLORS[zoomedCard.auctionType];
+        return (
+          <div
+            onClick={() => setZoomedCard(null)}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 40,
+              background: 'rgba(0,0,0,.88)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '24px 20px', gap: 16, backdropFilter: 'blur(12px)',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 320,
+                border: `2.5px solid ${artist.color}`,
+                borderRadius: 20, overflow: 'hidden',
+                background: 'var(--surface)',
+                boxShadow: `0 0 60px ${artist.color}40, 0 24px 60px -10px rgba(0,0,0,.8)`,
+              }}
+            >
+              <div style={{ background: artist.color, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 16 }}>{artist.avatar}</span>
+                <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, fontWeight: 900, color: '#0c0a12' }}>{artist.name}</span>
+              </div>
+              <ArtworkImage
+                artistId={artist.id} avatar={artist.avatar} artworkIndex={zoomedCard.artworkIndex}
+                className="ma-hero-art"
+              />
+              <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {title && (
+                  <div style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)', fontWeight: 700 }}>{title}</div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ background: auctionColor + 'cc', color: '#0c0a12', fontFamily: 'var(--f-kr)', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20 }}>
+                    {AUCTION_TYPE_ICONS[zoomedCard.auctionType]} {AUCTION_TYPE_LABELS[zoomedCard.auctionType]}
+                  </span>
+                  {value > 0 ? (
+                    <span style={{ fontFamily: 'var(--f-title)', fontSize: 18, fontWeight: 900, color: 'var(--gold)' }}>{value}M</span>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--faint)' }}>미평가</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div style={{ fontFamily: 'var(--f-kr)', fontSize: 12, color: 'rgba(255,255,255,.3)' }}>탭하여 닫기</div>
+          </div>
+        );
+      })()}
 
       {/* 라운드 기록 오버레이 */}
       {histOpen && (
@@ -425,6 +546,7 @@ function GameLayout({ gs, myClientId, children }: { gs: GameState; myClientId: s
         </div>
       )}
     </div>
+    </ZoomCardCtx.Provider>
   );
 }
 
@@ -896,8 +1018,9 @@ export default function OnlineModernArtGame() {
             {amIBuyer ? (
               <div className="space-y-2">
                 <button onClick={() => perform(s => fixedAccept(s))}
-                  className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-lg transition-colors">
-                  💰 구매 ({a.fixedPrice}M)
+                  disabled={offerTo.cash < a.fixedPrice}
+                  className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  {offerTo.cash < a.fixedPrice ? `💸 잔고 부족 (${offerTo.cash}M)` : `💰 구매 (${a.fixedPrice}M)`}
                 </button>
                 <button onClick={() => perform(s => fixedDecline(s))}
                   className="w-full py-3 rounded-xl bg-white/8 hover:bg-white/12 text-white/60 font-bold transition-colors border border-white/10">
@@ -943,7 +1066,7 @@ export default function OnlineModernArtGame() {
                   <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center text-white/50 text-sm">
                     비밀 입찰 금액을 입력하세요 (다른 플레이어에게 보이지 않습니다)
                   </div>
-                  <BidInput minBid={0} maxBid={myPlayer!.cash}
+                  <BidInput minBid={1} maxBid={myPlayer!.cash}
                     onSubmit={v => perform(s => secretSubmitBid(s, v, myPlayer!.id))}
                     label="비밀 입찰" accentColor={secretColor} playerCash={myPlayer!.cash} />
                 </>
@@ -985,15 +1108,10 @@ export default function OnlineModernArtGame() {
                 </div>
               ))}
             </div>
-            {isMyPlayerId(a.sellerId) && (
-              <button onClick={() => perform(s => secretResolve(s))}
-                className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base transition-colors">
-                낙찰 확정
-              </button>
-            )}
-            {!isMyPlayerId(a.sellerId) && (
-              <div className="text-white/30 text-sm text-center">{seller.name}님이 낙찰을 확정 중...</div>
-            )}
+            <button onClick={() => perform(s => secretResolve(s))}
+              className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base transition-colors">
+              낙찰 확정
+            </button>
           </div>
         </GameLayout>
       );
@@ -1041,11 +1159,11 @@ export default function OnlineModernArtGame() {
     const seller = getPlayerById(gs, lastAuctionResult.sellerId)!;
     const isNoContest = lastAuctionResult.noContest;
     const triggerArtist = roundEndArtistId ? getArtistById(roundEndArtistId) : null;
-    // 다음 차례 플레이어가 확인 버튼을 누름
+    // 라운드 종료: 현재 플레이어(카드 올린 사람)만, 일반 턴: 다음 플레이어만 진행 버튼
     const nextIndex = roundEndArtistId
       ? gs.currentPlayerIndex
       : (gs.currentPlayerIndex + 1) % gs.players.length;
-    const canAdvance = myPlayerIndex === nextIndex || myPlayerIndex === gs.currentPlayerIndex;
+    const canAdvance = myPlayerIndex === nextIndex;
 
     return (
       <GameLayout gs={gs} myClientId={myClientId}>
@@ -1057,7 +1175,12 @@ export default function OnlineModernArtGame() {
             </div>
           )}
           <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center w-full">
-            {isNoContest ? (
+            {isNoContest && roundEndArtistId ? (
+              <>
+                <div className="text-red-400 text-sm mb-2 font-bold">5번째 카드 출품 — 경매 취소</div>
+                <div className="text-white/60 mt-1">카드가 버려집니다</div>
+              </>
+            ) : isNoContest ? (
               <>
                 <div className="text-white/40 text-sm mb-2">낙찰자 없음</div>
                 <div className="text-amber-400 text-2xl font-black">{seller.name}</div>
@@ -1080,11 +1203,19 @@ export default function OnlineModernArtGame() {
             const { winnerId, sellerId, price, noContest } = lastAuctionResult;
             const isWinner = winnerId === myPlayer.id;
             const isSeller = sellerId === myPlayer.id;
-            if (isWinner && !isSeller && !noContest) {
+            if (isWinner && !noContest) {
               return (
-                <div className="w-full" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (낙찰)</span>
-                  <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: '#ef4444' }}>-{price}M</span>
+                <div className="w-full space-y-2">
+                  <div style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 16, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'rgba(255,255,255,.6)' }}>나 (낙찰){isSeller ? ' · 판매자 무상' : ''}</span>
+                    <span style={{ fontFamily: 'var(--f-title)', fontSize: 22, fontWeight: 900, color: isSeller ? '#10b981' : '#ef4444' }}>
+                      {isSeller ? '0M' : `-${price}M`}
+                    </span>
+                  </div>
+                  <div style={{ background: 'rgba(255,183,43,.06)', border: '1px solid rgba(255,183,43,.2)', borderRadius: 12, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>🎨</span>
+                    <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--gold)' }}>컬렉션에 추가됨 ({lastAuctionResult.cards.length}장)</span>
+                  </div>
                 </div>
               );
             }
