@@ -131,6 +131,16 @@ function CastOverlay({
   const isSuccess = cast.success;
   const accent = isSuccess ? sp.color : 'var(--dim)';
 
+  // 성공 시 2초간 이펙트를 충분히 보여주고 나서 확인 버튼 표시
+  const [readyToClose, setReadyToClose] = useState(false);
+  useEffect(() => {
+    const delay = isSuccess ? 2000 : 800;
+    const t = setTimeout(() => setReadyToClose(true), delay);
+    return () => clearTimeout(t);
+  }, [isSuccess]);
+
+  const canInteract = readyToClose && canClose;
+
   // 주사위가 필요한 경우 DiceRoll3D를 별도 오버레이로 표시 (1: 폭발, 3: 치유의 바람만)
   if ((cast.spellNum === 1 || cast.spellNum === 3) && cast.diceRoll != null) {
     return (
@@ -151,7 +161,7 @@ function CastOverlay({
         background: `radial-gradient(circle at 50% 44%, color-mix(in srgb, ${accent} 18%, rgba(12,10,18,.96)) 0%, rgba(12,10,18,.97) 100%)`,
         backdropFilter: 'blur(6px)',
       }}
-      onClick={canClose ? onClose : undefined}
+      onClick={canInteract ? onClose : undefined}
     >
       {/* 파티클 FX — 배경 레이어 */}
       {isSuccess && <SpellFX num={cast.spellNum} color={sp.color} />}
@@ -206,10 +216,12 @@ function CastOverlay({
           ))}
         </div>
 
-        {canClose ? (
+        {canInteract ? (
           <button onClick={onClose} className="arc-btn arc-btn--violet" style={{ maxWidth: 200, margin: '0 auto' }}>
             확인
           </button>
+        ) : canClose ? (
+          <p className="pix blink" style={{ fontSize: 12, color: 'var(--faint)' }}>...</p>
         ) : (
           <p className="pix blink" style={{ fontSize: 12, color: 'var(--faint)' }}>다음 플레이어 확인 대기 중...</p>
         )}
@@ -319,7 +331,6 @@ function OnlineGame({
   const [G, setG] = useState<AbraGameState>(initialG);
   const [selected, setSelected] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<{ success: boolean; num: number } | null>(null);
-  const [memo, setMemo] = useState<Record<number, 0 | 1 | 2>>({});
   const [showExitModal, setShowExitModal] = useState(false);
   const { soundEnabled, toggleSound } = useSoundEnabled();
 
@@ -332,10 +343,6 @@ function OnlineGame({
   const me = myIdx;
   const myPlayer = G.players[me];
   const alive = G.players.filter(p => !p.eliminated).length;
-
-  const writeMemo = useCallback((num: number, state: 0 | 1 | 2) => {
-    setMemo(prev => ({ ...prev, [num]: state }));
-  }, []);
 
   // ── Declare (only when it's my turn) ─────────────────────────
   const handleDeclare = useCallback(async () => {
@@ -624,39 +631,42 @@ function OnlineGame({
           </div>
         )}
 
-        {/* 플레이어 카드 — 나 포함 전원 */}
-        <div style={{ overflowX: 'auto', display: 'flex', gap: 8, paddingBottom: 6, marginBottom: 12 }}>
+        {/* 플레이어 카드 — 다른 플레이어 (1행) */}
+        <div style={{ overflowX: 'auto', display: 'flex', gap: 8, paddingBottom: 6, marginBottom: 8 }}>
           {G.players.map((p, i) => {
-            const isMe = i === myIdx;
+            if (i === myIdx) return null;
             const isCurrent = i === G.currentIdx;
-            const neighborTag = i === leftIdx ? '◀ 내 왼쪽' : i === rightIdx ? '내 오른쪽 ▶' : null;
+            const isLeft = i === leftIdx;
+            const isRight = i === rightIdx;
+            const isNeighbor = isLeft || isRight;
             return (
               <div
                 key={i}
                 className={`arc-panel-inset${isCurrent ? ' abra-turn-active' : ''}`}
                 style={{
                   '--turn': p.dot,
-                  flexShrink: 0, width: 124, padding: 10, borderRadius: 12,
+                  flexShrink: 0, width: 118, padding: 10, borderRadius: 12,
                   opacity: p.eliminated ? 0.4 : 1,
-                  background: isMe ? `color-mix(in srgb, ${p.dot} 10%, var(--surface))` : undefined,
+                  ...(isNeighbor ? {
+                    borderColor: 'rgba(54,224,207,.55)',
+                    boxShadow: '0 0 10px rgba(54,224,207,.18)',
+                  } : {}),
                 } as React.CSSProperties}
               >
-                {neighborTag && (
-                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 12, color: 'var(--cyan)', marginBottom: 4 }}>{neighborTag}</div>
+                {isNeighbor && (
+                  <div style={{ fontFamily: 'var(--f-pix)', fontSize: 10, color: 'var(--cyan)', marginBottom: 5, letterSpacing: 0.5 }}>
+                    {isLeft ? '◀ 내 왼쪽' : '내 오른쪽 ▶'}
+                  </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 6 }}>
                   <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: p.dot, boxShadow: `0 0 7px ${p.dot}`, display: 'inline-block', marginTop: 3 }} />
-                  <span style={{ fontWeight: 700, fontSize: 12, color: isMe ? p.dot : 'var(--text)', flex: 1, wordBreak: 'break-all', lineHeight: 1.3 }}>
-                    {p.name}{isMe && ' (나)'}
-                  </span>
+                  <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text)', flex: 1, wordBreak: 'break-all', lineHeight: 1.3 }}>{p.name}</span>
                   {isCurrent && <span className="pix" style={{ fontSize: 12, color: p.dot, flexShrink: 0 }}>NOW</span>}
                   {p.eliminated && <span style={{ fontSize: 11 }}>💀</span>}
                 </div>
                 <Hearts hp={p.hp} max={G.maxHp} />
                 <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 7 }}>
-                  {isMe
-                    ? p.tiles.map((_, ti) => <TileChip key={ti} faceDown />)
-                    : p.tiles.map((t, ti) => <TileChip key={ti} num={t} />)}
+                  {p.tiles.map((t, ti) => <TileChip key={ti} num={t} />)}
                   {p.secretRevealed.map((t, ti) => <SecretTile key={`s${ti}`} num={t} />)}
                 </div>
                 {p.secretRevealed.length > 0 && (
@@ -667,6 +677,49 @@ function OnlineGame({
               </div>
             );
           })}
+        </div>
+
+        {/* 나 카드 (2행) — 이웃 바 + 내 타일 */}
+        <div
+          className={`arc-panel-inset${G.currentIdx === myIdx ? ' abra-turn-active' : ''}`}
+          style={{
+            '--turn': myPlayer.dot,
+            padding: '10px 12px', borderRadius: 12, marginBottom: 12,
+            background: `color-mix(in srgb, ${myPlayer.dot} 8%, var(--surface))`,
+            border: `1.5px solid ${myPlayer.dot}55`,
+          } as React.CSSProperties}
+        >
+          {/* 이름 + HP */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: myPlayer.dot, boxShadow: `0 0 7px ${myPlayer.dot}`, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, fontSize: 13, color: myPlayer.dot, flex: 1 }}>{myPlayer.name} (나)</span>
+            {G.currentIdx === myIdx && <span className="pix" style={{ fontSize: 12, color: myPlayer.dot }}>NOW</span>}
+            {myPlayer.eliminated && <span style={{ fontSize: 11 }}>💀</span>}
+            <Hearts hp={myPlayer.hp} max={G.maxHp} />
+          </div>
+
+          {/* 이웃 바 */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '5px 10px', marginBottom: 8, borderRadius: 8,
+            background: 'rgba(54,224,207,.06)', border: '1px solid rgba(54,224,207,.2)',
+            fontSize: 12, color: 'var(--cyan)', fontWeight: 600,
+          }}>
+            <span>← {leftIdx !== -1 ? G.players[leftIdx].name : '없음'}</span>
+            <span style={{ color: 'var(--faint)', fontWeight: 400, fontSize: 11 }}>|</span>
+            <span style={{ color: myPlayer.dot }}>나</span>
+            <span style={{ color: 'var(--faint)', fontWeight: 400, fontSize: 11 }}>|</span>
+            <span>{rightIdx !== -1 ? G.players[rightIdx].name : '없음'} →</span>
+          </div>
+
+          {/* 내 타일 */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+            {myPlayer.tiles.map((_, i) => <TileChip key={i} faceDown />)}
+            {myPlayer.secretRevealed.map((t, i) => <SecretTile key={`s${i}`} num={t} />)}
+            <span style={{ fontSize: 12, color: 'var(--faint)', marginLeft: 4 }}>
+              {myPlayer.tiles.length}장{myPlayer.secretRevealed.length > 0 && <span style={{ color: 'var(--cyan)' }}> +비밀 {myPlayer.secretRevealed.length}</span>}
+            </span>
+          </div>
         </div>
 
         {/* Last result flash */}
@@ -683,44 +736,10 @@ function OnlineGame({
           </div>
         )}
 
-        {/* 타일 메모 */}
-        <div style={{ marginBottom: 8 }}>
-          <span className="arc-lbl" style={{ display: 'block', marginBottom: 5 }}>내 타일 메모</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4 }}>
-            {SPELLS.map(s => {
-              const mState = memo[s.num] ?? 0;
-              const nextState: 0 | 1 | 2 = mState === 0 ? 1 : mState === 1 ? 2 : 0;
-              const borderColor = mState === 0 ? 'var(--line)' : mState === 1 ? 'rgba(126,217,87,.5)' : 'rgba(255,90,77,.5)';
-              return (
-                <button
-                  key={s.num}
-                  onClick={() => writeMemo(s.num, nextState)}
-                  style={{
-                    appearance: 'none', cursor: 'pointer',
-                    aspectRatio: '1', borderRadius: 8, padding: '4px 2px',
-                    border: `1px solid ${borderColor}`,
-                    background: mState === 0 ? 'rgba(0,0,0,.15)' : mState === 1 ? 'rgba(126,217,87,.1)' : 'rgba(255,90,77,.1)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-                    position: 'relative', transition: 'all .1s',
-                  }}
-                >
-                  <span style={{ fontFamily: 'var(--f-disp)', fontSize: 13, color: mState === 0 ? 'var(--faint)' : mState === 1 ? 'var(--green)' : 'var(--red)', lineHeight: 1 }}>{s.num}</span>
-                  {mState !== 0 && (
-                    <span style={{ position: 'absolute', top: 1, right: 2, fontSize: 7, fontWeight: 800, color: mState === 1 ? 'var(--green)' : 'var(--red)', lineHeight: 1 }}>
-                      {mState === 1 ? '✓' : '✕'}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Spell grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
           {SPELLS.map(s => {
             const locked = !isMyTurn || !canDeclare(G, myIdx, s.num);
-            const mState = memo[s.num] ?? 0;
             return (
               <button
                 key={s.num}
@@ -736,13 +755,6 @@ function OnlineGame({
                   transition: 'all .12s',
                 }}
               >
-                {mState !== 0 && (
-                  <span style={{
-                    position: 'absolute', top: 3, right: 4,
-                    fontSize: 8, fontWeight: 800, lineHeight: 1,
-                    color: mState === 1 ? 'var(--green)' : 'var(--red)',
-                  }}>{mState === 1 ? '✓' : '✕'}</span>
-                )}
                 <span style={{ fontFamily: 'var(--f-disp)', fontSize: 20, color: locked ? 'var(--faint)' : s.color, lineHeight: 1, textShadow: locked ? 'none' : `0 0 10px ${s.color}88` }}>{s.num}</span>
                 <SpellIcon num={s.num} size={18} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: locked ? 'var(--faint)' : 'var(--dim)', whiteSpace: 'nowrap', lineHeight: 1 }}>{s.kr}</span>
@@ -765,20 +777,6 @@ function OnlineGame({
           </p>
         )}
 
-        {/* My area */}
-        <div style={{ borderTop: '1.5px solid var(--line)', paddingTop: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span className="arc-lbl" style={{ color: 'var(--violet)' }}>내 타일 (비공개)</span>
-            <span style={{ fontSize: 12, color: 'var(--faint)' }}>
-              {myPlayer.tiles.length}장{myPlayer.secretRevealed.length > 0 && <span style={{ color: 'var(--cyan)' }}> +비밀 {myPlayer.secretRevealed.length}</span>}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
-            {myPlayer.tiles.map((_, i) => <TileChip key={i} faceDown />)}
-            {myPlayer.secretRevealed.map((t, i) => <SecretTile key={`s${i}`} num={t} />)}
-          </div>
-
-        </div>
 
         {/* Log */}
         {G.log.length > 0 && (

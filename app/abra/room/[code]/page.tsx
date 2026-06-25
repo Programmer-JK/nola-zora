@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getGuestUid, getGuestNickname } from '@/lib/auth';
 import { subscribeRoom, startGame, type AbraOnlineRoom } from '@/lib/abra/firebase-game';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function AbraWaitingRoom() {
   const { code } = useParams<{ code: string }>();
@@ -70,6 +71,19 @@ export default function AbraWaitingRoom() {
           <div style={{ fontFamily: 'var(--f-pix)', fontSize: 26, letterSpacing: 8, color: 'var(--violet)', textShadow: '0 0 14px rgba(162,116,255,.5)', marginBottom: 14 }}>
             {code}
           </div>
+
+          {/* QR 코드 */}
+          <div style={{ display: 'inline-block', padding: 10, borderRadius: 12, background: '#fff', marginBottom: 14, boxShadow: '0 0 18px rgba(162,116,255,.25)' }}>
+            <QRCodeSVG
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/abra?code=${code}`}
+              size={120}
+              bgColor="#ffffff"
+              fgColor="#1a0d2e"
+              level="M"
+            />
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 12 }}>QR 스캔 또는 코드 직접 입력</p>
+
           <button onClick={handleCopy} className="arc-btn-ghost" style={{ fontSize: 12 }}>
             {copied ? '✓ 복사됨!' : '코드 복사'}
           </button>

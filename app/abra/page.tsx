@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { loginGuest, getGuestNickname } from '@/lib/auth';
 import { createRoom, joinRoom } from '@/lib/abra/firebase-game';
 
 function OnlineSetup({ maxRounds }: { maxRounds: number }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [nickname, setNickname] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
@@ -16,7 +17,9 @@ function OnlineSetup({ maxRounds }: { maxRounds: number }) {
   useEffect(() => {
     const saved = getGuestNickname();
     if (saved) setNickname(saved);
-  }, []);
+    const codeParam = searchParams.get('code');
+    if (codeParam) setJoinCode(codeParam.toUpperCase());
+  }, [searchParams]);
 
   const handleCreate = async () => {
     if (!nickname.trim()) { setError('닉네임을 입력하세요.'); return; }
