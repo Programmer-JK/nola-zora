@@ -1,18 +1,18 @@
 import type { YachtCategory, YachtCatId } from './types';
 
 export const Y_CATS: YachtCategory[] = [
-  { id: 'ones',   kr: '1 (Aces)',      sub: '눈 1의 합',           sec: 'upper', face: 1 },
-  { id: 'twos',   kr: '2 (Twos)',      sub: '눈 2의 합',           sec: 'upper', face: 2 },
-  { id: 'threes', kr: '3 (Threes)',    sub: '눈 3의 합',           sec: 'upper', face: 3 },
-  { id: 'fours',  kr: '4 (Fours)',     sub: '눈 4의 합',           sec: 'upper', face: 4 },
-  { id: 'fives',  kr: '5 (Fives)',     sub: '눈 5의 합',           sec: 'upper', face: 5 },
-  { id: 'sixes',  kr: '6 (Sixes)',     sub: '눈 6의 합',           sec: 'upper', face: 6 },
-  { id: 'choice', kr: '초이스',         sub: '주사위 5개 총합',      sec: 'lower' },
-  { id: 'fourk',  kr: '포 카드',        sub: '같은 눈 4개 · 4개 합', sec: 'lower' },
-  { id: 'fullh',  kr: '풀 하우스',      sub: '3+2 · 5개 총합',      sec: 'lower' },
-  { id: 'sstr',   kr: 'S. 스트레이트',  sub: '1-2-3-4-5 · 30점',   sec: 'lower', fixed: 30 },
-  { id: 'bstr',   kr: 'B. 스트레이트',  sub: '2-3-4-5-6 · 30점',   sec: 'lower', fixed: 30 },
-  { id: 'yacht',  kr: '요트',           sub: '같은 눈 5개 · 50점',  sec: 'lower', fixed: 50 },
+  { id: 'ones',   kr: '1 (Aces)',      sub: '눈 1의 합',            sec: 'upper', face: 1 },
+  { id: 'twos',   kr: '2 (Twos)',      sub: '눈 2의 합',            sec: 'upper', face: 2 },
+  { id: 'threes', kr: '3 (Threes)',    sub: '눈 3의 합',            sec: 'upper', face: 3 },
+  { id: 'fours',  kr: '4 (Fours)',     sub: '눈 4의 합',            sec: 'upper', face: 4 },
+  { id: 'fives',  kr: '5 (Fives)',     sub: '눈 5의 합',            sec: 'upper', face: 5 },
+  { id: 'sixes',  kr: '6 (Sixes)',     sub: '눈 6의 합',            sec: 'upper', face: 6 },
+  { id: 'choice', kr: '찬스',          sub: '주사위 5개 총합',       sec: 'lower' },
+  { id: 'fourk',  kr: '포 오브 어 카인드', sub: '같은 눈 4개의 합',  sec: 'lower' },
+  { id: 'fullh',  kr: '풀 하우스',     sub: '3+2 조합 · 5개 총합',  sec: 'lower' },
+  { id: 'sstr',   kr: 'S. 스트레이트', sub: '1-2-3-4-5 · 30점',    sec: 'lower', fixed: 30 },
+  { id: 'bstr',   kr: 'B. 스트레이트', sub: '2-3-4-5-6 · 30점',    sec: 'lower', fixed: 30 },
+  { id: 'yacht',  kr: '야추',          sub: '같은 눈 5개 · 50점',   sec: 'lower', fixed: 50 },
 ];
 
 export const Y_UPPER = Y_CATS.filter(c => c.sec === 'upper');
