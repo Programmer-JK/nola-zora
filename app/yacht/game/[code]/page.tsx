@@ -10,6 +10,8 @@ import {
   rollDie,
 } from '@/lib/yacht/game-logic';
 import type { YachtCatId } from '@/lib/yacht/types';
+import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@/lib/yacht/sounds';
+import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import {
   subscribeRoom, startGame, updateGameState, finishGame,
   generateRoomCode, createRoomWithPlayers, setNextRoom,
@@ -415,6 +417,8 @@ export default function YachtOnlineGame() {
   const code = params.code;
   const { uid } = useAuth();
 
+  const { soundEnabled, toggleSound } = useSoundEnabled();
+
   const [room, setRoom] = useState<YachtRoom | null>(null);
   const [gs, setGs] = useState<YachtOnlineGameState | null>(null);
 
@@ -546,12 +550,14 @@ export default function YachtOnlineGame() {
     if (ivRef.current) clearInterval(ivRef.current);
     ivRef.current = setInterval(() => {
       ticks++;
+      if (soundEnabled) playDiceRattle();
       setLocalDice(prev => prev.map((d, i) => heldSnap[i] ? d : rollDie()));
       if (ticks >= 9) {
         if (ivRef.current) clearInterval(ivRef.current);
         setLocalDice(finalDice);
         rollingRef.current = false;
         setRolling(false);
+        if (soundEnabled) playDiceLand();
         const next: YachtOnlineGameState = {
           ...curGs,
           dice: finalDice,
@@ -566,6 +572,7 @@ export default function YachtOnlineGame() {
   /* ── Hold ── */
   const toggleHold = (i: number) => {
     if (!isMyTurn || !gs.rolled || rolling) return;
+    if (soundEnabled) playHoldToggle();
     const newHeld = gs.held.map((h, idx) => idx === i ? !h : h);
     updateGameState(code, { ...gs, held: newHeld });
   };
@@ -585,6 +592,7 @@ export default function YachtOnlineGame() {
     const scores = gs.playerScores[gs.turnIdx] ?? {};
     if (scores[catId] !== undefined) return;
     const pts = yScore(catId, gs.dice);
+    if (soundEnabled) playScoreCommit();
     const newScores = Array.from({ length: n }, (_, i) => {
       const s = gs.playerScores[i] ?? {};
       return i === gs.turnIdx ? { ...s, [catId]: pts } : s;
@@ -592,7 +600,7 @@ export default function YachtOnlineGame() {
     setFlash(catId);
 
     const allDone = newScores.length === n &&
-      newScores.every(s => Y_CATS.filter(c => s[c.id] !== undefined).length === 12);
+      newScores.every(s => Y_CATS.filter(c => s[c.id] !== undefined).length === Y_CATS.length);
 
     if (allDone) {
       const doneGs: YachtOnlineGameState = { ...gs, playerScores: newScores };
@@ -888,105 +896,113 @@ export default function YachtOnlineGame() {
               ⛵ YACHT
             </div>
             <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', marginTop: 2 }}>
-              ROUND {turnNo} / 12 · {n}P · {code}
+              ROUND {turnNo} / {Y_CATS.length} · {n}P · {code}
             </div>
           </div>
-          <div style={{ width: 80 }} />
+          <button
+            onClick={toggleSound}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, width: 80, textAlign: 'right', padding: '0 4px' }}
+            title={soundEnabled ? '소리 끄기' : '소리 켜기'}
+          >
+            {soundEnabled ? '🔊' : '🔇'}
+          </button>
         </header>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '14px 12px 24px' }}>
-          {/* 차례 배너 */}
-          <div className="arc-pop" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '11px 14px', borderRadius: 13, marginBottom: 14,
-            background: `color-mix(in srgb, ${me?.color ?? '#888'} 14%, var(--surface))`,
-            border: `1.5px solid ${me?.color ?? '#888'}`,
-          }}>
-            <span style={{ width: 13, height: 13, borderRadius: '50%', background: me?.color, boxShadow: `0 0 9px ${me?.color}` }} />
-            <span style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)', whiteSpace: 'nowrap' }}>
-              {me?.name}<span style={{ color: 'var(--dim)', fontSize: 13 }}> 님 차례</span>
-            </span>
-            {isMyTurn && !gs.rolled && (
-              <span className="blink" style={{ color: ACCENT, fontSize: 11, fontFamily: 'var(--f-pix)', marginLeft: 4 }}>ROLL!</span>
-            )}
-            {!isMyTurn && (
-              <span className="blink" style={{ color: 'var(--dim)', fontSize: 10, fontFamily: 'var(--f-pix)', marginLeft: 4 }}>대기 중</span>
-            )}
-          </div>
-
-          {/* 주사위 트레이 */}
-          <div className="arc-panel ticks" style={{ padding: '18px 16px 16px', marginBottom: 16 }}>
-            {gs.rolled && !rolling && isMyTurn && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <button
-                  className="arc-btn-ghost"
-                  onClick={sortDice}
-                  style={{ fontSize: 12, padding: '7px 12px', '--c': ACCENT } as React.CSSProperties}
-                >↑↓ 정렬</button>
-              </div>
-            )}
-
-            <div
-              className={rolling ? 'dice-tray-shake' : ''}
-              style={{ display: 'flex', justifyContent: 'center', gap: 10, minHeight: 76, alignItems: 'center' }}
-            >
-              {displayDice.map((d, i) => (
-                rolling && !gs.held[i]
-                  ? <Die3D key={i} index={i} />
-                  : <YachtDie
-                    key={i}
-                    value={d}
-                    held={gs.held[i]}
-                    rolling={rolling}
-                    onClick={() => toggleHold(i)}
-                    inactive={!gs.rolled || rolling || !isMyTurn}
-                  />
-              ))}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flexShrink: 0, padding: '14px 12px 0' }}>
+            {/* 차례 배너 */}
+            <div className="arc-pop" style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '11px 14px', borderRadius: 13, marginBottom: 14,
+              background: `color-mix(in srgb, ${me?.color ?? '#888'} 14%, var(--surface))`,
+              border: `1.5px solid ${me?.color ?? '#888'}`,
+            }}>
+              <span style={{ width: 13, height: 13, borderRadius: '50%', background: me?.color, boxShadow: `0 0 9px ${me?.color}` }} />
+              <span style={{ fontFamily: 'var(--f-title)', fontSize: 17, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                {me?.name}<span style={{ color: 'var(--dim)', fontSize: 13 }}> 님 차례</span>
+              </span>
+              {isMyTurn && !gs.rolled && (
+                <span className="blink" style={{ color: ACCENT, fontSize: 11, fontFamily: 'var(--f-pix)', marginLeft: 4 }}>ROLL!</span>
+              )}
+              {!isMyTurn && (
+                <span className="blink" style={{ color: 'var(--dim)', fontSize: 10, fontFamily: 'var(--f-pix)', marginLeft: 4 }}>대기 중</span>
+              )}
             </div>
 
-            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
-              {!gs.rolled
-                ? isMyTurn ? '🎲 굴려서 턴을 시작하세요' : '상대방 차례입니다'
-                : gs.rollsLeft > 0
-                  ? isMyTurn ? '남기고 싶은 주사위를 탭해 고정(HOLD)' : '상대방이 주사위를 고르는 중…'
-                  : isMyTurn ? '굴림 끝! 아래 점수표에서 족보를 선택하세요' : '상대방이 족보를 선택 중…'}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button
-                className="arc-btn"
-                onClick={roll}
-                disabled={!isMyTurn || gs.rollsLeft <= 0 || rolling}
-                style={{
-                  flex: 1, fontSize: 18,
-                  background: isMyTurn ? 'var(--green)' : 'var(--surface)',
-                  color: isMyTurn ? '#06230a' : 'var(--dim)',
-                  borderColor: isMyTurn ? 'var(--green)' : 'var(--line)',
-                }}
-              >
-                🎲 {gs.rolled ? '다시 굴리기' : '굴리기'}
-              </button>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 48 }}>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {[0, 1, 2].map(k => (
-                    <span key={k} style={{
-                      width: 9, height: 9, borderRadius: '50%',
-                      background: k < gs.rollsLeft ? 'var(--green)' : 'rgba(255,255,255,.12)',
-                      boxShadow: k < gs.rollsLeft ? '0 0 7px var(--green)' : 'none',
-                      transition: 'all .2s',
-                    }} />
-                  ))}
+            {/* 주사위 트레이 */}
+            <div className="arc-panel ticks" style={{ padding: '18px 16px 16px', marginBottom: 16 }}>
+              {gs.rolled && !rolling && isMyTurn && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <button
+                    className="arc-btn-ghost"
+                    onClick={sortDice}
+                    style={{ fontSize: 12, padding: '7px 12px', '--c': ACCENT } as React.CSSProperties}
+                  >↑↓ 정렬</button>
                 </div>
-                <span className="pix" style={{ fontSize: 6, color: 'var(--faint)' }}>ROLLS</span>
-              </div>
-            </div>
+              )}
 
-            {suggestion && (
-              <p className="arc-rise" style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 0' }}>
-                💡 최고 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b>
+              <div
+                className={rolling ? 'dice-tray-shake' : ''}
+                style={{ display: 'flex', justifyContent: 'center', gap: 10, minHeight: 76, alignItems: 'center' }}
+              >
+                {displayDice.map((d, i) => (
+                  rolling && !gs.held[i]
+                    ? <Die3D key={i} index={i} />
+                    : <YachtDie
+                      key={i}
+                      value={d}
+                      held={gs.held[i]}
+                      rolling={rolling}
+                      onClick={() => toggleHold(i)}
+                      inactive={!gs.rolled || rolling || !isMyTurn}
+                    />
+                ))}
+              </div>
+
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
+                {!gs.rolled
+                  ? isMyTurn ? '🎲 굴려서 턴을 시작하세요' : '상대방 차례입니다'
+                  : gs.rollsLeft > 0
+                    ? isMyTurn ? '남기고 싶은 주사위를 탭해 고정(HOLD)' : '상대방이 주사위를 고르는 중…'
+                    : isMyTurn ? '굴림 끝! 아래 점수표에서 족보를 선택하세요' : '상대방이 족보를 선택 중…'}
               </p>
-            )}
-          </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button
+                  className="arc-btn"
+                  onClick={roll}
+                  disabled={!isMyTurn || gs.rollsLeft <= 0 || rolling}
+                  style={{
+                    flex: 1, fontSize: 18,
+                    background: isMyTurn ? 'var(--green)' : 'var(--surface)',
+                    color: isMyTurn ? '#06230a' : 'var(--dim)',
+                    borderColor: isMyTurn ? 'var(--green)' : 'var(--line)',
+                  }}
+                >
+                  🎲 {gs.rolled ? '다시 굴리기' : '굴리기'}
+                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 48 }}>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {[0, 1, 2].map(k => (
+                      <span key={k} style={{
+                        width: 9, height: 9, borderRadius: '50%',
+                        background: k < gs.rollsLeft ? 'var(--green)' : 'rgba(255,255,255,.12)',
+                        boxShadow: k < gs.rollsLeft ? '0 0 7px var(--green)' : 'none',
+                        transition: 'all .2s',
+                      }} />
+                    ))}
+                  </div>
+                  <span className="pix" style={{ fontSize: 6, color: 'var(--faint)' }}>ROLLS</span>
+                </div>
+              </div>
+
+              {suggestion && (
+                <p className="arc-rise" style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 0' }}>
+                  💡 최고 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b>
+                </p>
+              )}
+            </div>
+          </div>{/* /top section */}
 
           {/* 점수표 */}
           <div className="arc-panel" style={{ padding: 0, overflow: 'hidden' }}>

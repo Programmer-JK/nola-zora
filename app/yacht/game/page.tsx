@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSoundEnabled } from '@/hooks/useSoundEnabled';
+import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@/lib/yacht/sounds';
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
   yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
@@ -220,6 +221,8 @@ function YachtGame({ players: initPlayers, onQuit }: {
   const [swapSrc, setSwapSrc] = useState<number | null>(null);
   const ivRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const { soundEnabled, toggleSound } = useSoundEnabled();
+
   const n = players.length;
   const me = players[turnIdx];
   const turnNo = yFilled(me.scores) + 1;
@@ -237,6 +240,7 @@ function YachtGame({ players: initPlayers, onQuit }: {
     if (ivRef.current) clearInterval(ivRef.current);
     ivRef.current = setInterval(() => {
       ticks++;
+      if (soundEnabled) playDiceRattle();
       setDice(prev => prev.map((d, i) => held[i] ? d : rollDie()));
       if (ticks >= 9) {
         if (ivRef.current) clearInterval(ivRef.current);
@@ -244,12 +248,14 @@ function YachtGame({ players: initPlayers, onQuit }: {
         setRolling(false);
         setRolled(true);
         setRollsLeft(r => r - 1);
+        if (soundEnabled) playDiceLand();
       }
     }, 65);
   };
 
   const handleDieClick = (i: number) => {
     if (!rolled || rolling) return;
+    if (soundEnabled) playHoldToggle();
     setHeld(h => h.map((v, idx) => idx === i ? !v : v));
     // if (mode === 'hold') {
     //   setHeld(h => h.map((v, idx) => idx === i ? !v : v));
@@ -293,12 +299,13 @@ function YachtGame({ players: initPlayers, onQuit }: {
     if (!canScore) return;
     if (me.scores[catId] !== undefined) return;
     const pts = yScore(catId, dice);
+    if (soundEnabled) playScoreCommit();
     const np = players.map((pl, i) =>
       i === turnIdx ? { ...pl, scores: { ...pl.scores, [catId]: pts } } : pl
     );
     setPlayers(np);
     setFlash({ idx: turnIdx, cat: catId });
-    if (np.every(pl => yFilled(pl.scores) === 12)) {
+    if (np.every(pl => yFilled(pl.scores) === Y_CATS.length)) {
       setTimeout(() => setResult(np), 1100);
       return;
     }
@@ -560,10 +567,16 @@ function YachtGame({ players: initPlayers, onQuit }: {
               ⛵ YACHT
             </div>
             <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', marginTop: 2 }}>
-              ROUND {turnNo} / 12 · {n}P
+              ROUND {turnNo} / {Y_CATS.length} · {n}P
             </div>
           </div>
-          <div style={{ width: 80 }} />
+          <button
+            onClick={toggleSound}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, width: 80, textAlign: 'right', padding: '0 4px' }}
+            title={soundEnabled ? '소리 끄기' : '소리 켜기'}
+          >
+            {soundEnabled ? '🔊' : '🔇'}
+          </button>
         </header>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '14px 12px 24px' }}>
@@ -673,7 +686,9 @@ function YachtGame({ players: initPlayers, onQuit }: {
             )}
 
           </div>
+        </div>{/* /top section */}
 
+        <div style={{ flex: 1, overflow: 'auto', padding: '0 12px 24px' }}>
           {/* Scoresheet */}
           <div className="arc-panel" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ overflow: 'auto', maxHeight: '55vh' }}>
@@ -718,8 +733,8 @@ function YachtGame({ players: initPlayers, onQuit }: {
           <p className="pix" style={{ fontSize: 8, color: 'var(--faint)', textAlign: 'center', marginTop: 10, lineHeight: 1.8 }}>
             TAP A GREEN CELL TO SCORE · 0점으로 버릴 수도 있어요
           </p>
-        </div>
-      </div>
+        </div>{/* /scroll section */}
+      </div>{/* /flex column */}
     </div>
   );
 }
