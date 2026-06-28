@@ -15,6 +15,7 @@ export interface YachtOnlineGameState {
   held: boolean[];
   rollsLeft: number;
   rolled: boolean;
+  isRolling?: boolean;
 }
 
 export interface YachtRoom {

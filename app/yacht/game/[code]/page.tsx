@@ -531,6 +531,9 @@ export default function YachtOnlineGame() {
   const n = players.length;
   const me = players[gs.turnIdx];
   const isMyTurn = me?.clientId === uid;
+  // Other player is rolling — show animation on observer screens
+  const opponentRolling = !isMyTurn && !!gs.isRolling;
+  const showRolling = rolling || opponentRolling;
   const canScore = gs.rolled && !rolling && isMyTurn;
   const turnNo = gs.playerScores[gs.turnIdx]
     ? Object.keys(gs.playerScores[gs.turnIdx]).length + 1
@@ -545,9 +548,14 @@ export default function YachtOnlineGame() {
     setFlash(null);
     // snapshot held at roll-start to avoid stale closure inside interval
     const heldSnap = [...curGs.held];
-    const finalDice = localDice.map((d, i) => heldSnap[i] ? d : rollDie());
+    // Use curGs.dice (Firebase-confirmed) for held dice, not localDice (may be stale/animated)
+    const finalDice = curGs.dice.map((d, i) => heldSnap[i] ? d : rollDie());
     let ticks = 0;
     if (ivRef.current) clearInterval(ivRef.current);
+    // Signal rolling to other players via Firebase
+    const rollingGs: YachtOnlineGameState = { ...curGs, isRolling: true };
+    gsRef.current = rollingGs;
+    updateGameState(code, rollingGs);
     ivRef.current = setInterval(() => {
       ticks++;
       if (soundEnabled) playDiceRattle();
@@ -563,7 +571,9 @@ export default function YachtOnlineGame() {
           dice: finalDice,
           rollsLeft: curGs.rollsLeft - 1,
           rolled: true,
+          isRolling: false,
         };
+        gsRef.current = next;
         updateGameState(code, next);
       }
     }, 65);
@@ -573,16 +583,22 @@ export default function YachtOnlineGame() {
   const toggleHold = (i: number) => {
     if (!isMyTurn || !gs.rolled || rolling) return;
     if (soundEnabled) playHoldToggle();
-    const newHeld = gs.held.map((h, idx) => idx === i ? !h : h);
-    updateGameState(code, { ...gs, held: newHeld });
+    const curGs = gsRef.current ?? gs;
+    const newHeld = curGs.held.map((h, idx) => idx === i ? !h : h);
+    const next = { ...curGs, held: newHeld };
+    gsRef.current = next;
+    updateGameState(code, next);
   };
 
   /* ── Sort ── */
   const sortDice = () => {
     if (!isMyTurn || !gs.rolled) return;
-    const pairs = gs.dice.map((d, i) => ({ d, h: gs.held[i] }));
+    const curGs = gsRef.current ?? gs;
+    const pairs = curGs.dice.map((d, i) => ({ d, h: curGs.held[i] }));
     pairs.sort((a, b) => a.d - b.d);
-    updateGameState(code, { ...gs, dice: pairs.map(p => p.d), held: pairs.map(p => p.h) });
+    const next = { ...curGs, dice: pairs.map(p => p.d), held: pairs.map(p => p.h) };
+    gsRef.current = next;
+    updateGameState(code, next);
   };
 
   /* ── Commit ── */
@@ -942,19 +958,19 @@ export default function YachtOnlineGame() {
               )}
 
               <div
-                className={rolling ? 'dice-tray-shake' : ''}
+                className={showRolling ? 'dice-tray-shake' : ''}
                 style={{ display: 'flex', justifyContent: 'center', gap: 10, minHeight: 76, alignItems: 'center' }}
               >
                 {displayDice.map((d, i) => (
-                  rolling && !gs.held[i]
+                  showRolling && !gs.held[i]
                     ? <Die3D key={i} index={i} />
                     : <YachtDie
                       key={i}
                       value={d}
                       held={gs.held[i]}
-                      rolling={rolling}
+                      rolling={showRolling}
                       onClick={() => toggleHold(i)}
-                      inactive={!gs.rolled || rolling || !isMyTurn}
+                      inactive={!gs.rolled || showRolling || !isMyTurn}
                     />
                 ))}
               </div>
@@ -962,9 +978,11 @@ export default function YachtOnlineGame() {
               <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
                 {!gs.rolled
                   ? isMyTurn ? '🎲 굴려서 턴을 시작하세요' : '상대방 차례입니다'
-                  : gs.rollsLeft > 0
-                    ? isMyTurn ? '남기고 싶은 주사위를 탭해 고정(HOLD)' : '상대방이 주사위를 고르는 중…'
-                    : isMyTurn ? '굴림 끝! 아래 점수표에서 족보를 선택하세요' : '상대방이 족보를 선택 중…'}
+                  : opponentRolling
+                    ? '🎲 상대방이 굴리는 중…'
+                    : gs.rollsLeft > 0
+                      ? isMyTurn ? '남기고 싶은 주사위를 탭해 고정(HOLD)' : '상대방이 주사위를 고르는 중…'
+                      : isMyTurn ? '굴림 끝! 아래 점수표에서 족보를 선택하세요' : '상대방이 족보를 선택 중…'}
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
