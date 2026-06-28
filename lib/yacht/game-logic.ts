@@ -10,7 +10,7 @@ export const Y_CATS: YachtCategory[] = [
   { id: 'choice', kr: '찬스',          sub: '주사위 5개 총합',       sec: 'lower' },
   { id: 'fourk',  kr: '포 오브 어 카인드', sub: '같은 눈 4개의 합',  sec: 'lower' },
   { id: 'fullh',  kr: '풀 하우스',     sub: '3+2 조합 · 5개 총합',  sec: 'lower' },
-  { id: 'sstr',   kr: 'S. 스트레이트', sub: '연속 4개 포함 · 30점',  sec: 'lower', fixed: 30 },
+  { id: 'sstr',   kr: 'S. 스트레이트', sub: '연속 4개 포함 · 15점',  sec: 'lower', fixed: 15 },
   { id: 'bstr',   kr: 'B. 스트레이트', sub: '5개 연속 · 30점',       sec: 'lower', fixed: 30 },
   { id: 'yacht',  kr: '야추',          sub: '같은 눈 5개 · 50점',   sec: 'lower', fixed: 50 },
 ];
@@ -47,7 +47,7 @@ export function yScore(catId: YachtCatId, dice: number[]): number {
     }
     case 'sstr': {
       const h = (n: number) => c[n] >= 1;
-      return (h(1)&&h(2)&&h(3)&&h(4)) || (h(2)&&h(3)&&h(4)&&h(5)) || (h(3)&&h(4)&&h(5)&&h(6)) ? 30 : 0;
+      return (h(1)&&h(2)&&h(3)&&h(4)) || (h(2)&&h(3)&&h(4)&&h(5)) || (h(3)&&h(4)&&h(5)&&h(6)) ? 15 : 0;
     }
     case 'bstr': return [1,2,3,4,5].every(n=>c[n]>=1) || [2,3,4,5,6].every(n=>c[n]>=1) ? 30 : 0;
     case 'yacht': return c.some(x => x === 5) ? 50 : 0;
