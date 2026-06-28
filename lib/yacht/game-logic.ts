@@ -8,7 +8,7 @@ export const Y_CATS: YachtCategory[] = [
   { id: 'fives',  kr: '5 (Fives)',     sub: '눈 5의 합',            sec: 'upper', face: 5 },
   { id: 'sixes',  kr: '6 (Sixes)',     sub: '눈 6의 합',            sec: 'upper', face: 6 },
   { id: 'choice', kr: '찬스',          sub: '주사위 5개 총합',       sec: 'lower' },
-  { id: 'fourk',  kr: '포 오브 어 카인드', sub: '같은 눈 4개의 합',  sec: 'lower' },
+  { id: 'fourk',  kr: '포 오브 어 카인드', sub: '같은 눈 4개 포함 · 5개 총합',  sec: 'lower' },
   { id: 'fullh',  kr: '풀 하우스',     sub: '3+2 조합 · 5개 총합',  sec: 'lower' },
   { id: 'sstr',   kr: 'S. 스트레이트', sub: '연속 4개 포함 · 15점',  sec: 'lower', fixed: 15 },
   { id: 'bstr',   kr: 'B. 스트레이트', sub: '5개 연속 · 30점',       sec: 'lower', fixed: 30 },
@@ -38,7 +38,7 @@ export function yScore(catId: YachtCatId, dice: number[]): number {
     case 'choice': return sum;
     case 'fourk': {
       const f = c.findIndex(x => x >= 4);
-      return f > 0 ? f * 4 : 0;
+      return f > 0 ? sum : 0;
     }
     case 'fullh': {
       const has3 = c.some(x => x === 3);

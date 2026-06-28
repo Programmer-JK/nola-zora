@@ -444,9 +444,9 @@ export default function YachtOnlineGame() {
       if (r.gameState) {
         const nPlayers = toArr<YachtRoomPlayer>(r.players).length;
         const clean = sanitizeGs(r.gameState, nPlayers);
-        gsRef.current = clean;
+        // Don't overwrite gsRef while the local roll animation is playing
+        if (!rollingRef.current) gsRef.current = clean;
         setGs(clean);
-        // Don't overwrite localDice while the local roll animation is playing
         if (!rollingRef.current) setLocalDice(clean.dice);
         // Reset commit guard when new turn starts
         if (!clean.rolled) committingRef.current = false;
@@ -581,7 +581,7 @@ export default function YachtOnlineGame() {
 
   /* ── Hold ── */
   const toggleHold = (i: number) => {
-    if (!isMyTurn || !gs.rolled || rolling) return;
+    if (!isMyTurn || !(gsRef.current ?? gs).rolled || rolling) return;
     if (soundEnabled) playHoldToggle();
     const curGs = gsRef.current ?? gs;
     const newHeld = curGs.held.map((h, idx) => idx === i ? !h : h);
@@ -592,7 +592,7 @@ export default function YachtOnlineGame() {
 
   /* ── Sort ── */
   const sortDice = () => {
-    if (!isMyTurn || !gs.rolled) return;
+    if (!isMyTurn || !(gsRef.current ?? gs).rolled) return;
     const curGs = gsRef.current ?? gs;
     const pairs = curGs.dice.map((d, i) => ({ d, h: curGs.held[i] }));
     pairs.sort((a, b) => a.d - b.d);
@@ -605,13 +605,14 @@ export default function YachtOnlineGame() {
   const commit = async (catId: YachtCatId) => {
     if (!canScore || committingRef.current) return;
     committingRef.current = true;
-    const scores = gs.playerScores[gs.turnIdx] ?? {};
-    if (scores[catId] !== undefined) return;
-    const pts = yScore(catId, gs.dice);
+    const curGs = gsRef.current ?? gs;
+    const scores = curGs.playerScores[curGs.turnIdx] ?? {};
+    if (scores[catId] !== undefined) { committingRef.current = false; return; }
+    const pts = yScore(catId, curGs.dice);
     if (soundEnabled) playScoreCommit();
     const newScores = Array.from({ length: n }, (_, i) => {
-      const s = gs.playerScores[i] ?? {};
-      return i === gs.turnIdx ? { ...s, [catId]: pts } : s;
+      const s = curGs.playerScores[i] ?? {};
+      return i === curGs.turnIdx ? { ...s, [catId]: pts } : s;
     });
     setFlash(catId);
 
@@ -619,13 +620,13 @@ export default function YachtOnlineGame() {
       newScores.every(s => Y_CATS.filter(c => s[c.id] !== undefined).length === Y_CATS.length);
 
     if (allDone) {
-      const doneGs: YachtOnlineGameState = { ...gs, playerScores: newScores };
+      const doneGs: YachtOnlineGameState = { ...curGs, playerScores: newScores };
       await updateGameState(code, doneGs);
       await finishGame(code);
       return;
     }
 
-    const nextIdx = (gs.turnIdx + 1) % n;
+    const nextIdx = (curGs.turnIdx + 1) % n;
     const nextGs: YachtOnlineGameState = {
       turnIdx: nextIdx,
       playerScores: newScores,
@@ -633,6 +634,7 @@ export default function YachtOnlineGame() {
       held: [false, false, false, false, false],
       rollsLeft: 3,
       rolled: false,
+      isRolling: false,
     };
     setTimeout(() => updateGameState(code, nextGs), 900);
   };
