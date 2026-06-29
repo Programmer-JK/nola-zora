@@ -85,6 +85,19 @@ const GAMES = [
     desc: '숨겨진 타일을 추리하며 주문을 선언하고\n라이벌 마법사를 쓰러뜨려라',
     href: '/abra',
   },
+  {
+    id: 'who-am-i',
+    kr: '나는 누구?',
+    latin: 'WHO AM I?',
+    tag: 'PARTY GAME',
+    emoji: '🤔',
+    accent: '#f97316',
+    accentHex: '#f97316',
+    players: '2–8인',
+    kind: '소셜 추리',
+    desc: '이마에 붙은 단어를 질문으로 추리하라!\n모두가 답할 수 있는 질문을 던져라',
+    href: '/who-am-i',
+  },
 ]
 
 function GameCard({ game, onPick }: { game: (typeof GAMES)[number]; onPick: () => void }) {
@@ -210,7 +223,7 @@ export default function LobbyPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
-          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>06</span>
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>07</span>
         </div>
 
         {/* 게임 카드 */}
