@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { loginGuest, getGuestNickname } from '@/lib/auth';
@@ -18,8 +18,26 @@ function OnlineSetup({ maxRounds }: { maxRounds: number }) {
     const saved = getGuestNickname();
     if (saved) setNickname(saved);
     const codeParam = searchParams.get('code');
-    if (codeParam) setJoinCode(codeParam.toUpperCase());
-  }, [searchParams]);
+    if (!codeParam) return;
+    const upperCode = codeParam.toUpperCase();
+    setJoinCode(upperCode);
+    if (!saved) return;
+    setLoading('join');
+    loginGuest(saved)
+      .then(uid => joinRoom(upperCode, uid, saved))
+      .then(err => {
+        if (!err) {
+          router.push(`/abra/room/${upperCode}`);
+        } else {
+          setError(err);
+          setLoading(null);
+        }
+      })
+      .catch(() => {
+        setError('오류가 발생했습니다. 다시 시도해 주세요.');
+        setLoading(null);
+      });
+  }, [searchParams, router]);
 
   const handleCreate = async () => {
     if (!nickname.trim()) { setError('닉네임을 입력하세요.'); return; }
@@ -106,7 +124,7 @@ function OnlineSetup({ maxRounds }: { maxRounds: number }) {
   );
 }
 
-export default function AbraSetup() {
+function AbraSetupInner() {
   const [maxRounds, setMaxRounds] = useState(2);
 
   return (
@@ -158,5 +176,13 @@ export default function AbraSetup() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AbraSetup() {
+  return (
+    <Suspense>
+      <AbraSetupInner />
+    </Suspense>
   );
 }

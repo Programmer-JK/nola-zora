@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { loginGuest, getGuestNickname } from '@/lib/auth'
@@ -9,7 +9,7 @@ import { PLAYER_COLORS, COLOR_HEX, type PlayerColor } from '@/lib/who-am-i/types
 
 const ACCENT = '#f97316'
 
-export default function WhoAmISetup() {
+function WhoAmISetupInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [nickname, setNickname] = useState('')
@@ -37,6 +37,10 @@ export default function WhoAmISetup() {
           setError(result.error ?? '참가 실패')
           setLoading(null)
         }
+      })
+      .catch(() => {
+        setError('오류가 발생했습니다. 다시 시도해 주세요.')
+        setLoading(null)
       })
   }, [searchParams, router])
 
@@ -184,5 +188,13 @@ export default function WhoAmISetup() {
 
       </div>
     </div>
+  )
+}
+
+export default function WhoAmISetup() {
+  return (
+    <Suspense>
+      <WhoAmISetupInner />
+    </Suspense>
   )
 }
