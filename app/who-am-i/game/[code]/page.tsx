@@ -129,7 +129,7 @@ export default function WhoAmIGame() {
       clientId: 'system', name: 'SYSTEM', color: 'yellow' as PlayerColor,
       text: correct
         ? `🎉 ${myName}님이 정답을 맞혔습니다! (${myPlayer.assignedWord})`
-        : `❌ ${myName}님이 오답을 입력했습니다.`,
+        : `❌ ${myName}님의 오답: "${answerInput.trim()}"`,
       timestamp: Date.now(), type: correct ? 'correct' : 'wrong',
     })
     if (!correct) {
@@ -307,7 +307,7 @@ export default function WhoAmIGame() {
                     onClick={handleAssignWord}
                     disabled={!wordInput.trim() || wordSubmitting}
                     className="arc-btn"
-                    style={{ background: ACCENT, flexShrink: 0, width: 64, fontSize: 13 }}
+                    style={{ background: ACCENT, flexShrink: 0, width: 80, fontSize: 13 }}
                   >
                     {wordSubmitting ? '...' : '선정'}
                   </button>
@@ -322,7 +322,7 @@ export default function WhoAmIGame() {
                   className="arc-field"
                   style={{ flex: 1, fontSize: 13 }}
                 />
-                <button onClick={handleSendChat} disabled={!chatInput.trim()} className="arc-btn-ghost" style={{ flexShrink: 0, width: 64 }}>
+                <button onClick={handleSendChat} disabled={!chatInput.trim()} className="arc-btn-ghost" style={{ flexShrink: 0, width: 80 }}>
                   전송
                 </button>
               </div>
@@ -409,14 +409,18 @@ export default function WhoAmIGame() {
           </div>
         </div>
 
-        {/* 채팅 영역 */}
+        {/* 채팅 영역 — Phase 1 메시지 제외 (마지막 system 이후만) */}
+        {(() => {
+          const lastSysIdx = messages.reduce((acc, m, i) => m.type === 'system' ? i : acc, -1)
+          const phase2Messages = lastSysIdx >= 0 ? messages.slice(lastSysIdx + 1) : messages
+          return (
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {messages.length === 0 && (
+          {phase2Messages.length === 0 && (
             <p style={{ fontSize: 12, color: 'var(--faint)', textAlign: 'center', marginTop: 20 }}>
               채팅으로 질문하세요! (예: "저는 동물인가요?")
             </p>
           )}
-          {messages.map(msg => {
+          {phase2Messages.map(msg => {
             const isSpecial = msg.type !== 'chat'
             if (isSpecial) {
               return (
@@ -441,6 +445,8 @@ export default function WhoAmIGame() {
           })}
           <div ref={chatEndRef} />
         </div>
+          )
+        })()}
 
         {/* 하단 입력 영역 */}
         <div style={{ borderTop: '1px solid var(--line)', padding: '10px 16px 14px', background: 'var(--bg)', flexShrink: 0 }}>
