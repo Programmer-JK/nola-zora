@@ -22,8 +22,23 @@ export default function WhoAmISetup() {
     const saved = getGuestNickname()
     if (saved) setNickname(saved)
     const codeParam = searchParams.get('code')
-    if (codeParam) setJoinCode(codeParam.toUpperCase())
-  }, [searchParams])
+    if (!codeParam) return
+    const upperCode = codeParam.toUpperCase()
+    setJoinCode(upperCode)
+    if (!saved) return
+    // 저장된 닉네임이 있으면 자동 참가
+    setLoading('join')
+    loginGuest(saved)
+      .then(uid => joinRoom(upperCode, { clientId: uid, name: saved, color: 'red' }))
+      .then(result => {
+        if (result.success) {
+          router.push(`/who-am-i/room/${upperCode}`)
+        } else {
+          setError(result.error ?? '참가 실패')
+          setLoading(null)
+        }
+      })
+  }, [searchParams, router])
 
   const handleCreate = async () => {
     if (!nickname.trim()) { setError('닉네임을 입력하세요.'); return }

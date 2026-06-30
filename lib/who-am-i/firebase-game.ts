@@ -114,6 +114,31 @@ export async function closeRoom(code: string): Promise<void> {
   await update(ref(db, `who-am-i/rooms/${code}`), { status: 'finished' })
 }
 
+// 같은 멤버로 다시 시작 — 플레이어 데이터 초기화 후 waiting 상태로
+export async function resetRoom(
+  code: string,
+  players: Record<string, WhoAmIPlayerData>,
+): Promise<void> {
+  const db = getDb()
+  const resetPlayers: Record<string, WhoAmIPlayerData> = {}
+  for (const [id, p] of Object.entries(players)) {
+    resetPlayers[id] = {
+      name: p.name,
+      color: p.color,
+      assignedWord: '',
+      solved: false,
+      wrongAttempts: 0,
+      nextAttemptAt: 0,
+      joinedAt: p.joinedAt,
+    }
+  }
+  await update(ref(db, `who-am-i/rooms/${code}`), {
+    status: 'waiting',
+    players: resetPlayers,
+    messages: null,
+  })
+}
+
 // 정답 제출 처리
 export async function submitAnswer(
   code: string,
