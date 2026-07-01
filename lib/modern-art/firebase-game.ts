@@ -163,6 +163,25 @@ export async function registerPresence(code: string, clientId: string): Promise<
   return () => { remove(pRef); };
 }
 
+// ─── 비밀 경매: 원자적 입찰 (race condition 방지) ────────────
+// 전체 gameState 덮어쓰기 대신 해당 플레이어의 bid 필드만 업데이트
+export async function submitSecretBidAtomic(
+  code: string,
+  playerId: string,
+  amount: number,
+): Promise<void> {
+  await update(ref(getDb(), `modern-art/rooms/${code}`), {
+    [`gameState/currentAuction/bids/${playerId}`]: amount,
+  });
+}
+
+// 모든 입찰 완료 감지 후 revealing 단계로 전환 (멱등 연산)
+export async function setSecretReveal(code: string): Promise<void> {
+  await update(ref(getDb(), `modern-art/rooms/${code}`), {
+    'gameState/currentAuction/subPhase': 'revealing',
+  });
+}
+
 export function subscribeRoom(code: string, cb: (room: OnlineRoom | null) => void): () => void {
   const unsubscribe = onValue(roomRef(code), snapshot => {
     if (!snapshot.exists()) { cb(null); return; }

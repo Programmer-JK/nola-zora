@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState, useRef, createContext, useContext, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getGuestUid } from '@/lib/auth';
-import { subscribeRoom, updateGameState, finishGame, registerPresence } from '@/lib/modern-art/firebase-game';
+import { subscribeRoom, updateGameState, finishGame, registerPresence, submitSecretBidAtomic, setSecretReveal } from '@/lib/modern-art/firebase-game';
 import {
   ARTISTS, AUCTION_TYPES, AUCTION_TYPE_ICONS, AUCTION_TYPE_LABELS, AUCTION_TYPE_COLORS, getArtistById,
 } from '@/lib/modern-art/game-data';
@@ -11,7 +11,7 @@ import {
   selectCard, selectDoubleSecond, doublePassOffer, doublePassDecline,
   openBid, openPass, openStand,
   fixedSetPrice, fixedAccept, fixedDecline,
-  secretSubmitBid, secretResolve,
+  secretResolve,
   onceAroundBid, onceAroundPass,
   acknowledgeResult, acknowledgeScoring,
   calcFinalScores, getPlayerById,
@@ -716,6 +716,15 @@ export default function OnlineModernArtGame() {
     }
   }, [gs?.phase, code]);
 
+  // 비밀 경매: 모든 입찰 완료 감지 → revealing 전환 (멱등 연산, 어느 클라이언트든 가능)
+  useEffect(() => {
+    if (!gs || gs.phase !== 'auction') return;
+    const a = gs.currentAuction;
+    if (!a || a.type !== 'secret' || a.subPhase !== 'collecting') return;
+    const allSubmitted = Object.values(a.bids).every(b => (b as number) >= 0);
+    if (allSubmitted) setSecretReveal(code);
+  }, [gs, code]);
+
   if (leftPlayerName) {
     return (
       <div className="min-h-screen bg-[#0d0d1a] flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -1048,9 +1057,9 @@ export default function OnlineModernArtGame() {
       if (a.subPhase === 'collecting') {
         const myPlayerId = myPlayer?.id;
         const iAmSeller = isMyPlayerId(a.sellerId);
-        const hasIBid = myPlayerId ? (a.bids[myPlayerId] ?? -1) >= 0 : false;
-        const submittedIds = a.bidOrder.filter(id => (a.bids[id] ?? -1) >= 0);
-        const pendingNames = a.bidOrder.filter(id => (a.bids[id] ?? -1) < 0).map(id => getPlayerById(gs, id)?.name).filter(Boolean);
+        const myBidAmount = myPlayerId ? a.bids[myPlayerId] : -1;
+        const hasIBid = (myBidAmount ?? -1) >= 0;
+        const submittedCount = a.bidOrder.filter(id => (a.bids[id] ?? -1) >= 0).length;
 
         return (
           <GameLayout gs={gs} myClientId={myClientId}>
@@ -1060,26 +1069,32 @@ export default function OnlineModernArtGame() {
               {iAmSeller ? (
                 <div className="text-center py-3 text-white/40 text-sm">판매자 — 모든 플레이어의 입찰 대기 중</div>
               ) : hasIBid ? (
-                <div className="text-center py-3 text-green-400/70 text-sm font-semibold">✓ 입찰 완료 — 다른 플레이어 대기 중</div>
+                <div className="text-center py-3 text-green-400/70 text-sm font-semibold">
+                  ✓ 입찰 완료 ({myBidAmount}M) — 다른 플레이어 대기 중
+                </div>
               ) : (
                 <>
                   <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center text-white/50 text-sm">
                     비밀 입찰 금액을 입력하세요 (다른 플레이어에게 보이지 않습니다)
                   </div>
                   <BidInput minBid={1} maxBid={myPlayer!.cash}
-                    onSubmit={v => perform(s => secretSubmitBid(s, v, myPlayer!.id))}
+                    onSubmit={v => {
+                      // 1. 로컬 낙관적 업데이트 (즉시 "입찰 완료" 표시)
+                      setGs(prev => {
+                        if (!prev || prev.phase !== 'auction') return prev;
+                        const auction = prev.currentAuction as SecretAuction;
+                        if (!auction || auction.type !== 'secret') return prev;
+                        return { ...prev, currentAuction: { ...auction, bids: { ...auction.bids, [myPlayer!.id]: v } } };
+                      });
+                      // 2. 이 플레이어의 입찰만 원자적으로 Firebase에 기록 (race condition 방지)
+                      submitSecretBidAtomic(code, myPlayer!.id, v);
+                    }}
                     label="비밀 입찰" accentColor={secretColor} playerCash={myPlayer!.cash} />
                 </>
               )}
               <div className="text-white/40 text-xs text-center">
-                입찰 완료: {submittedIds.length}/{a.bidOrder.length}명
-                {submittedIds.length > 0 && (
-                  <span className="text-white/25"> — {submittedIds.map(id => getPlayerById(gs, id)?.name).join(', ')}</span>
-                )}
+                입찰 완료: {submittedCount}/{a.bidOrder.length}명
               </div>
-              {pendingNames.length > 0 && (
-                <div className="text-white/25 text-xs text-center">대기 중: {pendingNames.join(', ')}</div>
-              )}
             </div>
           </GameLayout>
         );
@@ -1159,11 +1174,8 @@ export default function OnlineModernArtGame() {
     const seller = getPlayerById(gs, lastAuctionResult.sellerId)!;
     const isNoContest = lastAuctionResult.noContest;
     const triggerArtist = roundEndArtistId ? getArtistById(roundEndArtistId) : null;
-    // 라운드 종료: 현재 플레이어(카드 올린 사람)만, 일반 턴: 다음 플레이어만 진행 버튼
-    const nextIndex = roundEndArtistId
-      ? gs.currentPlayerIndex
-      : (gs.currentPlayerIndex + 1) % gs.players.length;
-    const canAdvance = myPlayerIndex === nextIndex;
+    // 참가자 누구나 다음으로 진행 가능
+    const canAdvance = myPlayer != null;
 
     return (
       <GameLayout gs={gs} myClientId={myClientId}>
@@ -1245,9 +1257,7 @@ export default function OnlineModernArtGame() {
               {triggerArtist ? '라운드 채점 보기' : '다음 턴'}
             </button>
           ) : (
-            <div className="text-white/35 text-sm">
-              {gs.players[nextIndex]?.name}님이 확인 중...
-            </div>
+            <div className="text-white/35 text-sm">대기 중...</div>
           )}
         </div>
       </GameLayout>

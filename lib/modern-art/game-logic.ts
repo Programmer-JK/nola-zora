@@ -67,8 +67,13 @@ export function selectCard(state: GameState, cardId: string): GameState {
     if (sameArtist.length > 0) {
       return { ...state, pendingDoubleCardId: cardId, phase: 'double-select-second' };
     }
-    // 본인에게 두 번째 카드 없음 → 다음 플레이어에게 제공 기회 전달
-    const nextPlayerIdx = (state.currentPlayerIndex + 1) % state.players.length;
+    // 본인에게 두 번째 카드 없음 → 해당 작가 카드 보유한 다음 플레이어에게 전달
+    const startIdx = (state.currentPlayerIndex + 1) % state.players.length;
+    const nextPlayerIdx = findNextDoublePassCandidate(state, startIdx, card.artistId, state.currentPlayerIndex);
+    if (nextPlayerIdx === state.currentPlayerIndex) {
+      // 아무도 두 번째 카드 없음 → 더블 카드 단독 공개 경매
+      return beginAuction({ ...state, pendingDoubleCardId: null }, [card]);
+    }
     return {
       ...state,
       pendingDoubleCardId: cardId,
@@ -146,35 +151,47 @@ export function doublePassOffer(state: GameState, secondCardId: string): GameSta
   return beginAuction(newState, [first, second]);
 }
 
-// 더블 경매 패스: 현재 플레이어가 두 번째 카드 거절 → 다음 플레이어에게 넘기거나 종료
+// 더블 경매 패스: 현재 플레이어가 두 번째 카드 거절 → 해당 카드 보유 다음 플레이어로 건너뜀
 export function doublePassDecline(state: GameState): GameState {
-  const n = state.players.length;
   const currentAskIdx = state.pendingDoublePassPlayerIdx!;
   const originalSellerIdx = state.currentPlayerIndex;
+  const firstCardId = state.pendingDoubleCardId!;
+  const firstCard = state.players[originalSellerIdx].hand.find(c => c.id === firstCardId);
+  if (!firstCard) return state;
 
-  const nextAskIdx = (currentAskIdx + 1) % n;
+  // 현재 플레이어 다음부터 해당 작가 카드 보유 플레이어 탐색 (판매자 제외)
+  const startIdx = (currentAskIdx + 1) % state.players.length;
+  const nextIdx = findNextDoublePassCandidate(state, startIdx, firstCard.artistId, originalSellerIdx);
 
-  if (nextAskIdx === originalSellerIdx) {
+  if (nextIdx === originalSellerIdx) {
     // 모든 플레이어 거절 → 더블 카드 단독으로 공개 경매 진행 (원작 룰)
-    const firstCardId = state.pendingDoubleCardId!;
-    const originalSeller = state.players[originalSellerIdx];
-    const firstCard = originalSeller.hand.find(c => c.id === firstCardId)!;
-
     return beginAuction(
-      {
-        ...state,
-        pendingDoubleCardId: null,
-        pendingDoublePassPlayerIdx: null,
-      },
-      [firstCard]
+      { ...state, pendingDoubleCardId: null, pendingDoublePassPlayerIdx: null },
+      [firstCard],
     );
   }
 
-  // 다음 플레이어에게 기회 전달
-  return {
-    ...state,
-    pendingDoublePassPlayerIdx: nextAskIdx,
-  };
+  // 다음 후보 플레이어에게 기회 전달
+  return { ...state, pendingDoublePassPlayerIdx: nextIdx };
+}
+
+// ─── 더블 경매 패스: 두 번째 카드 제공 가능한 다음 플레이어 탐색 ─────
+function findNextDoublePassCandidate(
+  state: GameState,
+  startIdx: number,
+  artistId: string,
+  sellerIdx: number,
+): number {
+  const n = state.players.length;
+  let idx = startIdx;
+  while (idx !== sellerIdx) {
+    const hasMatch = state.players[idx].hand.some(
+      c => c.artistId === artistId && c.auctionType !== 'double',
+    );
+    if (hasMatch) return idx;
+    idx = (idx + 1) % n;
+  }
+  return sellerIdx; // 찾지 못함 = 판매자 인덱스로 "없음" 신호
 }
 
 // ─── 경매 시작 ────────────────────────────────────────────────
@@ -590,17 +607,36 @@ function scoreRound(state: GameState): GameState {
   })).sort((a, b) => b.count - a.count);
 
   const newValues = { ...state.artistValues };
-  const rankings: RoundRanking[] = sorted.map((item, idx) => {
-    const addedValue = item.count > 0 ? (RANKING_VALUES[idx] ?? 0) : 0;
-    newValues[item.artistId] = (newValues[item.artistId] ?? 0) + addedValue;
-    return {
-      artistId: item.artistId,
-      count: item.count,
-      rank: addedValue > 0 ? idx + 1 : null,
-      addedValue,
-      cumulativeValue: newValues[item.artistId],
-    };
-  });
+  const rankings: RoundRanking[] = sorted.map(item => ({
+    artistId: item.artistId,
+    count: item.count,
+    rank: null,
+    addedValue: 0,
+    cumulativeValue: newValues[item.artistId] ?? 0,
+  }));
+
+  // 동점 처리: 같은 count 그룹이 차지하는 RANKING_VALUES 슬롯을 합산 → 균등 분배(내림)
+  let i = 0;
+  while (i < sorted.length && sorted[i].count > 0) {
+    let j = i + 1;
+    while (j < sorted.length && sorted[j].count === sorted[i].count) j++;
+    // i..j-1 이 동점 그룹
+    const groupSize = j - i;
+    const totalValue = Array.from({ length: groupSize }, (_, k) => RANKING_VALUES[i + k] ?? 0)
+      .reduce((s, v) => s + v, 0);
+    const sharedValue = Math.floor(totalValue / groupSize);
+    for (let k = i; k < j; k++) {
+      const artistId = sorted[k].artistId;
+      newValues[artistId] = (newValues[artistId] ?? 0) + sharedValue;
+      rankings[k] = {
+        ...rankings[k],
+        rank: sharedValue > 0 ? i + 1 : null,
+        addedValue: sharedValue,
+        cumulativeValue: newValues[artistId],
+      };
+    }
+    i = j;
+  }
 
   return {
     ...state,
@@ -619,7 +655,7 @@ export function acknowledgeScoring(state: GameState): GameState {
   const nextState: GameState = {
     ...state,
     round: state.round + 1,
-    currentPlayerIndex: 0,
+    currentPlayerIndex: state.round % state.players.length, // 라운드마다 시작 플레이어 순환
     roundMarket: {},
     roundEndArtistId: null,
     lastAuctionResult: null,

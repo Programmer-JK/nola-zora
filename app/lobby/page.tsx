@@ -98,6 +98,19 @@ const GAMES = [
     desc: '작가의 작품을 경매로 사고팔아\n최고의 자산가가 되어라',
     href: '/modern-art',
   },
+  {
+    id: 'guryongtu',
+    kr: '구룡투',
+    latin: 'NINE DRAGONS DUEL',
+    tag: '1v1 DUEL',
+    emoji: '🐉',
+    accent: '#ff3333',
+    accentHex: '#ff3333',
+    players: '2인',
+    kind: '수비 전략',
+    desc: '1~9 타일로 맞대결!\n1이 9를 이기는 용의 전략 싸움',
+    href: '/guryongtu',
+  },
 ]
 
 function GameCard({ game, onPick }: { game: (typeof GAMES)[number]; onPick: () => void }) {
@@ -223,7 +236,7 @@ export default function LobbyPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
-          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>07</span>
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>08</span>
         </div>
 
         {/* 게임 카드 */}
