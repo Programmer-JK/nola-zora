@@ -7,7 +7,7 @@ import { GameState } from '@/lib/las-vegas/types';
 import { rollDice, chooseCasino, scoreRound, getColorHex, createInitialState } from '@/lib/las-vegas/gameLogic';
 import { playDiceRoll } from '@/lib/las-vegas/sounds';
 import { useSoundEnabled } from '@/hooks/useSoundEnabled';
-import { subscribeRoom, updateGameState, startGame, Room } from '@/lib/las-vegas/roomService';
+import { subscribeRoom, updateGameState, startGame, restartGame, Room } from '@/lib/las-vegas/roomService';
 import LobbyWaiting from '@/components/las-vegas/LobbyWaiting';
 import Dice from '@/components/las-vegas/Dice';
 import CasinoCard from '@/components/las-vegas/CasinoCard';
@@ -267,9 +267,16 @@ export default function OnlineGamePage() {
               })}
             </div>
           )}
-          <button className="arc-btn" onClick={() => router.push('/las-vegas')} style={{ fontSize: 18, maxWidth: 320 }}>
-            다시 하기 🎲
-          </button>
+          {uid === room?.hostClientId ? (
+            <button className="arc-btn" onClick={() => restartGame(code)} style={{ fontSize: 18, maxWidth: 320 }}>
+              다시 하기 🎲
+            </button>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <p className="pix blink" style={{ fontSize: 9, color: 'var(--dim)', marginBottom: 12 }}>호스트가 다시 하기를 누를 때까지 기다려요...</p>
+              <button className="arc-btn-ghost" onClick={() => router.push('/las-vegas')} style={{ fontSize: 13 }}>← 나가기</button>
+            </div>
+          )}
         </div>
       </div>
     );

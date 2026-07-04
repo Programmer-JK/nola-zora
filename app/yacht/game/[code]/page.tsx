@@ -14,7 +14,7 @@ import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@
 import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import {
   subscribeRoom, startGame, updateGameState, finishGame,
-  generateRoomCode, createRoomWithPlayers, setNextRoom,
+  restartGame,
   YachtRoom, YachtRoomPlayer, YachtOnlineGameState,
 } from '@/lib/yacht/roomService';
 
@@ -455,11 +455,6 @@ export default function YachtOnlineGame() {
     return unsub;
   }, [code, router]);
 
-  // 호스트가 다시 하기를 시작하면 새 방으로 리다이렉트
-  useEffect(() => {
-    if (room?.nextRoom) router.replace(`/yacht/game/${room.nextRoom}`);
-  }, [room?.nextRoom, router]);
-
   if (!room) {
     return (
       <div className="cabinet">
@@ -643,10 +638,8 @@ export default function YachtOnlineGame() {
   const handleRematch = async () => {
     if (rematching) return;
     setRematching(true);
-    const newCode = generateRoomCode();
-    await createRoomWithPlayers(newCode, room.hostClientId, players);
-    await setNextRoom(code, newCode);
-    // subscribeRoom 콜백이 room.nextRoom을 감지해 전원 리다이렉트
+    await restartGame(code);
+    setRematching(false);
   };
 
   /* ── Result screen ── */

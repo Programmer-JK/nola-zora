@@ -1,6 +1,7 @@
 import { ref, set, get, update, onValue } from 'firebase/database';
 import { getDb } from '@/lib/firebase';
 import { GameState, PlayerColor } from '@/lib/las-vegas/types';
+import { createInitialState } from '@/lib/las-vegas/gameLogic';
 
 export interface RoomPlayer {
   clientId: string;
@@ -76,6 +77,17 @@ export async function startGame(code: string, gameState: GameState): Promise<voi
 export async function updateGameState(code: string, gameState: GameState): Promise<void> {
   const db = getDb();
   await update(ref(db, `las-vegas/rooms/${code}`), { gameState });
+}
+
+export async function restartGame(code: string): Promise<void> {
+  const db = getDb();
+  const snap = await get(ref(db, `las-vegas/rooms/${code}`));
+  if (!snap.exists()) return;
+  const room = snap.val() as Room;
+  const gameState = createInitialState(
+    room.players.map(p => ({ name: p.name, color: p.color, clientId: p.clientId }))
+  );
+  await update(ref(db, `las-vegas/rooms/${code}`), { status: 'playing', gameState });
 }
 
 export function subscribeRoom(

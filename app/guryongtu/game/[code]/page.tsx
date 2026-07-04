@@ -7,6 +7,7 @@ import {
   subscribeRoom,
   selectTileAtomic,
   resolveRoundAtomic,
+  restartMatch,
   type OnlineRoom,
 } from '@/lib/guryongtu/firebase-game';
 import { GameState, GamePhase, TileValue, RoundResult } from '@/lib/guryongtu/types';
@@ -606,7 +607,7 @@ export default function GuryongtuGamePage() {
             gs={gs}
             uid={uid}
             myColor={myColor}
-            onRestart={() => router.push('/guryongtu')}
+            onRestart={() => restartMatch(code)}
           />
         )}
       </div>

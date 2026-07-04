@@ -126,6 +126,28 @@ export async function setNextRoom(code: string, nextCode: string): Promise<void>
   await update(ref(db, `yacht/rooms/${code}`), { nextRoom: nextCode });
 }
 
+export async function restartGame(code: string): Promise<void> {
+  const db = getDb();
+  const snap = await get(ref(db, `yacht/rooms/${code}`));
+  if (!snap.exists()) return;
+  const room = snap.val() as YachtRoom;
+  const players = toArr<YachtRoomPlayer>(room.players);
+
+  const initGs: YachtOnlineGameState = {
+    turnIdx: 0,
+    playerScores: players.map(() => ({})),
+    dice: [1, 2, 3, 4, 5],
+    held: [false, false, false, false, false],
+    rollsLeft: 3,
+    rolled: false,
+  };
+  await update(ref(db, `yacht/rooms/${code}`), {
+    status: 'playing',
+    gameState: initGs,
+    nextRoom: null,
+  });
+}
+
 export function subscribeRoom(
   code: string,
   callback: (room: YachtRoom | null) => void,

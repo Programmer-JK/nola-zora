@@ -164,6 +164,22 @@ export async function resolveRoundAtomic(code: string): Promise<void> {
   });
 }
 
+// ─── 매치 재시작 (같은 방, 같은 플레이어) ───────────────────
+export async function restartMatch(code: string): Promise<void> {
+  const snap = await get(roomRef(code));
+  if (!snap.exists()) return;
+  const room = snap.val() as OnlineRoom;
+  const players = toArr(room.players) as RoomPlayer[];
+  if (players.length < 2) return;
+
+  const gameState = createGame(
+    players[0].clientId, players[0].name,
+    players[1].clientId, players[1].name,
+  );
+  await set(ref(getDb(), `guryongtu/rooms/${code}/gameState`), gameState);
+  await set(ref(getDb(), `guryongtu/rooms/${code}/status`), 'playing');
+}
+
 // ─── 방 삭제 ────────────────────────────────────────────────
 export async function deleteRoom(code: string): Promise<void> {
   await remove(roomRef(code));
