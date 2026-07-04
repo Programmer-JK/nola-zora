@@ -31,6 +31,7 @@ export function createGame(
     roundResults: [],
     currentGameNumber: 1,
     matchWinnerId: null,
+    firstPlayerIdx: Math.random() < 0.5 ? 0 : 1, // 1라운드 선 플레이어 랜덤 결정
   };
 }
 
@@ -53,6 +54,11 @@ export function resolveRound(state: GameState): GameState {
 
   const roundResult: RoundResult = { round: state.currentRound, p0Tile, p1Tile, outcome };
   const roundResults = [...state.roundResults, roundResult];
+
+  // 다음 라운드 선 플레이어: 승자가 선, 무승부면 기존 선 유지
+  const nextFirstPlayerIdx =
+    outcome === 'draw' ? state.firstPlayerIdx
+    : outcome === 'p0' ? 0 : 1;
 
   const p0Wins = players[0].roundWins;
   const p1Wins = players[1].roundWins;
@@ -79,10 +85,11 @@ export function resolveRound(state: GameState): GameState {
         roundResults,
         phase: 'match-over',
         matchWinnerId: matchWinner,
+        firstPlayerIdx: nextFirstPlayerIdx,
       };
     }
 
-    // 다음 게임 (타일 리셋)
+    // 다음 게임 (타일 리셋) — 새 게임 1라운드 선 플레이어 다시 랜덤
     const resetPlayers = updatedPlayers.map(p => ({
       ...p,
       remainingTiles: [...ALL_TILES],
@@ -98,6 +105,7 @@ export function resolveRound(state: GameState): GameState {
       roundResults: [],
       currentGameNumber: state.currentGameNumber + 1,
       matchWinnerId: null,
+      firstPlayerIdx: Math.random() < 0.5 ? 0 : 1,
     };
   }
 
@@ -107,5 +115,6 @@ export function resolveRound(state: GameState): GameState {
     currentRound: state.currentRound + 1,
     phase: 'selecting',
     roundResults,
+    firstPlayerIdx: nextFirstPlayerIdx,
   };
 }

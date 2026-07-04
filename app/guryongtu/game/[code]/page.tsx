@@ -9,12 +9,51 @@ import {
   resolveRoundAtomic,
   type OnlineRoom,
 } from '@/lib/guryongtu/firebase-game';
-import { GameState, GamePhase, TileValue } from '@/lib/guryongtu/types';
+import { GameState, GamePhase, TileValue, RoundResult } from '@/lib/guryongtu/types';
 import { getBgm, sfx } from '@/lib/guryongtu/sounds';
 
 const RED = '#ff3333';
 const BLUE = '#4488ff';
 const ALL_TILES: TileValue[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+// 홀수: 흑백 돌, 짝수: 백색 돌
+function tileColors(value: TileValue | null, selected: boolean, used: boolean, faceDown: boolean) {
+  if (used) return {
+    bg: 'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.06)',
+    text: 'rgba(255,255,255,0.12)',
+  };
+  if (faceDown) return {
+    bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+    border: '#333355',
+    text: 'transparent',
+  };
+  if (value === null) return { bg: '#111', border: '#333', text: '#999' };
+
+  const isOdd = value % 2 !== 0; // 홀수 = 흑백 돌
+  const isSpecial = value === 1;
+
+  if (selected) return {
+    bg: isOdd
+      ? `linear-gradient(135deg, ${RED}33, ${RED}11)`
+      : `linear-gradient(135deg, #fff5, #fff2)`,
+    border: isOdd ? RED : '#ccc',
+    text: isOdd ? RED : '#111',
+  };
+
+  if (isOdd) return {
+    bg: 'linear-gradient(135deg, #1e1e3a 0%, #12122a 100%)',
+    border: isSpecial ? `${RED}88` : '#334',
+    text: isSpecial ? RED : '#ccc',
+  };
+
+  // 짝수 = 백색 돌
+  return {
+    bg: 'linear-gradient(135deg, #d4d4e8 0%, #b8b8cc 100%)',
+    border: '#999aaa',
+    text: '#111',
+  };
+}
 
 // ── 도트 픽셀 타일 ────────────────────────────────────────────
 function PixelTile({
@@ -36,7 +75,7 @@ function PixelTile({
 }) {
   const dim = size === 'lg' ? 72 : size === 'md' ? 54 : 40;
   const fontSize = size === 'lg' ? 26 : size === 'md' ? 19 : 14;
-  const isSpecial = value === 1 && !faceDown;
+  const { bg, border, text } = tileColors(value, selected, used, faceDown);
 
   return (
     <button
@@ -44,36 +83,19 @@ function PixelTile({
       disabled={disabled || used || !onClick}
       style={{
         width: dim, height: dim,
-        background: used
-          ? 'rgba(255,255,255,0.04)'
-          : faceDown
-          ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
-          : selected
-          ? `linear-gradient(135deg, ${RED}33, ${RED}11)`
-          : 'linear-gradient(135deg, #1e1e3a 0%, #12122a 100%)',
-        border: `2px solid ${
-          used ? 'rgba(255,255,255,0.06)'
-          : faceDown ? '#333355'
-          : selected ? RED
-          : isSpecial ? `${RED}88`
-          : '#334'
-        }`,
+        background: bg,
+        border: `2px solid ${border}`,
         borderRadius: 4,
         cursor: disabled || used || !onClick ? 'default' : 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'var(--f-pix)',
         fontSize,
-        color: used
-          ? 'rgba(255,255,255,0.12)'
-          : faceDown ? 'transparent'
-          : selected ? RED
-          : isSpecial ? RED
-          : '#ccc',
+        color: text,
         boxShadow: selected
-          ? `0 0 14px ${RED}66, inset 0 0 8px ${RED}22`
+          ? `0 0 14px ${border}66, inset 0 0 8px ${border}22`
           : faceDown && !used
-          ? '0 2px 8px rgba(0,0,0,0.5)'
-          : 'none',
+            ? '0 2px 8px rgba(0,0,0,0.5)'
+            : 'none',
         transition: 'all 0.15s',
         imageRendering: 'pixelated',
         flexShrink: 0,
@@ -85,7 +107,7 @@ function PixelTile({
         <span style={{ fontSize: size === 'lg' ? 24 : 16, opacity: 0.4 }}>🐉</span>
       )}
       {!faceDown && value !== null && (
-        <span style={{ textShadow: selected || isSpecial ? `0 0 8px ${RED}` : 'none' }}>
+        <span style={{ textShadow: (selected || value === 1) && value % 2 !== 0 ? `0 0 8px ${RED}` : 'none' }}>
           {value}
         </span>
       )}
@@ -98,20 +120,63 @@ function PixelTile({
   );
 }
 
-// ── 승리 램프 ─────────────────────────────────────────────────
-function Lamps({ wins, color }: { wins: number; color: string }) {
+// ── 라운드 기록 (3행 박스) ────────────────────────────────────
+function RoundHistory({ roundResults, p0Name, p1Name }: {
+  roundResults: RoundResult[];
+  p0Name: string;
+  p1Name: string;
+}) {
+  if (roundResults.length === 0) return null;
+
+  const stoneStyle = (isOdd: boolean): React.CSSProperties => ({
+    width: 26, height: 26, borderRadius: 5, flexShrink: 0,
+    background: isOdd
+      ? 'linear-gradient(135deg, #22224a, #14142e)'
+      : 'linear-gradient(135deg, #e0e0f4, #c0c0d8)',
+    border: `2px solid ${isOdd ? '#6666bb' : '#aaaacc'}`,
+    boxShadow: isOdd ? '0 0 6px #6666bb66' : '0 0 4px #aaaacc44',
+  });
+
+  const outcomeStyle = (outcome: 'p0' | 'p1' | 'draw'): React.CSSProperties => {
+    const c = outcome === 'draw' ? '#ffb72b' : outcome === 'p0' ? RED : BLUE;
+    return {
+      width: 26, height: 26, borderRadius: 5, flexShrink: 0,
+      background: `${c}2a`,
+      border: `2px solid ${c}`,
+      boxShadow: `0 0 8px ${c}99`,
+    };
+  };
+
   return (
-    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-      {Array.from({ length: 9 }).map((_, i) => (
-        <span key={i} style={{
-          width: 12, height: 12, borderRadius: 2,
-          background: i < wins ? color : 'rgba(255,255,255,0.08)',
-          boxShadow: i < wins ? `0 0 6px ${color}` : 'none',
-          display: 'block',
-          imageRendering: 'pixelated',
-          transition: 'all 0.3s',
-        }} />
-      ))}
+    <div style={{
+      margin: '6px 12px',
+      padding: '10px 14px',
+      background: 'rgba(0,0,0,0.25)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 8,
+      overflowX: 'auto',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 'max-content' }}>
+        {/* 레이블 열 */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 6,
+          marginRight: 10, paddingRight: 10,
+          borderRight: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: RED, fontWeight: 700, lineHeight: '26px' }}>{p0Name.slice(0, 5)}</span>
+          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: '26px' }}>결과</span>
+          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: BLUE, fontWeight: 700, lineHeight: '26px' }}>{p1Name.slice(0, 5)}</span>
+        </div>
+        {/* 라운드별 열 */}
+        {roundResults.map((r, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={stoneStyle(r.p0Tile % 2 !== 0)} />
+            <div style={outcomeStyle(r.outcome)} />
+            <div style={stoneStyle(r.p1Tile % 2 !== 0)} />
+            <span className="pix" style={{ fontSize: 6, color: 'rgba(255,255,255,0.25)', letterSpacing: 0 }}>R{r.round}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -122,7 +187,7 @@ function GameWinStars({ wins, color }: { wins: number; color: string }) {
     <div style={{ display: 'flex', gap: 4 }}>
       {[0, 1].map(i => (
         <span key={i} className="pix" style={{
-          fontSize: 17,
+          fontSize: 30,
           color: i < wins ? color : 'rgba(255,255,255,0.1)',
           textShadow: i < wins ? `0 0 8px ${color}` : 'none',
           transition: 'all 0.3s',
@@ -144,7 +209,6 @@ export default function GuryongtuGamePage() {
   const [muted, setMuted] = useState(false);
   const resolveRef = useRef(false);
   const prevPhaseRef = useRef<GamePhase | null>(null);
-  const prevRoundRef = useRef<number>(-1);
 
   useEffect(() => {
     const unsub = subscribeRoom(code, r => {
@@ -163,6 +227,14 @@ export default function GuryongtuGamePage() {
     else bgm.stop();
     return () => { bgm.stop(); };
   }, [muted]);
+
+  // 라운드/게임 전환 시 localTile & submitting 리셋
+  useEffect(() => {
+    if (gs?.phase === 'selecting') {
+      setLocalTile(null);
+      setSubmitting(false);
+    }
+  }, [gs?.currentRound, gs?.currentGameNumber, gs?.phase]);
 
   // 자동 결산
   useEffect(() => {
@@ -185,11 +257,8 @@ export default function GuryongtuGamePage() {
   useEffect(() => {
     if (!gs || muted) return;
     const phase = gs.phase;
-    const round = gs.currentRound;
     const prevPhase = prevPhaseRef.current;
-    const prevRound = prevRoundRef.current;
     prevPhaseRef.current = phase;
-    prevRoundRef.current = round;
 
     if (phase === 'revealing' && prevPhase !== 'revealing') {
       sfx.reveal();
@@ -213,11 +282,6 @@ export default function GuryongtuGamePage() {
       }
     }
 
-    if (phase === 'selecting' && prevPhase === 'revealing' && round !== prevRound) {
-      setLocalTile(null);
-      setSubmitting(false);
-    }
-
     if (phase === 'match-over' && prevPhase !== 'match-over') {
       const iWon = gs.matchWinnerId === uid;
       setTimeout(() => { if (iWon) sfx.victory(); else sfx.defeat(); }, 300);
@@ -234,8 +298,14 @@ export default function GuryongtuGamePage() {
     setLocalTile(tile);
     setSubmitting(true);
     try {
-      await selectTileAtomic(code, myIdx, tile);
-      sfx.tileSubmit();
+      const committed = await selectTileAtomic(code, myIdx, tile);
+      if (committed) {
+        sfx.tileSubmit();
+      } else {
+        // 트랜잭션 abort — 선택 취소
+        setLocalTile(null);
+        setSubmitting(false);
+      }
     } catch (e) {
       console.error(e);
       setLocalTile(null);
@@ -269,6 +339,14 @@ export default function GuryongtuGamePage() {
   const myDisplayTile = myCommittedTile ?? localTile;
   const iSelected = myCommittedTile !== null || localTile !== null;
 
+  // 선(攻) 플레이어
+  const firstPlayerIdx = gs.firstPlayerIdx;
+  const amIFirst = myIdx !== -1 && myIdx === firstPlayerIdx;
+  const firstPlayerName = gs.players[firstPlayerIdx]?.name ?? '';
+  const firstPlayerSelectedTile = gs.players[firstPlayerIdx]?.selectedTile ?? null;
+  const firstPlayerHasSelected = firstPlayerSelectedTile !== null;
+  const firstStoneIsOdd = firstPlayerSelectedTile !== null && firstPlayerSelectedTile % 2 !== 0;
+
   let revealWinner: 'me' | 'opp' | 'draw' | null = null;
   if (isRevealing && myCommittedTile !== null && oppCommittedTile !== null) {
     if (myCommittedTile === oppCommittedTile) revealWinner = 'draw';
@@ -280,16 +358,42 @@ export default function GuryongtuGamePage() {
   return (
     <div className="cabinet">
       <div className="crt" />
-      <div className="arc-screen" style={{ padding: '12px 0 20px', gap: 0 }}>
+      <div className="arc-screen" style={{ padding: '0 0 20px', gap: 0 }}>
+
+        {/* ── 최상단 바 (음소거) ─── */}
+        <div style={{
+          display: 'flex', justifyContent: 'flex-end',
+          padding: '6px 12px 0',
+        }}>
+          <button
+            onClick={() => setMuted(m => !m)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 18, opacity: muted ? 0.3 : 0.65, padding: '4px 6px',
+            }}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
+        </div>
 
         {/* ── 헤더 ─── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 16px', marginBottom: 8,
+          padding: '6px 16px 10px',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
+          marginBottom: 8,
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-            <span className="pix" style={{ fontSize: 10, color: RED, opacity: 0.85 }}>{p0.name.slice(0, 6)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontFamily: 'var(--f-body)', fontSize: 12, color: RED, fontWeight: 700 }}>{p0.name.slice(0, 6)}</span>
+              {firstPlayerIdx === 0 && (
+                <span style={{
+                  fontFamily: 'var(--f-kr)', fontWeight: 700,
+                  fontSize: 10, color: '#fff', background: RED,
+                  borderRadius: 3, padding: '1px 5px',
+                }}>선</span>
+              )}
+            </div>
             <GameWinStars wins={p0.gameWins} color={RED} />
           </div>
 
@@ -302,20 +406,18 @@ export default function GuryongtuGamePage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-              <span className="pix" style={{ fontSize: 10, color: BLUE, opacity: 0.85 }}>{p1.name.slice(0, 6)}</span>
-              <GameWinStars wins={p1.gameWins} color={BLUE} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {firstPlayerIdx === 1 && (
+                <span style={{
+                  fontFamily: 'var(--f-kr)', fontWeight: 700,
+                  fontSize: 10, color: '#fff', background: BLUE,
+                  borderRadius: 3, padding: '1px 5px',
+                }}>선</span>
+              )}
+              <span style={{ fontFamily: 'var(--f-body)', fontSize: 12, color: BLUE, fontWeight: 700 }}>{p1.name.slice(0, 6)}</span>
             </div>
-            <button
-              onClick={() => setMuted(m => !m)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 16, opacity: muted ? 0.3 : 0.7, padding: 2,
-              }}
-            >
-              {muted ? '🔇' : '🔊'}
-            </button>
+            <GameWinStars wins={p1.gameWins} color={BLUE} />
           </div>
         </div>
 
@@ -327,6 +429,7 @@ export default function GuryongtuGamePage() {
             hasSelected={oppCommittedTile !== null}
             phase={gs.phase}
             label="상대방"
+            isFirst={myIdx !== -1 ? (myIdx === 0 ? firstPlayerIdx === 1 : firstPlayerIdx === 0) : false}
           />
         </div>
 
@@ -337,19 +440,37 @@ export default function GuryongtuGamePage() {
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 8,
         }}>
-          <div className="pix" style={{ fontSize: 10, color: 'var(--faint)', textAlign: 'center', marginBottom: 12 }}>
-            ⚔ ARENA ⚔
-          </div>
+          {/* 선 플레이어 안내 */}
+          {!isRevealing && !isGameOver && (
+            <div style={{
+              fontFamily: 'var(--f-kr)', fontWeight: 700,
+              fontSize: 14, textAlign: 'center', marginBottom: 10,
+              color: amIFirst ? myColor : oppColor,
+              textShadow: `0 0 12px ${amIFirst ? myColor : oppColor}66`,
+            }}>
+              ⚔ {amIFirst ? '내가' : `${firstPlayerName.slice(0, 6)}이/가`} 선(攻)
+            </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
             {/* 상대 슬롯 */}
             <div style={{ textAlign: 'center' }}>
-              <div className="pix" style={{ fontSize: 10, color: 'var(--faint)', marginBottom: 8 }}>상대방</div>
+              <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--dim)', marginBottom: 8 }}>상대방</div>
               <PixelTile
                 value={isRevealing ? oppCommittedTile : null}
                 faceDown={!isRevealing && oppCommittedTile !== null}
                 size="lg"
               />
+              {oppCommittedTile !== null && !isRevealing && (
+                <div style={{
+                  marginTop: 6,
+                  fontFamily: 'var(--f-kr)', fontSize: 12, fontWeight: 700,
+                  color: oppCommittedTile % 2 !== 0 ? '#aaaacc' : '#ccccaa',
+                  textShadow: oppCommittedTile % 2 !== 0 ? '0 0 6px #aaaacc88' : '0 0 6px #ccccaa88',
+                }}>
+                  {oppCommittedTile % 2 !== 0 ? '흑(黑)' : '백(白)'}
+                </div>
+              )}
             </div>
 
             {/* VS / 결과 */}
@@ -363,6 +484,18 @@ export default function GuryongtuGamePage() {
                 }}>
                   {revealWinner === 'draw' ? 'DRAW' : revealWinner === 'me' ? 'WIN!' : 'LOSE'}
                 </div>
+              ) : firstPlayerHasSelected && !iSelected && !amIFirst ? (
+                /* 후 플레이어 관점 - 선 플레이어가 낸 돌 종류 */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                  <div className="pix" style={{ fontSize: 9, color: 'var(--faint)' }}>VS</div>
+                  <div style={{
+                    fontFamily: 'var(--f-kr)', fontSize: 16, fontWeight: 700,
+                    color: firstStoneIsOdd ? '#aaaaee' : '#ddddaa',
+                    textShadow: `0 0 10px ${firstStoneIsOdd ? '#aaaaee' : '#ddddaa'}`,
+                  }}>
+                    {firstStoneIsOdd ? '흑' : '백'}
+                  </div>
+                </div>
               ) : (
                 <div className="pix" style={{ fontSize: 13, color: 'var(--faint)' }}>VS</div>
               )}
@@ -370,7 +503,7 @@ export default function GuryongtuGamePage() {
 
             {/* 내 슬롯 */}
             <div style={{ textAlign: 'center' }}>
-              <div className="pix" style={{ fontSize: 10, color: 'var(--faint)', marginBottom: 8 }}>나</div>
+              <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--dim)', marginBottom: 8 }}>나</div>
               <PixelTile
                 value={isRevealing ? myCommittedTile : myDisplayTile}
                 faceDown={false}
@@ -380,46 +513,10 @@ export default function GuryongtuGamePage() {
             </div>
           </div>
 
-          {/* 라운드 히스토리 */}
-          {gs.roundResults.length > 0 && (
-            <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 10 }}>
-              <div style={{ display: 'flex', gap: 5, justifyContent: 'center', flexWrap: 'wrap' }}>
-                {gs.roundResults.map((r, i) => {
-                  const iWon =
-                    (r.outcome === 'p0' && myIdx === 0) ||
-                    (r.outcome === 'p1' && myIdx === 1);
-                  const isDraw = r.outcome === 'draw';
-                  const color = isDraw ? 'var(--gold)' : iWon ? myColor : oppColor;
-                  return (
-                    <div key={i} style={{
-                      width: 16, height: 16,
-                      background: isDraw ? 'rgba(255,183,43,0.2)' : iWon ? `${myColor}33` : `${oppColor}33`,
-                      border: `1.5px solid ${color}`,
-                      borderRadius: 2,
-                      boxShadow: `0 0 4px ${color}66`,
-                    }} />
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* ── 라운드 승리 램프 ─── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 16px', marginBottom: 4,
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span className="pix" style={{ fontSize: 9, color: RED }}>{p0.name.slice(0, 8)} 승</span>
-            <Lamps wins={p0.roundWins} color={RED} />
-          </div>
-          <div className="pix" style={{ fontSize: 9, color: 'var(--faint)' }}>ROUND WIN</div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-            <span className="pix" style={{ fontSize: 9, color: BLUE }}>{p1.name.slice(0, 8)} 승</span>
-            <Lamps wins={p1.roundWins} color={BLUE} />
-          </div>
-        </div>
+        {/* ── 라운드 기록 ─── */}
+        <RoundHistory roundResults={gs.roundResults} p0Name={p0.name} p1Name={p1.name} />
 
         {/* ── 내 패널 ─── */}
         <div style={{ padding: '0 12px', marginBottom: 8 }}>
@@ -429,6 +526,7 @@ export default function GuryongtuGamePage() {
             hasSelected={iSelected}
             phase={gs.phase}
             label="나"
+            isFirst={amIFirst}
           />
         </div>
 
@@ -441,23 +539,46 @@ export default function GuryongtuGamePage() {
               borderRadius: 8, padding: '12px 12px',
             }}>
               {/* 상태 메시지 */}
-              <div className="pix" style={{
-                fontSize: 11, textAlign: 'center', marginBottom: 12,
-                color: isRevealing ? 'var(--gold)' : iSelected ? 'var(--dim)' : myColor,
+              <div style={{
+                fontFamily: 'var(--f-kr)', fontWeight: 700,
+                fontSize: 13, textAlign: 'center', marginBottom: 12,
+                color: isRevealing ? 'var(--gold)' : iSelected ? 'rgba(255,255,255,0.5)' : !amIFirst && !firstPlayerHasSelected ? 'rgba(255,255,255,0.4)' : myColor,
               }}>
                 {isRevealing
                   ? '⚔️ 타일 공개!'
                   : iSelected
-                  ? '✓ 선택 완료 — 상대방 대기 중...'
-                  : '🐉 타일을 선택하세요!'}
+                    ? '✓ 선택 완료 — 상대방 대기 중...'
+                    : !amIFirst && !firstPlayerHasSelected
+                      ? '선 플레이어 선택 대기 중...'
+                      : '🐉 타일을 선택하세요!'}
               </div>
+
+              {/* 후 플레이어 - 선 플레이어 돌 종류 표시 */}
+              {!amIFirst && firstPlayerHasSelected && !iSelected && (
+                <div style={{
+                  textAlign: 'center', marginBottom: 12,
+                  padding: '8px 12px', borderRadius: 8,
+                  background: firstStoneIsOdd ? 'rgba(80,80,120,0.25)' : 'rgba(200,200,120,0.15)',
+                  border: `1px solid ${firstStoneIsOdd ? '#8888cc55' : '#cccc8855'}`,
+                }}>
+                  <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--faint)' }}>상대방이 낸 돌: </span>
+                  <span style={{
+                    fontFamily: 'var(--f-kr)', fontSize: 15, fontWeight: 700,
+                    color: firstStoneIsOdd ? '#aaaaee' : '#eeeeaa',
+                    textShadow: `0 0 8px ${firstStoneIsOdd ? '#aaaaee88' : '#eeeeaa88'}`,
+                  }}>
+                    {firstStoneIsOdd ? '흑(黑)' : '백(白)'}
+                  </span>
+                </div>
+              )}
 
               {/* 타일 그리드 */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {ALL_TILES.map(tile => {
                   const remaining = me?.remainingTiles.includes(tile) ?? false;
                   const isSelected = myDisplayTile === tile;
-                  const canClick = isMyTurn && !iSelected && !isRevealing && !submitting && remaining;
+                  const canClick = isMyTurn && !iSelected && !isRevealing && !submitting && remaining
+                    && (amIFirst || firstPlayerHasSelected);
                   return (
                     <PixelTile
                       key={tile}
@@ -472,7 +593,7 @@ export default function GuryongtuGamePage() {
                 })}
               </div>
 
-              <div className="pix" style={{ fontSize: 9, color: 'var(--faint)', textAlign: 'center', marginTop: 10 }}>
+              <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 10 }}>
                 남은 타일: {me?.remainingTiles.length ?? 0}개
               </div>
             </div>
@@ -500,12 +621,14 @@ function PlayerPanel({
   hasSelected,
   phase,
   label,
+  isFirst,
 }: {
   player: { name: string; remainingTiles: TileValue[]; roundWins: number };
   color: string;
   hasSelected: boolean;
   phase: GamePhase;
   label: string;
+  isFirst: boolean;
 }) {
   return (
     <div style={{
@@ -521,18 +644,27 @@ function PlayerPanel({
         transition: 'all 0.3s',
       }} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontFamily: 'var(--f-body)', fontSize: 15, color, fontWeight: 700 }}>
-          {player.name}
-          <span className="pix" style={{ fontSize: 9, color: 'var(--faint)', marginLeft: 8 }}>{label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontFamily: 'var(--f-body)', fontSize: 15, color, fontWeight: 700 }}>
+            {player.name}
+          </span>
+          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, color: 'var(--dim)', marginLeft: 2 }}>{label}</span>
+          {isFirst && (
+            <span style={{
+              fontFamily: 'var(--f-kr)', fontWeight: 700,
+              fontSize: 10, color: '#fff', background: color,
+              borderRadius: 3, padding: '1px 6px',
+            }}>선(攻)</span>
+          )}
         </div>
-        <div className="pix" style={{ fontSize: 9, color: 'var(--faint)', marginTop: 3 }}>
+        <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>
           남은 타일 {player.remainingTiles.length}개
         </div>
       </div>
       {phase === 'selecting' && (
-        <span className="pix" style={{
-          fontSize: 9,
-          color: hasSelected ? color : 'rgba(255,255,255,0.15)',
+        <span style={{
+          fontFamily: 'var(--f-kr)', fontWeight: 700, fontSize: 12,
+          color: hasSelected ? color : 'rgba(255,255,255,0.45)',
         }}>
           {hasSelected ? '✓ 선택완료' : '선택 중...'}
         </span>

@@ -26,4 +26,5 @@ export type GameState = {
   roundResults: RoundResult[];
   currentGameNumber: number;
   matchWinnerId: string | null;
+  firstPlayerIdx: number; // 0 or 1 — 선(攻) 플레이어
 };

@@ -42,6 +42,7 @@ export function sanitizeGameState(raw: unknown): GameState {
     players: [sanitizePlayer(gs.players[0]), sanitizePlayer(gs.players[1])],
     roundResults: toArr(gs.roundResults),
     matchWinnerId: gs.matchWinnerId ?? null,
+    firstPlayerIdx: gs.firstPlayerIdx ?? 0,
   };
 }
 
@@ -132,9 +133,9 @@ export async function selectTileAtomic(
   code: string,
   playerIdx: number,
   tile: TileValue,
-): Promise<void> {
+): Promise<boolean> {
   const gsRef = ref(getDb(), `guryongtu/rooms/${code}/gameState`);
-  await runTransaction(gsRef, (current: unknown) => {
+  const result = await runTransaction(gsRef, (current: unknown) => {
     if (!current) return;
     const gs = sanitizeGameState(current);
     if (gs.phase !== 'selecting') return; // abort
@@ -149,6 +150,7 @@ export async function selectTileAtomic(
 
     return { ...gs, players, phase: bothSelected ? 'revealing' : 'selecting' };
   });
+  return result.committed;
 }
 
 // ─── 라운드 결산 (트랜잭션) ──────────────────────────────────

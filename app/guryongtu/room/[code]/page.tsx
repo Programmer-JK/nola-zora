@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getGuestUid, getGuestNickname } from '@/lib/auth';
+import Link from 'next/link';
+import { getGuestUid } from '@/lib/auth';
 import { subscribeRoom, startGame, type OnlineRoom } from '@/lib/guryongtu/firebase-game';
 
 const ACCENT = '#ff3333';
+const ACCENT_LO = '#b51a1a';
 
 export default function GuryongtuWaitingRoom() {
   const { code } = useParams<{ code: string }>();
@@ -55,80 +57,85 @@ export default function GuryongtuWaitingRoom() {
   return (
     <div className="cabinet">
       <div className="crt" />
-      <div className="arc-screen" style={{ justifyContent: 'center', alignItems: 'center', paddingTop: 40 }}>
+      <div className="arc-screen" style={{ '--c': ACCENT } as React.CSSProperties}>
 
-        {/* 타이틀 */}
-        <div className="arc-pop" style={{ textAlign: 'center', marginBottom: 24 }}>
-          <p className="arc-lbl" style={{ marginBottom: 6 }}>구룡투 — 대기실</p>
-          <div className="pix" style={{
-            fontSize: 22, letterSpacing: 4,
-            color: ACCENT, textShadow: `0 0 16px ${ACCENT}88`,
-          }}>
-            🐉 구룡투
-          </div>
-          <div className="pix" style={{ fontSize: 7, color: 'var(--dim)', marginTop: 6 }}>
-            NINE DRAGONS DUEL
-          </div>
+        {/* ── 상단 바 ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px' }}>
+          <Link href="/guryongtu" className="arc-btn-ghost" style={{ fontSize: 13, padding: '9px 14px' }}>
+            ← 나가기
+          </Link>
+          <Link href="/guryongtu/rules" className="arc-btn-ghost" style={{ fontSize: 13, padding: '9px 14px' }}>
+            📖 규칙
+          </Link>
         </div>
 
-        {/* 방 코드 */}
-        <div className="arc-panel ticks arc-rise" style={{ width: '100%', maxWidth: 340, padding: '20px 18px', textAlign: 'center', marginBottom: 16 }}>
-          <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>방 코드</span>
+        {/* ── 히어로 ── */}
+        <div className="arc-pop" style={{ textAlign: 'center', margin: '8px 0 20px' }}>
+          <div className="arc-float" style={{ fontSize: 48, lineHeight: 1, marginBottom: 6 }}>🐉</div>
+          <h1 style={{
+            fontFamily: 'var(--f-disp)', fontSize: 28, letterSpacing: 2, margin: '0 0 4px',
+            color: ACCENT, textShadow: `0 0 20px ${ACCENT}88`,
+          }}>
+            NINE DRAGONS
+          </h1>
+          <div style={{ fontFamily: 'var(--f-title)', fontSize: 20, color: 'var(--text)', marginBottom: 4 }}>
+            구룡투
+          </div>
+          <div style={{ fontFamily: 'var(--f-kr)', fontSize: 12, color: 'var(--dim)' }}>대기실</div>
+        </div>
+
+        {/* ── 방 코드 ── */}
+        <div className="arc-panel ticks arc-rise" style={{ padding: '18px', marginBottom: 12, textAlign: 'center' }}>
+          <span className="arc-lbl" style={{ display: 'block', marginBottom: 10 }}>방 코드</span>
           <div className="pix" style={{
-            fontSize: 26, letterSpacing: 8,
+            fontSize: 28, letterSpacing: 10,
             color: ACCENT, textShadow: `0 0 14px ${ACCENT}66`,
-            marginBottom: 14,
+            marginBottom: 12,
           }}>
             {code}
           </div>
-          <button onClick={handleCopy} className="arc-btn-ghost" style={{ fontSize: 12 }}>
+          <button onClick={handleCopy} className="arc-btn-ghost" style={{ fontSize: 13 }}>
             {copied ? '✓ 복사됨!' : '코드 복사'}
           </button>
         </div>
 
-        {/* 참가자 목록 */}
-        <div style={{ width: '100%', maxWidth: 340, marginBottom: 16 }}>
-          <span className="arc-lbl" style={{ display: 'block', textAlign: 'center', marginBottom: 12 }}>
-            참가자 ({room.players.length}/2)
-          </span>
+        {/* ── 참가자 목록 ── */}
+        <div className="arc-panel arc-rise" style={{ padding: '18px', marginBottom: 12, animationDelay: '.06s' }}>
+          <span className="arc-lbl" style={{ display: 'block', marginBottom: 12 }}>참가자 ({room.players.length}/2)</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {room.players.map((p, i) => {
               const isMe = p.clientId === uid;
               const isRoomHost = room.hostClientId === p.clientId;
+              const playerColor = i === 0 ? ACCENT : '#4488ff';
               return (
                 <div
                   key={p.clientId}
                   className="arc-panel-inset"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
                     borderColor: isMe ? `${ACCENT}55` : 'var(--line)',
                     background: isMe ? `${ACCENT}0a` : undefined,
                   }}
                 >
-                  <span className="pix" style={{
-                    fontSize: 14, width: 20, textAlign: 'center',
-                    color: i === 0 ? ACCENT : '#4488ff',
-                  }}>
+                  <span style={{ fontSize: 18, width: 24, textAlign: 'center' }}>
                     {i === 0 ? '🔴' : '🔵'}
                   </span>
-                  <span style={{ flex: 1, fontFamily: 'var(--f-body)', fontWeight: 700, color: isMe ? ACCENT : 'var(--text-2)' }}>
+                  <span style={{ flex: 1, fontFamily: 'var(--f-kr)', fontWeight: 700, fontSize: 14, color: isMe ? playerColor : 'var(--text-2)' }}>
                     {p.name}
                   </span>
                   {isRoomHost && (
-                    <span className="arc-badge" style={{ background: ACCENT, color: '#fff', fontSize: 9 }}>
-                      HOST
-                    </span>
+                    <span className="arc-badge" style={{ background: ACCENT, color: '#fff' }}>HOST</span>
                   )}
-                  {isMe && <span className="pix" style={{ fontSize: 7, color: 'var(--faint)' }}>나</span>}
+                  {isMe && <span style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--faint)' }}>나</span>}
                 </div>
               );
             })}
             {room.players.length < 2 && (
               <div className="arc-panel-inset" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '12px 16px', borderStyle: 'dashed', opacity: 0.5,
+                padding: '14px 16px', borderStyle: 'dashed', opacity: 0.5,
               }}>
-                <p className="pix blink" style={{ fontSize: 8, color: 'var(--faint)' }}>
+                <p className="blink" style={{ fontFamily: 'var(--f-kr)', fontSize: 13, color: 'var(--faint)', margin: 0 }}>
                   상대방을 기다리는 중...
                 </p>
               </div>
@@ -138,35 +145,31 @@ export default function GuryongtuWaitingRoom() {
 
         {error && (
           <p style={{
-            color: 'var(--red)', fontSize: 13,
+            fontFamily: 'var(--f-kr)', color: 'var(--red)', fontSize: 13,
             background: 'rgba(255,90,77,0.08)', border: '1px solid rgba(255,90,77,0.25)',
             borderRadius: 12, padding: '10px 14px', marginBottom: 12,
-            width: '100%', maxWidth: 340, textAlign: 'center',
           }}>
             {error}
           </p>
         )}
 
-        {/* 시작 / 대기 */}
-        <div style={{ width: '100%', maxWidth: 340 }}>
-          {isHost ? (
-            <button
-              onClick={handleStart}
-              disabled={!canStart || starting}
-              className="arc-btn"
-              style={{ background: ACCENT, borderColor: ACCENT, color: '#fff', fontSize: 16 }}
-            >
-              <span className="pix" style={{ fontSize: 10, marginRight: 6 }}>▶</span>
-              {starting ? 'LOADING...' : canStart ? '대결 시작!' : `상대방 대기 중 (${room.players.length}/2)`}
-            </button>
-          ) : (
-            <p className="pix blink" style={{ fontSize: 13, color: 'var(--dim)', textAlign: 'center' }}>
-              호스트가 시작하길 기다리는 중...
-            </p>
-          )}
-        </div>
+        {/* ── 시작 / 대기 ── */}
+        {isHost ? (
+          <button
+            onClick={handleStart}
+            disabled={!canStart || starting}
+            className="arc-btn"
+            style={{ '--c': ACCENT, '--c-lo': ACCENT_LO, color: '#fff' } as React.CSSProperties}
+          >
+            {starting ? 'LOADING...' : canStart ? '⚔️ 대결 시작!' : `상대방 대기 중 (${room.players.length}/2)`}
+          </button>
+        ) : (
+          <p className="blink" style={{ fontFamily: 'var(--f-kr)', fontSize: 14, color: 'var(--dim)', textAlign: 'center' }}>
+            호스트가 시작하길 기다리는 중...
+          </p>
+        )}
 
-        <p className="pix" style={{ fontSize: 7, color: 'var(--faint)', marginTop: 20 }}>
+        <p className="pix" style={{ fontSize: 7, color: 'var(--faint)', marginTop: 20, textAlign: 'center' }}>
           2인 전용 · BEST OF 3 GAMES
         </p>
       </div>
