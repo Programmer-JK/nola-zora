@@ -31,7 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!checked) return
     if (!auth && pathname !== '/') {
-      router.replace('/')
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
+      router.replace(`/?returnUrl=${returnUrl}`)
     }
   }, [checked, auth, pathname, router])
 

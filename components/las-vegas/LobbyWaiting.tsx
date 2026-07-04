@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
-import { Room, RoomPlayer } from '@/lib/las-vegas/roomService';
-import { PLAYER_COLORS } from '@/lib/las-vegas/types';
+import { QRCodeSVG } from 'qrcode.react';
+import { Room, RoomPlayer, joinRoom } from '@/lib/las-vegas/roomService';
+import { PLAYER_COLORS, PlayerColor } from '@/lib/las-vegas/types';
 import { getColorHex } from '@/lib/las-vegas/gameLogic';
+import { loginGuest, getGuestNickname } from '@/lib/auth';
 
 const MIN_PLAYERS = 2;
 
@@ -51,6 +53,23 @@ export default function LobbyWaiting({ code, room, myUid, onStart, starting }: P
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  const isPlayer = room.players.some(p => p.clientId === myUid);
+  const takenColors = room.players.map(p => p.color);
+  const firstAvailable = PLAYER_COLORS.find(c => !takenColors.includes(c.color))?.color ?? PLAYER_COLORS[0].color;
+  const [joinNickname, setJoinNickname] = useState(() => getGuestNickname() ?? '');
+  const [joinColor, setJoinColor] = useState<PlayerColor>(firstAvailable);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
+
+  const handleJoin = async () => {
+    if (!joinNickname.trim()) { setJoinError('닉네임을 입력하세요.'); return; }
+    if (takenColors.includes(joinColor)) { setJoinError('이미 선택된 색상입니다.'); return; }
+    setJoining(true); setJoinError('');
+    const uid = await loginGuest(joinNickname.trim());
+    const result = await joinRoom(code, { clientId: uid, name: joinNickname.trim(), color: joinColor });
+    if (!result.success) { setJoinError(result.error ?? '참가 실패'); setJoining(false); }
+  };
+
   const isHost = myUid !== '' && room.hostClientId === myUid;
   const canStart = isHost && room.players.length >= MIN_PLAYERS;
 
@@ -65,6 +84,77 @@ export default function LobbyWaiting({ code, room, myUid, onStart, starting }: P
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
   };
+
+  if (!isPlayer) {
+    return (
+      <div className="cabinet">
+        <div className="crt" />
+        <div className="arc-screen" style={{ justifyContent: 'center', alignItems: 'center', paddingTop: 28 }}>
+          <div className="arc-pop" style={{ textAlign: 'center', marginBottom: 20, width: '100%', maxWidth: 400 }}>
+            <div className="arc-float" style={{ fontSize: 48, lineHeight: 1, marginBottom: 8 }}>🏨</div>
+            <h1 style={{ fontFamily: 'var(--f-title)', fontSize: 28, margin: '0 0 4px' }}>LAS VEGAS</h1>
+            <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', letterSpacing: 2 }}>JOIN ROOM · {code}</div>
+          </div>
+
+          <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>닉네임</span>
+              <input
+                className="arc-field"
+                value={joinNickname}
+                onChange={e => setJoinNickname(e.target.value)}
+                maxLength={12}
+                placeholder="닉네임 입력..."
+                style={{ fontWeight: 700 }}
+              />
+            </div>
+
+            <div>
+              <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>색상 선택</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {PLAYER_COLORS.map(c => {
+                  const hex = getColorHex(c.color);
+                  const taken = takenColors.includes(c.color);
+                  const selected = joinColor === c.color;
+                  return (
+                    <button
+                      key={c.color}
+                      disabled={taken}
+                      onClick={() => setJoinColor(c.color)}
+                      style={{
+                        width: 44, height: 44, borderRadius: 10,
+                        background: taken ? 'var(--surface-2)' : `color-mix(in srgb, ${hex} 20%, var(--surface))`,
+                        border: `2px solid ${selected ? hex : taken ? 'var(--line)' : hex + '55'}`,
+                        boxShadow: selected ? `0 0 0 2px ${hex}, 0 0 12px -4px ${hex}` : 'none',
+                        cursor: taken ? 'not-allowed' : 'pointer',
+                        opacity: taken ? 0.35 : 1,
+                        transition: 'all .15s',
+                        flexShrink: 0,
+                      }}
+                      title={taken ? `${c.label} (사용 중)` : c.label}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {joinError && (
+              <p style={{ color: 'var(--red)', fontSize: 13, margin: 0 }}>{joinError}</p>
+            )}
+
+            <button
+              className="arc-btn"
+              onClick={handleJoin}
+              disabled={joining}
+              style={{ fontSize: 18 }}
+            >
+              {joining ? '참가 중...' : '🎲 방 참가하기'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="cabinet">
@@ -98,19 +188,29 @@ export default function LobbyWaiting({ code, room, myUid, onStart, starting }: P
               {copied ? '✓ COPIED!' : 'TAP TO COPY'}
             </div>
           </button>
-          <button
-            onClick={handleCopyLink}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', width: '100%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              fontSize: 12, color: linkCopied ? 'var(--green)' : 'var(--dim)',
-              marginTop: 8, transition: 'color .15s',
-            }}
-          >
-            <Check size={11} style={{ opacity: linkCopied ? 1 : 0, position: 'absolute' }} />
-            <Copy size={11} />
-            {linkCopied ? '링크 복사됨!' : '입장 링크 복사'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+            <div style={{ display: 'inline-block', padding: 8, borderRadius: 10, background: '#fff', boxShadow: '0 0 12px rgba(0,0,0,0.3)' }}>
+              <QRCodeSVG
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/las-vegas/game/${code}`}
+                size={80}
+                bgColor="#ffffff"
+                fgColor="#1a1206"
+                level="M"
+              />
+            </div>
+            <button
+              onClick={handleCopyLink}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: 12, color: linkCopied ? 'var(--green)' : 'var(--dim)',
+                transition: 'color .15s',
+              }}
+            >
+              {linkCopied ? <Check size={11} /> : <Copy size={11} />}
+              {linkCopied ? '링크 복사됨!' : '입장 링크 복사'}
+            </button>
+          </div>
         </div>
 
         {/* Player list */}

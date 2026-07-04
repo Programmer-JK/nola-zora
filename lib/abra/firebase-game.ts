@@ -60,8 +60,7 @@ export function sanitizeGameState(raw: unknown): AbraGameState {
 // ─── Utils ──────────────────────────────────────────────────
 
 export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
 }
 
 function roomRef(code: string) {

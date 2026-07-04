@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { loginGuest, getGuestNickname } from '@/lib/auth'
 
 function Bulbs({ n = 11 }: { n?: number }) {
@@ -12,17 +12,19 @@ function Bulbs({ n = 11 }: { n?: number }) {
   )
 }
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnUrl = searchParams.get('returnUrl') ?? '/lobby'
   const [nickname, setNickname] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (getGuestNickname()) {
-      router.replace('/lobby')
+      router.replace(returnUrl)
     }
-  }, [router])
+  }, [router, returnUrl])
 
   async function submit() {
     const name = nickname.trim()
@@ -32,7 +34,7 @@ export default function LoginPage() {
     setError('')
     try {
       await loginGuest(name)
-      router.push('/lobby')
+      router.push(returnUrl)
     } catch {
       setError('입장 중 오류가 발생했습니다.')
       setLoading(false)
@@ -109,5 +111,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   )
 }

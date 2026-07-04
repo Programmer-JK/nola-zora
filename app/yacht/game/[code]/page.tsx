@@ -4,17 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Copy, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { QRCodeSVG } from 'qrcode.react';
+import { loginGuest, getGuestNickname } from '@/lib/auth';
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
   yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
-  rollDie,
+  rollDie, PLAYER_COLORS,
 } from '@/lib/yacht/game-logic';
 import type { YachtCatId } from '@/lib/yacht/types';
 import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@/lib/yacht/sounds';
 import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import {
   subscribeRoom, startGame, updateGameState, finishGame,
-  restartGame,
+  restartGame, joinRoom,
   YachtRoom, YachtRoomPlayer, YachtOnlineGameState,
 } from '@/lib/yacht/roomService';
 
@@ -262,6 +264,22 @@ function LobbyWaiting({
   const players = toArr<YachtRoomPlayer>(room.players);
   const isHost = room.hostClientId === myUid;
   const canStart = isHost && players.length >= MIN_PLAYERS;
+  const isPlayer = players.some(p => p.clientId === myUid);
+  const takenColors = players.map(p => p.color);
+  const firstAvailable = PLAYER_COLORS.find(c => !takenColors.includes(c.hex))?.hex ?? PLAYER_COLORS[0].hex;
+  const [joinNickname, setJoinNickname] = useState(() => getGuestNickname() ?? '');
+  const [joinColor, setJoinColor] = useState(firstAvailable);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
+
+  const handleJoin = async () => {
+    if (!joinNickname.trim()) { setJoinError('닉네임을 입력하세요.'); return; }
+    if (takenColors.includes(joinColor)) { setJoinError('이미 선택된 색상입니다.'); return; }
+    setJoining(true); setJoinError('');
+    const uid = await loginGuest(joinNickname.trim());
+    const result = await joinRoom(code, { clientId: uid, name: joinNickname.trim(), color: joinColor });
+    if (!result.success) { setJoinError(result.error ?? '참가 실패'); setJoining(false); }
+  };
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code);
@@ -274,6 +292,65 @@ function LobbyWaiting({
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
   };
+
+  if (!isPlayer) {
+    return (
+      <div className="arc-screen" style={{ justifyContent: 'center', alignItems: 'center', paddingTop: 28 }}>
+        <div className="arc-pop" style={{ textAlign: 'center', marginBottom: 20, width: '100%', maxWidth: 400 }}>
+          <div className="arc-float" style={{ fontSize: 48, lineHeight: 1, marginBottom: 8 }}>⛵</div>
+          <h1 style={{ fontFamily: 'var(--f-title)', fontSize: 28, margin: '0 0 4px' }}>YACHT DICE</h1>
+          <div className="pix" style={{ fontSize: 8, color: 'var(--dim)', letterSpacing: 2 }}>JOIN ROOM · {code}</div>
+        </div>
+
+        <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>닉네임</span>
+            <input
+              className="arc-field"
+              value={joinNickname}
+              onChange={e => setJoinNickname(e.target.value)}
+              maxLength={12}
+              placeholder="닉네임 입력..."
+              style={{ fontWeight: 700 }}
+            />
+          </div>
+
+          <div>
+            <span className="arc-lbl" style={{ display: 'block', marginBottom: 8 }}>색상 선택</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {PLAYER_COLORS.map(c => {
+                const taken = takenColors.includes(c.hex);
+                const selected = joinColor === c.hex;
+                return (
+                  <button
+                    key={c.id}
+                    disabled={taken}
+                    onClick={() => setJoinColor(c.hex)}
+                    style={{
+                      width: 44, height: 44, borderRadius: 10,
+                      background: taken ? 'var(--surface-2)' : c.hex + '33',
+                      border: `2px solid ${selected ? c.hex : taken ? 'var(--line)' : c.hex + '55'}`,
+                      boxShadow: selected ? `0 0 0 2px ${c.hex}, 0 0 12px -4px ${c.hex}` : 'none',
+                      cursor: taken ? 'not-allowed' : 'pointer',
+                      opacity: taken ? 0.35 : 1,
+                      transition: 'all .15s',
+                    }}
+                    title={taken ? `사용 중` : c.id}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {joinError && <p style={{ color: 'var(--red)', fontSize: 13, margin: 0 }}>{joinError}</p>}
+
+          <button className="arc-btn" onClick={handleJoin} disabled={joining} style={{ fontSize: 18, '--c': ACCENT } as React.CSSProperties}>
+            {joining ? '참가 중...' : '⛵ 방 참가하기'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="arc-screen" style={{ justifyContent: 'center', alignItems: 'center', paddingTop: 8 }}>
@@ -313,18 +390,29 @@ function LobbyWaiting({
             {copied ? '✓ COPIED!' : 'TAP TO COPY'}
           </div>
         </button>
-        <button
-          onClick={handleCopyLink}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer', width: '100%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-            fontSize: 12, color: linkCopied ? 'var(--green)' : 'var(--dim)',
-            marginTop: 8, transition: 'color .15s',
-          }}
-        >
-          {linkCopied ? <Check size={11} /> : <Copy size={11} />}
-          {linkCopied ? '링크 복사됨!' : '입장 링크 복사'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+          <div style={{ display: 'inline-block', padding: 8, borderRadius: 10, background: '#fff', boxShadow: '0 0 12px rgba(0,0,0,0.3)' }}>
+            <QRCodeSVG
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/yacht/game/${code}`}
+              size={80}
+              bgColor="#ffffff"
+              fgColor="#061a0c"
+              level="M"
+            />
+          </div>
+          <button
+            onClick={handleCopyLink}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 12, color: linkCopied ? 'var(--green)' : 'var(--dim)',
+              transition: 'color .15s',
+            }}
+          >
+            {linkCopied ? <Check size={11} /> : <Copy size={11} />}
+            {linkCopied ? '링크 복사됨!' : '입장 링크 복사'}
+          </button>
+        </div>
       </div>
 
       {/* Player list */}

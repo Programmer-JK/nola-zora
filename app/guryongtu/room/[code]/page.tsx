@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getGuestUid } from '@/lib/auth';
-import { subscribeRoom, startGame, type OnlineRoom } from '@/lib/guryongtu/firebase-game';
+import { getGuestUid, loginGuest, getGuestNickname } from '@/lib/auth';
+import { subscribeRoom, startGame, joinRoom, type OnlineRoom } from '@/lib/guryongtu/firebase-game';
+import { QRCodeSVG } from 'qrcode.react';
 
 const ACCENT = '#ff3333';
 const ACCENT_LO = '#b51a1a';
@@ -16,6 +17,9 @@ export default function GuryongtuWaitingRoom() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [joinNickname, setJoinNickname] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
 
   const uid = getGuestUid() ?? '';
 
@@ -40,6 +44,23 @@ export default function GuryongtuWaitingRoom() {
     if (err) { setError(err); setStarting(false); }
   }, [code, uid]);
 
+  const handleJoin = useCallback(async () => {
+    const name = joinNickname.trim();
+    if (!name) { setJoinError('닉네임을 입력해 주세요'); return; }
+    if (name.length > 12) { setJoinError('12자 이내로 입력해 주세요'); return; }
+    setJoining(true);
+    setJoinError('');
+    try {
+      if (!getGuestNickname()) await loginGuest(name);
+      const currentUid = getGuestUid() ?? '';
+      const err = await joinRoom(code, currentUid, name);
+      if (err) { setJoinError(err); setJoining(false); }
+    } catch {
+      setJoinError('입장 중 오류가 발생했습니다.');
+      setJoining(false);
+    }
+  }, [code, joinNickname]);
+
   if (!room) {
     return (
       <div className="cabinet">
@@ -53,6 +74,7 @@ export default function GuryongtuWaitingRoom() {
 
   const isHost = room.hostClientId === uid;
   const canStart = isHost && room.players.length >= 2;
+  const isPlayer = room.players.some(p => p.clientId === uid);
 
   return (
     <div className="cabinet">
@@ -94,6 +116,16 @@ export default function GuryongtuWaitingRoom() {
           }}>
             {code}
           </div>
+          <div style={{ display: 'inline-block', padding: 10, borderRadius: 12, background: '#fff', marginBottom: 12, boxShadow: `0 0 18px ${ACCENT}33` }}>
+            <QRCodeSVG
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/guryongtu/room/${code}`}
+              size={120}
+              bgColor="#ffffff"
+              fgColor="#1a0000"
+              level="M"
+            />
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 12 }}>QR 스캔 또는 코드 직접 입력</p>
           <button onClick={handleCopy} className="arc-btn-ghost" style={{ fontSize: 13 }}>
             {copied ? '✓ 복사됨!' : '코드 복사'}
           </button>
@@ -153,8 +185,29 @@ export default function GuryongtuWaitingRoom() {
           </p>
         )}
 
-        {/* ── 시작 / 대기 ── */}
-        {isHost ? (
+        {/* ── 시작 / 대기 / 참가 ── */}
+        {!isPlayer ? (
+          <div className="arc-panel arc-rise" style={{ padding: '18px', marginBottom: 12 }}>
+            <span className="arc-lbl" style={{ display: 'block', marginBottom: 12, textAlign: 'center' }}>방 참가하기</span>
+            <input
+              className="arc-field"
+              style={{ textAlign: 'center', fontFamily: 'var(--f-body)', fontWeight: 700, fontSize: 18, letterSpacing: 1, marginBottom: 10 }}
+              value={joinNickname}
+              maxLength={12}
+              placeholder="닉네임 입력"
+              onChange={e => { setJoinNickname(e.target.value); setJoinError(''); }}
+            />
+            {joinError && <p style={{ color: 'var(--red)', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>{joinError}</p>}
+            <button
+              onClick={handleJoin}
+              disabled={joining || room.players.length >= 2}
+              className="arc-btn"
+              style={{ '--c': ACCENT, '--c-lo': ACCENT_LO, color: '#fff' } as React.CSSProperties}
+            >
+              {joining ? 'LOADING...' : room.players.length >= 2 ? '방이 가득 찼습니다' : '⚔️ 참가하기'}
+            </button>
+          </div>
+        ) : isHost ? (
           <button
             onClick={handleStart}
             disabled={!canStart || starting}
