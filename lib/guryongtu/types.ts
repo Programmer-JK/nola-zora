@@ -24,6 +24,7 @@ export type GameState = {
   currentRound: number;
   phase: GamePhase;
   roundResults: RoundResult[];
+  matchHistory: RoundResult[][];  // 게임별 라운드 결과 누적 (게임 종료 시 추가)
   currentGameNumber: number;
   matchWinnerId: string | null;
   firstPlayerIdx: number; // 0 or 1 — 선(攻) 플레이어

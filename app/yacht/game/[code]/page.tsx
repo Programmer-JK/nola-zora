@@ -9,7 +9,7 @@ import { loginGuest, getGuestNickname } from '@/lib/auth';
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
   yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
-  rollDie, PLAYER_COLORS,
+  rollDie, PLAYER_COLORS, yBestSuggestion,
 } from '@/lib/yacht/game-logic';
 import type { YachtCatId } from '@/lib/yacht/types';
 import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@/lib/yacht/sounds';
@@ -927,16 +927,9 @@ export default function YachtOnlineGame() {
   );
 
   /* ── suggestion ── */
-  const suggestion = (() => {
-    if (!canScore) return null;
-    let best: { id: YachtCatId; kr: string; v: number } | null = null;
-    for (const c of Y_CATS) {
-      if ((gs.playerScores[gs.turnIdx] ?? {})[c.id] !== undefined) continue;
-      const v = yScore(c.id, gs.dice);
-      if (!best || v > best.v) best = { id: c.id, kr: c.kr, v };
-    }
-    return best !== null && best.v > 0 ? best : null;
-  })();
+  const suggestion = canScore
+    ? yBestSuggestion(gs.dice, gs.playerScores[gs.turnIdx] ?? {})
+    : null;
 
   // Always use localDice for display — it's kept in sync with gs.dice when not rolling,
   // and shows the live animation values when rolling.
@@ -944,7 +937,7 @@ export default function YachtOnlineGame() {
 
   /* ── Game UI ── */
   return (
-    <div className="cabinet">
+    <div className="cabinet" style={{ height: '100dvh', overflow: 'hidden' }}>
       <div className="crt" />
 
       {/* 나가기 확인 모달 */}
@@ -1012,7 +1005,7 @@ export default function YachtOnlineGame() {
             {/* 차례 배너 */}
             <div className="arc-pop" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '11px 14px', borderRadius: 13, marginBottom: 14,
+              padding: '8px 14px', borderRadius: 13, marginBottom: 8,
               background: `color-mix(in srgb, ${me?.color ?? '#888'} 14%, var(--surface))`,
               border: `1.5px solid ${me?.color ?? '#888'}`,
             }}>
@@ -1029,9 +1022,9 @@ export default function YachtOnlineGame() {
             </div>
 
             {/* 주사위 트레이 */}
-            <div className="arc-panel ticks" style={{ padding: '18px 16px 16px', marginBottom: 16 }}>
+            <div className="arc-panel ticks" style={{ padding: '12px 16px 10px', marginBottom: 0 }}>
               {gs.rolled && !rolling && isMyTurn && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <button
                     className="arc-btn-ghost"
                     onClick={sortDice}
@@ -1058,14 +1051,14 @@ export default function YachtOnlineGame() {
                 ))}
               </div>
 
-              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 6px', minHeight: 16 }}>
                 {!gs.rolled
                   ? isMyTurn ? '🎲 굴려서 턴을 시작하세요' : '상대방 차례입니다'
                   : opponentRolling
                     ? '🎲 상대방이 굴리는 중…'
                     : gs.rollsLeft > 0
                       ? isMyTurn ? '남기고 싶은 주사위를 탭해 고정(HOLD)' : '상대방이 주사위를 고르는 중…'
-                      : isMyTurn ? '굴림 끝! 아래 점수표에서 족보를 선택하세요' : '상대방이 족보를 선택 중…'}
+                      : isMyTurn ? '굴림 끝! 점수표에서 족보를 선택하세요' : '상대방이 족보를 선택 중…'}
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1099,15 +1092,18 @@ export default function YachtOnlineGame() {
 
               {suggestion && (
                 <p className="arc-rise" style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 0' }}>
-                  💡 최고 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b>
+                  {suggestion.sacrifice
+                    ? <>💡 희생 추천 <b style={{ color: 'var(--dim)' }}>{suggestion.kr}</b></>
+                    : <>💡 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b></>
+                  }
                 </p>
               )}
             </div>
           </div>{/* /top section */}
 
           {/* 점수표 */}
-          <div className="arc-panel" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ overflow: 'auto', maxHeight: '55vh' }}>
+          <div className="arc-panel" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, overflow: 'auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: colTmpl, minWidth: 'min-content' }}>
                 {/* 헤더 — sticky top + left */}
                 <div style={{

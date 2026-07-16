@@ -454,15 +454,15 @@ export default function GuryongtuGamePage() {
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-            {/* 상대 슬롯 */}
+            {/* 상대 슬롯 — 숫자 비공개 */}
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--dim)', marginBottom: 8 }}>상대방</div>
               <PixelTile
-                value={isRevealing ? oppCommittedTile : null}
-                faceDown={!isRevealing && oppCommittedTile !== null}
+                value={null}
+                faceDown={oppCommittedTile !== null}
                 size="lg"
               />
-              {oppCommittedTile !== null && !isRevealing && (
+              {oppCommittedTile !== null && (
                 <div style={{
                   marginTop: 6,
                   fontFamily: 'var(--f-kr)', fontSize: 12, fontWeight: 700,
@@ -502,15 +502,25 @@ export default function GuryongtuGamePage() {
               )}
             </div>
 
-            {/* 내 슬롯 */}
+            {/* 내 슬롯 — revealing 시 숫자 비공개 */}
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: 'var(--f-kr)', fontSize: 11, color: 'var(--dim)', marginBottom: 8 }}>나</div>
               <PixelTile
-                value={isRevealing ? myCommittedTile : myDisplayTile}
-                faceDown={false}
+                value={isRevealing ? null : myDisplayTile}
+                faceDown={isRevealing && myCommittedTile !== null}
                 selected={!isRevealing && myDisplayTile !== null}
                 size="lg"
               />
+              {isRevealing && myCommittedTile !== null && (
+                <div style={{
+                  marginTop: 6,
+                  fontFamily: 'var(--f-kr)', fontSize: 12, fontWeight: 700,
+                  color: myCommittedTile % 2 !== 0 ? '#aaaacc' : '#ccccaa',
+                  textShadow: myCommittedTile % 2 !== 0 ? '0 0 6px #aaaacc88' : '0 0 6px #ccccaa88',
+                }}>
+                  {myCommittedTile % 2 !== 0 ? '흑(黑)' : '백(白)'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -607,6 +617,7 @@ export default function GuryongtuGamePage() {
             gs={gs}
             uid={uid}
             myColor={myColor}
+            myIdx={myIdx}
             onRestart={() => restartMatch(code)}
           />
         )}
@@ -676,13 +687,15 @@ function PlayerPanel({
 
 // ── 게임 오버 ────────────────────────────────────────────────
 function GameOverPanel({
-  gs, uid, myColor, onRestart,
+  gs, uid, myColor, myIdx, onRestart,
 }: {
-  gs: GameState; uid: string; myColor: string; onRestart: () => void;
+  gs: GameState; uid: string; myColor: string; myIdx: number; onRestart: () => void;
 }) {
   const iWon = gs.matchWinnerId === uid;
   const p0 = gs.players[0];
   const p1 = gs.players[1];
+  const myName = myIdx !== -1 ? gs.players[myIdx].name : '';
+  const oppName = myIdx !== -1 ? gs.players[myIdx === 0 ? 1 : 0].name : '';
 
   return (
     <div style={{ padding: '0 12px', marginTop: 8 }}>
@@ -717,6 +730,73 @@ function GameOverPanel({
             </div>
           ))}
         </div>
+
+        {/* ── 전체 숫자 공개 ─── */}
+        {gs.matchHistory && gs.matchHistory.length > 0 && (
+          <div style={{
+            marginBottom: 18,
+            background: 'rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 6, padding: '12px 10px',
+            textAlign: 'left',
+          }}>
+            <div style={{
+              fontFamily: 'var(--f-kr)', fontSize: 12, fontWeight: 700,
+              color: 'var(--gold)', marginBottom: 10, textAlign: 'center',
+            }}>
+              📜 매치 전체 기록 공개
+            </div>
+            {gs.matchHistory.map((gameResults, gi) => {
+              const myResults = myIdx !== -1
+                ? gameResults.map(r => ({ ...r, myTile: myIdx === 0 ? r.p0Tile : r.p1Tile, oppTile: myIdx === 0 ? r.p1Tile : r.p0Tile, iWon: (myIdx === 0 ? r.outcome === 'p0' : r.outcome === 'p1') }))
+                : gameResults.map(r => ({ ...r, myTile: r.p0Tile, oppTile: r.p1Tile, iWon: r.outcome === 'p0' }));
+              return (
+                <div key={gi} style={{ marginBottom: gi < gs.matchHistory.length - 1 ? 10 : 0 }}>
+                  <div style={{
+                    fontFamily: 'var(--f-pix)', fontSize: 9,
+                    color: 'rgba(255,255,255,0.35)', marginBottom: 5,
+                  }}>
+                    GAME {gi + 1}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {myResults.map((r, ri) => {
+                      const outcomeColor = r.outcome === 'draw' ? 'var(--gold)' : r.iWon ? myColor : (myIdx === 0 ? BLUE : RED);
+                      const outcomeText = r.outcome === 'draw' ? 'DRAW' : r.iWon ? 'WIN' : 'LOSE';
+                      return (
+                        <div key={ri} style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '3px 6px', borderRadius: 4,
+                          background: 'rgba(255,255,255,0.03)',
+                        }}>
+                          <span style={{ fontFamily: 'var(--f-pix)', fontSize: 8, color: 'rgba(255,255,255,0.3)', width: 16 }}>R{r.round}</span>
+                          <span style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'rgba(255,255,255,0.5)', width: 44 }}>{myName.slice(0, 4)}</span>
+                          <span style={{
+                            fontFamily: 'var(--f-pix)', fontSize: 14, fontWeight: 700,
+                            color: myColor, width: 18, textAlign: 'center',
+                            textShadow: `0 0 6px ${myColor}88`,
+                          }}>{r.myTile}</span>
+                          <span style={{ fontFamily: 'var(--f-kr)', fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>vs</span>
+                          <span style={{
+                            fontFamily: 'var(--f-pix)', fontSize: 14, fontWeight: 700,
+                            color: myIdx === 0 ? BLUE : RED, width: 18, textAlign: 'center',
+                            textShadow: `0 0 6px ${myIdx === 0 ? BLUE : RED}88`,
+                          }}>{r.oppTile}</span>
+                          <span style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'rgba(255,255,255,0.5)', width: 44, textAlign: 'right' }}>{oppName.slice(0, 4)}</span>
+                          <span style={{
+                            fontFamily: 'var(--f-pix)', fontSize: 9,
+                            color: outcomeColor, marginLeft: 2,
+                            textShadow: `0 0 4px ${outcomeColor}`,
+                          }}>{outcomeText}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <button
           onClick={onRestart}
           className="arc-btn"

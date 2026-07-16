@@ -29,6 +29,7 @@ export function createGame(
     currentRound: 1,
     phase: 'selecting',
     roundResults: [],
+    matchHistory: [],
     currentGameNumber: 1,
     matchWinnerId: null,
     firstPlayerIdx: Math.random() < 0.5 ? 0 : 1, // 1라운드 선 플레이어 랜덤 결정
@@ -78,11 +79,14 @@ export function resolveRound(state: GameState): GameState {
     const gw1 = updatedPlayers[1].gameWins;
     const matchWinner = gw0 >= 2 ? updatedPlayers[0].id : gw1 >= 2 ? updatedPlayers[1].id : null;
 
+    const updatedMatchHistory = [...(state.matchHistory ?? []), roundResults];
+
     if (matchWinner) {
       return {
         ...state,
         players: updatedPlayers,
         roundResults,
+        matchHistory: updatedMatchHistory,
         phase: 'match-over',
         matchWinnerId: matchWinner,
         firstPlayerIdx: nextFirstPlayerIdx,
@@ -103,6 +107,7 @@ export function resolveRound(state: GameState): GameState {
       currentRound: 1,
       phase: 'selecting',
       roundResults: [],
+      matchHistory: updatedMatchHistory,
       currentGameNumber: state.currentGameNumber + 1,
       matchWinnerId: null,
       firstPlayerIdx: Math.random() < 0.5 ? 0 : 1,

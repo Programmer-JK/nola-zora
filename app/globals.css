@@ -197,6 +197,71 @@ body {
   }
 }
 
+/* ── Race game animations ── */
+
+/* LIVE badge pulse */
+@keyframes race-live-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px #cc002288; }
+  50%       { opacity: 0.65; box-shadow: 0 0 3px #cc002244; }
+}
+.race-live { animation: race-live-pulse 1.2s ease-in-out infinite; }
+
+/* Countdown number pop */
+@keyframes race-countdown {
+  0%   { transform: scale(2.5); opacity: 0; }
+  25%  { transform: scale(1.05); opacity: 1; }
+  80%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+.race-countdown { animation: race-countdown 0.85s ease-out forwards; }
+
+/* GO! burst */
+@keyframes race-go {
+  0%   { transform: scale(0.5); opacity: 0; letter-spacing: 8px; }
+  40%  { transform: scale(1.15); opacity: 1; letter-spacing: 12px; }
+  100% { transform: scale(1); opacity: 1; letter-spacing: 10px; }
+}
+.race-go { animation: race-go 0.5s ease-out forwards; }
+
+/* Rank ticker — top-3 card gold glow pulse */
+@keyframes race-rank-glow {
+  0%, 100% { box-shadow: 0 0 6px #f5c54244; }
+  50%       { box-shadow: 0 0 14px #f5c54299; }
+}
+.race-rank-top { animation: race-rank-glow 1.8s ease-in-out infinite; }
+
+/* Timer urgent shake */
+@keyframes race-timer-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-2px); }
+  40%       { transform: translateX(2px); }
+  60%       { transform: translateX(-1px); }
+  80%       { transform: translateX(1px); }
+}
+.race-timer-urgent { animation: race-timer-shake 0.4s ease-in-out infinite; }
+
+/* Bet button flash */
+@keyframes race-bet-flash {
+  0%   { filter: brightness(1); }
+  30%  { filter: brightness(2.5); }
+  100% { filter: brightness(1); }
+}
+.race-bet-flash { animation: race-bet-flash 0.25s ease-out; }
+
+/* Settlement result pop-in */
+@keyframes race-result-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.race-result-in { animation: race-result-in 0.4s ease-out both; }
+
+/* Finish banner glow pulse */
+@keyframes race-finish-glow {
+  0%, 100% { box-shadow: 0 0 30px #f5c54244; }
+  50%       { box-shadow: 0 0 60px #f5c54277; }
+}
+.race-finish { animation: race-finish-glow 1.5s ease-in-out infinite; }
+
 /* ── Neon helpers ── */
 .neon-gold {
   color: var(--gold);

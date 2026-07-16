@@ -40,6 +40,7 @@ export function sanitizeGameState(raw: unknown): GameState {
     ...gs,
     players: [sanitizePlayer(gs.players[0]), sanitizePlayer(gs.players[1])],
     roundResults: toArr(gs.roundResults),
+    matchHistory: toArr(gs.matchHistory ?? []).map(g => toArr(g)),
     matchWinnerId: gs.matchWinnerId ?? null,
     firstPlayerIdx: gs.firstPlayerIdx ?? 0,
   };

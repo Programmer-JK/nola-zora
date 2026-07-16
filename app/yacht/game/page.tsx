@@ -7,7 +7,7 @@ import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
   yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
-  rollDie,
+  rollDie, yBestSuggestion,
 } from '@/lib/yacht/game-logic';
 import type { YachtPlayer, YachtCatId, PlayerSetup } from '@/lib/yacht/types';
 
@@ -313,16 +313,7 @@ function YachtGame({ players: initPlayers, onQuit }: {
   };
 
   /* best suggestion */
-  const suggestion = ((): { id: YachtCatId; kr: string; v: number } | null => {
-    if (!canScore) return null;
-    let best: { id: YachtCatId; kr: string; v: number } | null = null;
-    for (const c of Y_CATS) {
-      if (me.scores[c.id] !== undefined) continue;
-      const v = yScore(c.id, dice);
-      if (!best || v > best.v) best = { id: c.id, kr: c.kr, v };
-    }
-    return best !== null && best.v > 0 ? best : null;
-  })();
+  const suggestion = canScore ? yBestSuggestion(dice, me.scores) : null;
 
   /* ── Result screen ── */
   if (result) {
@@ -550,7 +541,7 @@ function YachtGame({ players: initPlayers, onQuit }: {
 
   /* ── Game UI ── */
   return (
-    <div className="cabinet">
+    <div className="cabinet" style={{ height: '100dvh', overflow: 'hidden' }}>
       <div className="crt" />
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 640, flex: 1, position: 'relative', zIndex: 1 }}>
 
@@ -579,11 +570,11 @@ function YachtGame({ players: initPlayers, onQuit }: {
           </button>
         </header>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '14px 12px 24px' }}>
+        <div style={{ flexShrink: 0, padding: '10px 12px 0' }}>
           {/* Turn banner */}
           <div className="arc-pop" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '11px 14px', borderRadius: 13, marginBottom: 14,
+            padding: '8px 14px', borderRadius: 13, marginBottom: 8,
             background: `color-mix(in srgb, ${me.color} 14%, var(--surface))`,
             border: `1.5px solid ${me.color}`,
           }}>
@@ -597,10 +588,10 @@ function YachtGame({ players: initPlayers, onQuit }: {
           </div>
 
           {/* Dice tray */}
-          <div className="arc-panel ticks" style={{ padding: '18px 16px 16px', marginBottom: 16 }}>
+          <div className="arc-panel ticks" style={{ padding: '12px 16px 10px', marginBottom: 0 }}>
             {/* Mode toggle + sort */}
             {rolled && !rolling && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 {/* <div className="arc-seg" style={{ flex: 1 }}>
                 <button
                   className={mode === 'hold' ? 'on' : ''}
@@ -647,12 +638,12 @@ function YachtGame({ players: initPlayers, onQuit }: {
               ))}
             </div>
 
-            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '18px 0 12px', minHeight: 16 }}>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 6px', minHeight: 16 }}>
               {!rolled
                 ? '🎲 굴려서 턴을 시작하세요'
                 : rollsLeft > 0
                   ? '남기고 싶은 주사위를 탭해 고정(HOLD)'
-                  : '굴림 끝! 아래 점수표에서 족보를 선택하세요'}
+                  : '굴림 끝! 점수표에서 족보를 선택하세요'}
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -681,17 +672,20 @@ function YachtGame({ players: initPlayers, onQuit }: {
 
             {suggestion && (
               <p className="arc-rise" style={{ textAlign: 'center', fontSize: 11, color: 'var(--dim)', margin: '8px 0 0' }}>
-                💡 최고 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b>
+                {suggestion.sacrifice
+                  ? <>💡 희생 추천 <b style={{ color: 'var(--dim)' }}>{suggestion.kr}</b></>
+                  : <>💡 추천 <b style={{ color: ACCENT }}>{suggestion.kr} +{suggestion.v}</b></>
+                }
               </p>
             )}
 
           </div>
         </div>{/* /top section */}
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '0 12px 24px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '8px 12px 24px' }}>
           {/* Scoresheet */}
           <div className="arc-panel" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ overflow: 'auto', maxHeight: '55vh' }}>
+            <div style={{ overflow: 'auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: colTmpl, minWidth: 'min-content' }}>
                 {/* Header row — sticky top + left */}
                 <div style={{
