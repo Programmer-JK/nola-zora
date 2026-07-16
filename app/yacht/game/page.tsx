@@ -6,7 +6,7 @@ import { useSoundEnabled } from '@/hooks/useSoundEnabled';
 import { playDiceRattle, playDiceLand, playScoreCommit, playHoldToggle } from '@/lib/yacht/sounds';
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
-  yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
+  yScore, yUpperSum, yLowerSum, yTotal, yFilled,
   rollDie, yBestSuggestion,
 } from '@/lib/yacht/game-logic';
 import type { YachtPlayer, YachtCatId, PlayerSetup } from '@/lib/yacht/types';

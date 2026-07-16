@@ -8,7 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { loginGuest, getGuestNickname } from '@/lib/auth';
 import {
   Y_CATS, Y_UPPER, Y_LOWER,
-  yScore, yUpperSum, yUpperBonus, yLowerSum, yTotal, yFilled,
+  yScore, yUpperSum, yLowerSum, yTotal,
   rollDie, PLAYER_COLORS, yBestSuggestion,
 } from '@/lib/yacht/game-logic';
 import type { YachtCatId } from '@/lib/yacht/types';

@@ -125,9 +125,10 @@ export function yBestSuggestion(
   if (best) return { id: best.id, kr: best.kr, v: best.v };
 
   // 득점 가능 칸 없음 → 희생 추천 (가치 낮은 칸부터)
+  // ※ choice는 항상 v>0이므로 여기 도달 시 이미 사용된 상태
   const sacrificeOrder: YachtCatId[] = [
     'ones', 'twos', 'threes', 'fours', 'fives', 'sixes',
-    'choice', 'fullh', 'fourk', 'sstr', 'bstr', 'yacht',
+    'fullh', 'fourk', 'sstr', 'bstr', 'yacht',
   ];
   for (const id of sacrificeOrder) {
     const cat = available.find(c => c.id === id);
