@@ -72,6 +72,71 @@ export const yFilled = (scores: Partial<Record<YachtCatId, number>>) =>
 
 export const rollDie = () => 1 + Math.floor(Math.random() * 6);
 
+export type YachtSuggestion = { id: YachtCatId; kr: string; v: number; sacrifice?: boolean };
+
+/**
+ * 현재 주사위 상태에 대한 전략적 최선의 추천을 반환합니다.
+ * - 희귀 조합(야추, 스트레이트 등)에 전략적 가중치 부여
+ * - 상단 보너스(63점 이상 → +35점) 달성 가능성 반영
+ * - 득점 불가 시 가장 희생하기 적절한 칸 추천
+ */
+export function yBestSuggestion(
+  dice: number[],
+  scores: Partial<Record<YachtCatId, number>>,
+): YachtSuggestion | null {
+  if (!dice || dice.length < 5) return null;
+
+  const available = Y_CATS.filter(c => scores[c.id] === undefined);
+  if (available.length === 0) return null;
+
+  // 상단 보너스 추적
+  const upperCurrentTotal = Y_UPPER.reduce((sum, c) => sum + (scores[c.id] ?? 0), 0);
+  const upperRemaining = Y_UPPER.filter(c => scores[c.id] === undefined);
+  const maxUpperRemaining = upperRemaining.reduce((sum, c) => sum + (c.face! * 5), 0);
+  const bonusSecured = upperCurrentTotal >= 63;
+  const bonusPossible = upperCurrentTotal + maxUpperRemaining >= 63;
+
+  let best: { id: YachtCatId; kr: string; v: number; strategic: number } | null = null;
+
+  for (const cat of available) {
+    const v = yScore(cat.id, dice);
+    if (v === 0) continue;
+
+    let strategic = v;
+
+    switch (cat.id) {
+      case 'yacht': strategic += 60; break;  // 50→110 · 극히 희귀, 반드시 사용
+      case 'bstr':  strategic += 25; break;  // 30→55  · 매우 희귀한 고정 점수
+      case 'sstr':  strategic += 10; break;  // 15→25  · 희귀한 고정 점수
+      case 'fullh': strategic += 8;  break;  // 중간 희귀도
+      case 'fourk': strategic += 3;  break;  // 약간 희귀
+      default:
+        if (cat.sec === 'upper' && !bonusSecured && bonusPossible) {
+          // 보너스 달성 가능 시 상단 점수는 약 1.56배 효과
+          strategic += Math.round(v * 35 / 63);
+        }
+    }
+
+    if (!best || strategic > best.strategic) {
+      best = { id: cat.id, kr: cat.kr, v, strategic };
+    }
+  }
+
+  if (best) return { id: best.id, kr: best.kr, v: best.v };
+
+  // 득점 가능 칸 없음 → 희생 추천 (가치 낮은 칸부터)
+  const sacrificeOrder: YachtCatId[] = [
+    'ones', 'twos', 'threes', 'fours', 'fives', 'sixes',
+    'choice', 'fullh', 'fourk', 'sstr', 'bstr', 'yacht',
+  ];
+  for (const id of sacrificeOrder) {
+    const cat = available.find(c => c.id === id);
+    if (cat) return { id: cat.id, kr: cat.kr, v: 0, sacrifice: true };
+  }
+
+  return null;
+}
+
 export const PLAYER_COLORS = [
   { id: 'red',    hex: '#ef4444' },
   { id: 'blue',   hex: '#3b82f6' },
