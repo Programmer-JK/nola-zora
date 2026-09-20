@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RACE GAME — 배당 · 기대값 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Galmuri11:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0b0a17;--bg2:#0f0d21;--panel:#181433;--panel2:#211b45;--navy:#15223f;--navy2:#1d2f56;
+  --purple:#7a5cf0;--purple-dim:#5a3fb8;--purple-deep:#3a2a78;--gold:#f5c542;--gold-dim:#c99a2e;
+  --ink:#ece9ff;--muted:#9a92c4;--muted2:#6f679a;--line:#3a3168;--black:#050410;
+  --good:#4fd88a;--bad:#ff5d6c;--info:#57c7ff;--shadow:6px 6px 0 0 rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1100px 560px at 82% -10%,rgba(122,92,240,.14),transparent 60%),var(--bg);
+  color:var(--ink);font-family:'VT323','Galmuri11',ui-monospace,monospace;font-size:19px;line-height:1.5;
+  -webkit-font-smoothing:none;image-rendering:pixelated}
+::selection{background:var(--gold);color:var(--black)}
+h1,h2,h3,.pix{font-family:'Press Start 2P',monospace;line-height:1.35;-webkit-font-smoothing:none}
+a{color:var(--gold)}
+::-webkit-scrollbar{width:12px;height:12px}::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--purple-deep);border:3px solid var(--bg2)}
+
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:16px;padding:14px 20px;
+  background:linear-gradient(180deg,#120f28,#0c0a1c);border-bottom:4px solid var(--black);
+  box-shadow:0 4px 0 0 var(--purple-deep),0 8px 0 0 var(--black)}
+.logo-badge{width:42px;height:42px;flex:none;background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:var(--black);
+  display:grid;place-items:center;font-family:'Press Start 2P';font-size:16px;
+  clip-path:polygon(0 8px,8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px));
+  box-shadow:inset -3px -3px 0 rgba(0,0,0,.35),inset 3px 3px 0 rgba(255,255,255,.4)}
+.topbar h1{font-size:15px;margin:0;color:var(--gold);text-shadow:2px 2px 0 var(--black)}
+.topbar p{margin:3px 0 0;font-size:15px;color:var(--muted)}
+.topbar .spacer{flex:1}
+.backlink{font-family:'Press Start 2P';font-size:9px;padding:9px 11px;background:var(--navy);border:2px solid var(--navy2);color:var(--info);text-decoration:none}
+
+.wrap{max-width:1240px;margin:0 auto;padding:22px 22px 120px}
+.panel{background:linear-gradient(180deg,var(--panel),var(--bg2));border:3px solid var(--black);padding:18px 20px;margin:0 0 18px;
+  box-shadow:inset 0 0 0 2px var(--line),var(--shadow);
+  clip-path:polygon(0 8px,8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px))}
+.panel h2{font-size:13px;margin:0 0 14px;color:var(--gold);text-shadow:2px 2px 0 var(--black);display:flex;align-items:center;gap:10px}
+.panel h2 .n{font-size:11px;color:var(--black);background:var(--purple);padding:6px 8px}
+.panel h3{font-size:11px;margin:16px 0 10px;color:var(--info)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.muted{color:var(--muted)}.small{font-size:16px}
+
+/* controls */
+.ctrl{margin-bottom:14px}
+.ctrl label{font-family:'Press Start 2P';font-size:9px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:8px}
+.ctrl label b{color:var(--gold)}
+select,input[type=number]{width:100%;font-family:'VT323';font-size:19px;background:var(--black);color:var(--ink);
+  border:2px solid var(--line);padding:8px 10px}
+select:focus,input:focus{outline:none;border-color:var(--purple)}
+input[type=range]{width:100%;-webkit-appearance:none;height:14px;background:var(--black);border:2px solid var(--line);padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:20px;background:var(--gold);border:2px solid var(--black);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:20px;background:var(--gold);border:2px solid var(--black);cursor:pointer}
+.btn{font-family:'Press Start 2P';font-size:10px;padding:12px 14px;cursor:pointer;color:var(--black);
+  background:linear-gradient(135deg,var(--gold),var(--gold-dim));border:2px solid var(--black);width:100%;
+  box-shadow:inset -2px -2px 0 rgba(0,0,0,.3),inset 2px 2px 0 rgba(255,255,255,.35),3px 3px 0 rgba(0,0,0,.5)}
+.btn:active{transform:translate(2px,2px);box-shadow:inset -2px -2px 0 rgba(0,0,0,.3)}
+.btn.sec{background:var(--navy);color:var(--info);box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .s{font-family:'Press Start 2P';font-size:9px;padding:9px 11px;cursor:pointer;background:var(--navy);border:2px solid var(--navy2);color:var(--muted)}
+.seg .s.on{background:var(--purple-deep);border-color:var(--purple);color:var(--gold)}
+
+/* table */
+.tbl-wrap{overflow-x:auto;border:3px solid var(--black);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:640px;background:var(--bg2)}
+th,td{padding:9px 10px;border:1px solid var(--line);font-size:17px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+th{font-family:'Press Start 2P';font-size:8px;color:var(--gold);background:var(--navy);cursor:pointer;user-select:none}
+th.sorted{color:var(--info)}
+tbody tr:nth-child(even){background:rgba(122,92,240,.05)}
+tbody tr:hover{background:rgba(245,197,66,.08)}
+tbody tr.sel{background:rgba(87,199,255,.14)!important;box-shadow:inset 3px 0 0 var(--info)}
+.num{font-family:'Press Start 2P';font-size:10px}
+.pos{color:var(--good)}.neg{color:var(--bad)}
+.val-tag{font-family:'Press Start 2P';font-size:8px;padding:4px 6px;border:2px solid}
+.val-tag.value{color:var(--good);border-color:#2e7d54;background:rgba(79,216,138,.12)}
+.val-tag.trap{color:var(--bad);border-color:#8a3540;background:rgba(255,93,108,.12)}
+.val-tag.fair{color:var(--muted2);border-color:var(--muted2)}
+.avatar{display:inline-grid;place-items:center;width:26px;height:26px;border:2px solid var(--black);margin-right:8px;font-size:15px;vertical-align:middle}
+
+.stat-mini{display:inline-flex;gap:3px;vertical-align:middle}
+.stat-mini i{display:block;width:5px;background:var(--purple);image-rendering:pixelated}
+
+.kpi{display:flex;gap:12px;flex-wrap:wrap}
+.kpi .box{flex:1;min-width:120px;background:var(--panel2);border:2px solid var(--line);padding:12px 14px;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.05),3px 3px 0 rgba(0,0,0,.4)}
+.kpi .k{font-family:'Press Start 2P';font-size:8px;color:var(--muted);display:block;margin-bottom:8px}
+.kpi .v{font-family:'Press Start 2P';font-size:15px;color:var(--gold)}
+.kpi .v.pos{color:var(--good)}.kpi .v.neg{color:var(--bad)}
+
+canvas{width:100%;display:block;image-rendering:auto;background:var(--black);border:2px solid var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.legend .li{font-size:15px;display:flex;align-items:center;gap:5px;cursor:pointer;padding:2px 6px;border:1px solid transparent}
+.legend .li.on{border-color:var(--gold)}
+.legend .sw{width:16px;height:8px;display:inline-block}
+
+.note{border-left:6px solid var(--gold);background:rgba(245,197,66,.07);padding:12px 16px;margin:0 0 16px;font-size:18px}
+.note.info{border-color:var(--info);background:rgba(87,199,255,.07)}
+.note.good{border-color:var(--good);background:rgba(79,216,138,.07)}
+.note b{color:var(--gold)}
+.chip{font-family:'Press Start 2P';font-size:8px;padding:6px 8px;background:var(--navy);border:2px solid var(--navy2);color:var(--ink);margin-right:4px}
+.chip.good{color:var(--good);border-color:#2e7d54}.chip.bad{color:var(--bad);border-color:#8a3540}.chip.gold{color:var(--gold);border-color:var(--gold-dim)}
+
+@media(max-width:900px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo-badge">σ</div>
+  <div><h1>배당 · 기대값 시뮬레이터</h1><p>RACE GAME · Odds & EV Sandbox</p></div>
+  <div class="spacer"></div>
+  <a class="backlink" href="Race Game GDD.html">◂ GDD</a>
+</header>
+
+<div class="wrap">
+
+  <div class="note info"><b>이 도구는 무엇인가.</b> 게임의 재미 절반은 숫자에 있습니다. 이 샌드박스는 <b>시장 배당(하우스의 불완전한 라인)</b> 과 <b>실제 승률(몬테카를로 시뮬)</b> 을 나란히 계산해, 어디에 <span class="chip good">+EV 밸류</span> 와 <span class="chip bad">함정</span> 이 생기는지 보여줍니다. 슬라이더를 돌려 밸런스가 어떻게 무너지고 살아나는지 직접 확인하세요.</div>
+
+  <!-- SETUP -->
+  <div class="panel">
+    <h2><span class="n">01</span> RACE SETUP · 조건 설정</h2>
+    <div class="grid g4">
+      <div class="ctrl"><label>트랙 <b id="trackInfo"></b></label><select id="track"></select></div>
+      <div class="ctrl"><label>날씨 <b id="wxInfo"></b></label><select id="weather"></select></div>
+      <div class="ctrl"><label>거리 <b id="distV">2.4 km</b></label><input type="range" id="dist" min="1.8" max="3.0" step="0.1" value="2.4" /></div>
+      <div class="ctrl"><label>시드 <b>SEED</b></label><input type="number" id="seed" value="1234" /></div>
+    </div>
+    <h3>▶ 밸런스 튜닝 (여기가 게임의 생사를 가른다)</h3>
+    <div class="grid g4">
+      <div class="ctrl"><label>하우스 마진 <b id="marginV">12%</b></label><input type="range" id="margin" min="0" max="25" step="1" value="12" /></div>
+      <div class="ctrl"><label>변동성(노이즈) <b id="noiseV">18%</b></label><input type="range" id="noise" min="0" max="45" step="1" value="18" /></div>
+      <div class="ctrl"><label>이벤트 발생률 <b id="eventV">15%</b></label><input type="range" id="event" min="0" max="40" step="1" value="15" /></div>
+      <div class="ctrl"><label>MC 샘플 <b id="nV">500</b></label><input type="range" id="nsamp" min="150" max="1500" step="50" value="500" /></div>
+    </div>
+    <div class="grid g2" style="margin-top:6px">
+      <button class="btn" id="run">▶ 시뮬레이션 실행</button>
+      <button class="btn sec" id="reseed">⟳ 새 시드로 레이스 리롤</button>
+    </div>
+  </div>
+
+  <!-- FIELD -->
+  <div class="panel">
+    <h2><span class="n">02</span> FIELD · 사전 배당 & 밸류</h2>
+    <div class="note small">각 열 헤더를 눌러 정렬하세요. <b>실제승률</b>(MC 시뮬)이 <b>시장 암시확률</b>(하우스 라인)보다 높으면 저평가 → <span class="chip good">VALUE</span>. 행을 클릭하면 아래 차트·EV 계산기에 반영됩니다. 하우스 라인은 트랙 적성까지만 반영하고 <b>날씨·약점·패시브를 놓치므로</b>, 조건을 읽는 사람만 밸류를 잡습니다.</div>
+    <div class="tbl-wrap"><table id="fieldTable">
+      <thead><tr>
+        <th class="l" data-k="name">캐릭터</th>
+        <th data-k="rating">지표</th>
+        <th data-k="trueP">실제승률</th>
+        <th data-k="mktOdds">시장배당</th>
+        <th data-k="impP">암시확률</th>
+        <th data-k="ev" class="sorted">EV(100)</th>
+        <th data-k="edge">엣지</th>
+        <th class="l" data-k="tag">판정</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="muted small" style="margin-top:10px">EV(100) = 100 Chip 단승 베팅의 기대손익. <span class="pos">양수(초록)</span> = 장기적으로 이득인 베팅, <span class="neg">음수(빨강)</span> = 손해. 엣지 = 실제승률 − 암시확률.</p>
+  </div>
+
+  <!-- POSITION CHART -->
+  <div class="panel">
+    <h2><span class="n">03</span> RACE PROGRESSION · 순위 흐름 (현재 시드)</h2>
+    <div class="note small">선택한 시드의 대표 레이스에서 체크포인트별 순위 변화입니다. <b>초반 리드형</b>은 위에서 시작해 처지고, <b>스태미나·스퍼트형</b>은 후반에 치고 올라옵니다 — 이 교차가 라이브 베팅 밸류의 원천.</div>
+    <canvas id="posChart" width="1120" height="360"></canvas>
+    <div class="legend" id="posLegend"></div>
+  </div>
+
+  <!-- LIVE ODDS -->
+  <div class="panel">
+    <h2><span class="n">04</span> LIVE BET EXPLORER · 라이브 배당 밸류</h2>
+    <div class="ctrl" style="max-width:420px"><label>체크포인트 <b>라이브 베팅 시점</b></label>
+      <div class="seg" id="cpSeg">
+        <span class="s on" data-cp="1">CP1 (0:35)</span>
+        <span class="s" data-cp="2">CP2 (1:10)</span>
+        <span class="s" data-cp="3">CP3 (1:50)</span>
+      </div>
+    </div>
+    <div class="note small">라이브 배당은 <b>모든 캐릭터</b>에 열리되 순위에 반비례합니다. 하우스의 라이브 라인은 <b>현재 순위와 잔여거리만</b> 봅니다 — 뒤처졌지만 <b>후반 스태미나가 강한</b> 캐릭터는 실제 역전 확률이 라인보다 높아 <span class="chip good">역전 밸류</span>가 터집니다. 그게 "하위권 라이브로 판 뒤집기"의 수학적 근거.</div>
+    <div class="tbl-wrap"><table id="liveTable">
+      <thead><tr>
+        <th class="l">현재순위</th><th class="l">캐릭터</th>
+        <th>라이브배당</th><th>실제 역전확률</th><th>공정배당</th><th>EV(100)</th><th class="l">판정</th>
+      </tr></thead><tbody></tbody>
+    </table></div>
+    <h3 style="margin-top:18px">▶ 선택 캐릭터의 라이브 배당 곡선 (CP1 → CP3)</h3>
+    <div class="note small">시장 배당(골드)과 공정 배당(=1/실제확률, 파랑)의 간격이 <b>밸류의 크기</b>입니다. 골드가 파랑보다 위(=더 후하게 쳐줌)면 그 시점 베팅이 이득.</div>
+    <canvas id="oddsChart" width="1120" height="300"></canvas>
+    <div class="legend"><span class="li on"><span class="sw" style="background:var(--gold)"></span>시장 라이브 배당</span><span class="li on"><span class="sw" style="background:var(--info)"></span>공정 배당(1/실제확률)</span></div>
+  </div>
+
+  <!-- EV CALC -->
+  <div class="panel">
+    <h2><span class="n">05</span> EV CALCULATOR · 베팅 기대값 계산기</h2>
+    <div class="grid g4">
+      <div class="ctrl"><label>캐릭터</label><select id="evChar"></select></div>
+      <div class="ctrl"><label>베팅 종류</label><select id="evType">
+        <option value="win">단승 (1위)</option>
+        <option value="place">복승 (3위 내)</option>
+        <option value="live">라이브 (선택 CP)</option>
+      </select></div>
+      <div class="ctrl"><label>베팅액 <b id="evAmtV">100</b></label><input type="range" id="evAmt" min="10" max="700" step="10" value="100" /></div>
+      <div class="ctrl" id="evCpWrap" style="display:none"><label>라이브 CP</label><select id="evCp"><option value="1">CP1</option><option value="2">CP2</option><option value="3">CP3</option></select></div>
+    </div>
+    <div class="kpi" style="margin-top:6px">
+      <div class="box"><span class="k">실제 확률</span><span class="v" id="kProb">–</span></div>
+      <div class="box"><span class="k">배당</span><span class="v" id="kOdds">–</span></div>
+      <div class="box"><span class="k">적중 시 지급</span><span class="v" id="kPay">–</span></div>
+      <div class="box"><span class="k">기대손익 EV</span><span class="v" id="kEv">–</span></div>
+      <div class="box"><span class="k">판정</span><span class="v" id="kVerdict">–</span></div>
+    </div>
+    <p class="muted small" style="margin-top:10px" id="evExplain"></p>
+  </div>
+
+  <div class="note good"><b>설계 검증 팁.</b> ① 마진을 0%로 내리면 시장이 완벽해져 밸류가 사라짐 → 마진과 "하우스가 놓치는 정보"가 클수록 실력 여지가 커진다. ② 노이즈를 40%로 올리면 실제승률이 균등해지며 "운 게임"이 됨 → 예측이 무의미. ③ 노이즈를 0%로 내리면 결과가 고정되어 "너무 뻔한 게임"이 됨. <b>재미는 이 두 극단 사이의 좁은 밴드에 있습니다.</b> 슬라이더로 그 밴드를 찾아보세요.</div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const CHARS=[
+ {id:'bolt',e:'⚡',n:'볼트',c:'#57c7ff',s:{SPD:8,ACC:10,STA:5,LCK:6,TEC:7},favT:['city','space'],favW:['clear','thunder'],weakT:[],weakW:[],pass:'start'},
+ {id:'ember',e:'🔥',n:'엠버',c:'#ff7a3c',s:{SPD:7,ACC:6,STA:8,LCK:5,TEC:6},favT:['volcano','desert'],favW:['heat','clear'],weakT:['ice'],weakW:['snow'],pass:null},
+ {id:'frosty',e:'❄️',n:'프로스티',c:'#a7e8ff',s:{SPD:9,ACC:7,STA:6,LCK:4,TEC:8},favT:['ice','sky'],favW:['snow','fog'],weakT:['volcano'],weakW:[],pass:null},
+ {id:'sage',e:'🌿',n:'세이지',c:'#7bd88a',s:{SPD:6,ACC:5,STA:10,LCK:6,TEC:7},favT:['forest','swamp'],favW:['rain','fog'],weakT:['ice'],weakW:[],pass:'spurt'},
+ {id:'dune',e:'🏜️',n:'듄',c:'#f5c542',s:{SPD:7,ACC:7,STA:8,LCK:5,TEC:6},favT:['desert','cave'],favW:['sand','heat'],weakT:[],weakW:['rain','snow'],pass:null},
+ {id:'nova',e:'🌌',n:'노바',c:'#b56bff',s:{SPD:8,ACC:8,STA:6,LCK:8,TEC:5},favT:['space','sky'],favW:['clear','rainbow'],weakT:['swamp','cave'],weakW:[],pass:'luck'},
+ {id:'mudd',e:'🐸',n:'머드',c:'#a6b84a',s:{SPD:5,ACC:6,STA:9,LCK:9,TEC:6},favT:['swamp','forest'],favW:['rain','storm'],weakT:[],weakW:[],pass:'underdog'},
+ {id:'neo',e:'🤖',n:'네오',c:'#8fa0c0',s:{SPD:7,ACC:7,STA:7,LCK:5,TEC:10},favT:['city','cave'],favW:['clear','fog'],weakT:[],weakW:[],pass:null},
+ {id:'gale',e:'🦅',n:'게일',c:'#e8eefc',s:{SPD:10,ACC:6,STA:5,LCK:6,TEC:7},favT:['sky','beach'],favW:['wind','storm'],weakT:[],weakW:['clear'],pass:null},
+ {id:'coco',e:'🍬',n:'코코',c:'#ff9ecb',s:{SPD:6,ACC:8,STA:6,LCK:10,TEC:5},favT:['beach','forest'],favW:['rainbow','clear'],weakT:[],weakW:[],pass:'luck'},
+ {id:'roxy',e:'🪨',n:'록시',c:'#d98a4a',s:{SPD:5,ACC:5,STA:10,LCK:6,TEC:8},favT:['cave','volcano'],favW:['sand','snow'],weakT:[],weakW:[],pass:'spurt'},
+ {id:'misty',e:'🌫️',n:'미스티',c:'#7ce8d8',s:{SPD:8,ACC:7,STA:6,LCK:7,TEC:8},favT:['swamp','beach'],favW:['fog','rain'],weakT:[],weakW:['clear'],pass:null},
+];
+const TRACKS=[
+ {k:'forest',n:'🌲 숲',d:2.4},{k:'desert',n:'🏜️ 사막',d:3.0},{k:'ice',n:'❄️ 빙판',d:1.8},{k:'volcano',n:'🌋 화산',d:2.6},
+ {k:'swamp',n:'🐊 늪',d:2.5},{k:'city',n:'🏙️ 도시',d:2.4},{k:'space',n:'🌌 우주',d:2.9},{k:'beach',n:'🏖️ 해변',d:2.3},
+ {k:'cave',n:'🕳️ 동굴',d:2.0},{k:'sky',n:'🌸 하늘정원',d:2.8},
+];
+const WX=[
+ {k:'clear',n:'☀️ 맑음'},{k:'rain',n:'🌧️ 비'},{k:'snow',n:'❄️ 눈'},{k:'fog',n:'🌫️ 안개'},{k:'storm',n:'⛈️ 폭풍'},
+ {k:'heat',n:'🔥 폭염'},{k:'wind',n:'💨 강풍'},{k:'thunder',n:'⚡ 번개'},{k:'sand',n:'🌪️ 황사'},{k:'rainbow',n:'🌈 무지개'},
+];
+
+/* ============ RNG ============ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ============ MODEL ============ */
+let S={track:'forest',weather:'clear',dist:2.4,seed:1234,margin:12,noise:18,event:15,n:500,cp:1,selChar:'bolt'};
+
+function affMult(ch){let m=1;if(ch.favT.includes(S.track))m*=1.15;if(ch.weakT.includes(S.track))m*=0.85;
+  if(ch.favW.includes(S.weather))m*=1.13;if(ch.weakW.includes(S.weather))m*=0.85;return m;}
+
+// market rating: stats + ONLY track fav (ignores weather/weakness/passive) → imperfect house line
+function marketRating(ch){let r=0.30*ch.s.SPD+0.22*ch.s.ACC+0.22*ch.s.STA+0.10*ch.s.LCK+0.16*ch.s.TEC;
+  if(ch.favT.includes(S.track))r*=1.15;return r;}
+
+function phaseSpeed(ch,seg,distNorm){const s=ch.s;let v;
+  if(seg===0)v=0.40*s.ACC+0.30*s.SPD+0.15*s.STA+0.15*s.TEC;
+  else if(seg===1)v=0.45*s.SPD+0.25*s.TEC+0.20*s.STA+0.10*s.ACC;
+  else if(seg===2)v=0.40*s.SPD+0.30*s.STA+0.20*s.TEC+0.10*s.LCK;
+  else v=0.50*s.STA+0.30*s.SPD+0.20*s.TEC;
+  if(seg===0)v*=(1.12-0.20*distNorm); // short race rewards start
+  if(seg===3)v*=(0.90+0.24*distNorm); // long race rewards stamina/spurt
+  return v;
+}
+
+// one race run -> {cum[char][cp0..4], final[]}
+function runRace(rng,noiseScale,eventRate){
+  const distNorm=(S.dist-1.8)/1.2;
+  const cum=CHARS.map(()=>[0,0,0,0,0]);
+  const acc=CHARS.map(()=>0);
+  for(let seg=0;seg<4;seg++){
+    // provisional rank by current acc
+    const order=CHARS.map((_,i)=>i).sort((a,b)=>acc[b]-acc[a]);
+    const rankOf=[];order.forEach((idx,r)=>rankOf[idx]=r+1);
+    CHARS.forEach((ch,i)=>{
+      let v=phaseSpeed(ch,seg,distNorm)*affMult(ch);
+      if(ch.pass==='start'&&seg===0)v*=1.25;
+      if(ch.pass==='spurt'&&seg===3)v*=1.28;
+      if(ch.pass==='underdog'&&rankOf[i]>6)v*=1+0.30*((rankOf[i]-6)/6);
+      v*=1+noiseScale*(rng()*2-1);
+      if(ch.pass==='luck')v*=1+0.16*(rng()*2-1); // higher variance
+      if(rng()<eventRate){ // event
+        let good=rng()< (ch.pass==='luck'?0.62:0.5);
+        v*=good?1.22:0.80;
+      }
+      acc[i]+=Math.max(0.1,v);
+      cum[i][seg+1]=acc[i];
+    });
+  }
+  return{cum,final:acc.slice()};
+}
+
+// Monte Carlo pre-race true probabilities
+function mcPre(){
+  const winN=CHARS.map(()=>0),placeN=CHARS.map(()=>0);
+  const noiseScale=S.noise/100,eventRate=S.event/100;
+  for(let k=0;k<S.n;k++){
+    const rng=mulberry32(S.seed*2654435761+k*40503+7);
+    const{final}=runRace(rng,noiseScale,eventRate);
+    const order=CHARS.map((_,i)=>i).sort((a,b)=>final[b]-final[a]);
+    winN[order[0]]++;
+    for(let p=0;p<3;p++)placeN[order[p]]++;
+  }
+  return CHARS.map((_,i)=>({winP:winN[i]/S.n,placeP:placeN[i]/S.n}));
+}
+
+// market implied probabilities via power softmax on marketRating
+function marketProbs(){
+  const th=3.2;const r=CHARS.map(c=>Math.pow(marketRating(c),th));
+  const sum=r.reduce((a,b)=>a+b,0);return r.map(x=>x/sum);
+}
+function oddsFromP(p){const o=(1/Math.max(p,1e-4))*(1-S.margin/100);return Math.max(1.02,o);}
+
+// displayed representative race (fixed seed, includes events for realism)
+let DISPLAY=null;
+function computeDisplay(){DISPLAY=runRace(mulberry32(S.seed*2654435761+7),S.noise/100,S.event/100);}
+
+// rank at checkpoint cp (1..4) from displayed race
+function ranksAt(cp){const prog=CHARS.map((_,i)=>DISPLAY.cum[i][cp]);
+  const order=CHARS.map((_,i)=>i).sort((a,b)=>prog[b]-prog[a]);
+  const rankOf=[];order.forEach((idx,r)=>rankOf[idx]=r+1);return{order,rankOf,prog};}
+
+// MC continuation from checkpoint cp of DISPLAY -> true win prob per char
+function mcLive(cp){
+  const winN=CHARS.map(()=>0);const noiseScale=S.noise/100,eventRate=S.event/100;const distNorm=(S.dist-1.8)/1.2;
+  const baseCum=CHARS.map((_,i)=>DISPLAY.cum[i][cp]);
+  for(let k=0;k<S.n;k++){
+    const rng=mulberry32((S.seed+cp*131)*2654435761+k*40503+13);
+    const acc=baseCum.slice();
+    for(let seg=cp;seg<4;seg++){
+      const order=CHARS.map((_,i)=>i).sort((a,b)=>acc[b]-acc[a]);
+      const rankOf=[];order.forEach((idx,r)=>rankOf[idx]=r+1);
+      CHARS.forEach((ch,i)=>{
+        let v=phaseSpeed(ch,seg,distNorm)*affMult(ch);
+        if(ch.pass==='start'&&seg===0)v*=1.25;
+        if(ch.pass==='spurt'&&seg===3)v*=1.28;
+        if(ch.pass==='underdog'&&rankOf[i]>6)v*=1+0.30*((rankOf[i]-6)/6);
+        v*=1+noiseScale*(rng()*2-1);
+        if(ch.pass==='luck')v*=1+0.16*(rng()*2-1);
+        if(rng()<eventRate){let good=rng()<(ch.pass==='luck'?0.62:0.5);v*=good?1.22:0.80;}
+        acc[i]+=Math.max(0.1,v);
+      });
+    }
+    const order=CHARS.map((_,i)=>i).sort((a,b)=>acc[b]-acc[a]);
+    winN[order[0]]++;
+  }
+  return winN.map(w=>w/S.n);
+}
+
+// naive house LIVE line: uses only current rank + remaining
+function naiveLiveP(cp){
+  const{rankOf}=ranksAt(cp);
+  const remaining=(4-cp)/4; // 1 at start, 0.25 at cp3
+  const decay=0.62;
+  // rank weight
+  const raw=CHARS.map((_,i)=>Math.pow(decay,rankOf[i]-1));
+  const sum=raw.reduce((a,b)=>a+b,0);
+  const rankW=raw.map(x=>x/sum);
+  const uni=1/CHARS.length;
+  // early race (remaining high) -> closer to uniform; late -> trust rank
+  const w=1-remaining; // 0 early .. 0.75 late
+  return CHARS.map((_,i)=>uni*(1-w)+rankW[i]*w);
+}
+
+/* ============ STATE ============ */
+let PRE=null,MKT=null,LIVE={};
+
+function recompute(){
+  computeDisplay();
+  PRE=mcPre();
+  MKT=marketProbs();
+  LIVE={};
+  renderField();renderPosChart();renderLive();renderEV();
+}
+
+/* ============ RENDER: FIELD ============ */
+let sortKey='ev',sortDir=-1;
+function fieldRows(){
+  const mktOdds=MKT.map(p=>oddsFromP(p));
+  return CHARS.map((ch,i)=>{
+    const trueP=PRE[i].winP, impP=1/mktOdds[i]*(1-0); // implied from posted odds (with margin baked) -> use 1/odds
+    const impDirect=1/ (mktOdds[i]/(1-S.margin/100)); // pre-margin true implied = MKT[i]
+    const ev=100*(trueP*mktOdds[i]-1);
+    const edge=trueP-MKT[i];
+    const rating=marketRating(ch);
+    let tag=Math.abs(edge)<0.015?'fair':(edge>0?'value':'trap');
+    return{ch,i,rating,trueP,mktOdds:mktOdds[i],impP:MKT[i],ev,edge,tag};
+  });
+}
+function renderField(){
+  const rows=fieldRows();
+  rows.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];if(sortKey==='name'){x=a.ch.n;y=b.ch.n;}
+    if(x<y)return -1*sortDir;if(x>y)return 1*sortDir;return 0;});
+  const tb=document.querySelector('#fieldTable tbody');
+  tb.innerHTML=rows.map(r=>{
+    const evc=r.ev>=0?'pos':'neg';const edgc=r.edge>=0?'pos':'neg';
+    const barmax=Math.max(...rows.map(x=>x.rating));
+    const h=Math.round(4+16*(r.rating/barmax));
+    return `<tr data-id="${r.ch.id}" class="${r.ch.id===S.selChar?'sel':''}">
+      <td class="l"><span class="avatar" style="background:${r.ch.c}22;border-color:${r.ch.c}">${r.ch.e}</span>${r.ch.n}</td>
+      <td><span class="stat-mini"><i style="height:${h}px"></i></span> <span class="num muted">${r.rating.toFixed(1)}</span></td>
+      <td class="num" style="color:var(--info)">${(r.trueP*100).toFixed(1)}%</td>
+      <td class="num" style="color:var(--gold)">${r.mktOdds.toFixed(2)}x</td>
+      <td class="num muted">${(r.impP*100).toFixed(1)}%</td>
+      <td class="num ${evc}">${r.ev>=0?'+':''}${r.ev.toFixed(0)}</td>
+      <td class="num ${edgc}">${r.edge>=0?'+':''}${(r.edge*100).toFixed(1)}%</td>
+      <td class="l"><span class="val-tag ${r.tag}">${r.tag==='value'?'VALUE':r.tag==='trap'?'TRAP':'FAIR'}</span></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',()=>{S.selChar=tr.dataset.id;
+    document.getElementById('evChar').value=S.selChar;renderField();renderOddsChart();renderEV();}));
+  document.querySelectorAll('#fieldTable th').forEach(th=>{th.classList.toggle('sorted',th.dataset.k===sortKey);});
+}
+document.querySelectorAll('#fieldTable th').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='name')?1:-1;}renderField();}));
+
+/* ============ RENDER: POSITION CHART ============ */
+let hidden=new Set();
+function renderPosChart(){
+  const cv=document.getElementById('posChart'),g=cv.getContext('2d');
+  const W=cv.width,H=cv.height,padL=60,padR=140,padT=24,padB=40;
+  g.clearRect(0,0,W,H);g.fillStyle='#050410';g.fillRect(0,0,W,H);
+  const N=CHARS.length;const cps=[0,1,2,3,4];const labels=['START','CP1','CP2','CP3','FINISH'];
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const x=cp=>padL+plotW*(cp/4);const y=rank=>padT+plotH*((rank-1)/(N-1));
+  // grid
+  g.strokeStyle='#1d1a3a';g.lineWidth=1;g.font="10px 'Press Start 2P',monospace";g.fillStyle='#6f679a';
+  for(let r=1;r<=N;r++){g.beginPath();g.moveTo(padL,y(r));g.lineTo(padL+plotW,y(r));g.stroke();}
+  cps.forEach((cp,idx)=>{g.strokeStyle='#2b2358';g.beginPath();g.moveTo(x(cp),padT);g.lineTo(x(cp),padT+plotH);g.stroke();
+    g.fillStyle='#9a92c4';g.textAlign='center';g.fillText(labels[idx],x(cp),H-16);});
+  g.textAlign='right';g.fillStyle='#6f679a';g.fillText('1위',padL-8,y(1)+4);g.fillText(N+'위',padL-8,y(N)+4);
+  // ranks at each cp
+  const rankSeries=CHARS.map(()=>[]);
+  cps.forEach(cp=>{const prog=CHARS.map((_,i)=>DISPLAY.cum[i][cp]);
+    const order=CHARS.map((_,i)=>i).sort((a,b)=>prog[b]-prog[a]);
+    order.forEach((idx,r)=>rankSeries[idx][cp]=r+1);});
+  CHARS.forEach((ch,i)=>{
+    if(hidden.has(ch.id))return;
+    const sel=ch.id===S.selChar;
+    g.strokeStyle=ch.c;g.lineWidth=sel?5:2.5;g.globalAlpha=sel?1:(S.selChar?0.35:0.9);
+    g.beginPath();cps.forEach((cp,idx)=>{const px=x(cp),py=y(rankSeries[i][cp]);idx===0?g.moveTo(px,py):g.lineTo(px,py);});g.stroke();
+    cps.forEach(cp=>{const px=x(cp),py=y(rankSeries[i][cp]);g.fillStyle=ch.c;g.beginPath();g.arc(px,py,sel?5:3.5,0,7);g.fill();});
+    // label at finish
+    const fy=y(rankSeries[i][4]);g.globalAlpha=sel?1:0.8;g.fillStyle=ch.c;g.textAlign='left';g.font="12px 'VT323',monospace";
+    g.fillText(ch.e+' '+ch.n,padL+plotW+8,fy+4);
+  });
+  g.globalAlpha=1;
+  // legend
+  const lg=document.getElementById('posLegend');
+  lg.innerHTML=CHARS.map(ch=>`<span class="li ${hidden.has(ch.id)?'':'on'}" data-id="${ch.id}"><span class="sw" style="background:${ch.c}"></span>${ch.n}</span>`).join('');
+  lg.querySelectorAll('.li').forEach(li=>li.addEventListener('click',()=>{const id=li.dataset.id;hidden.has(id)?hidden.delete(id):hidden.add(id);renderPosChart();}));
+}
+
+/* ============ RENDER: LIVE ============ */
+function getLive(cp){if(!LIVE[cp]){LIVE[cp]={trueP:mcLive(cp),naiveP:naiveLiveP(cp),ranks:ranksAt(cp)};}return LIVE[cp];}
+function renderLive(){
+  const cp=S.cp;const L=getLive(cp);const {order,rankOf}=L.ranks;
+  const liveOdds=L.naiveP.map(p=>oddsFromP(p));
+  const tb=document.querySelector('#liveTable tbody');
+  tb.innerHTML=order.map(i=>{
+    const ch=CHARS[i];const odd=liveOdds[i];const tp=L.trueP[i];
+    const fair=tp>0?(1/tp*(1-S.margin/100)):999;
+    const ev=100*(tp*odd-1);
+    const tag=Math.abs(tp-L.naiveP[i])<0.012?'fair':(ev>0?'value':'trap');
+    return `<tr data-id="${ch.id}" class="${ch.id===S.selChar?'sel':''}">
+      <td class="l"><span class="num">${rankOf[i]}위</span></td>
+      <td class="l"><span class="avatar" style="background:${ch.c}22;border-color:${ch.c}">${ch.e}</span>${ch.n}</td>
+      <td class="num" style="color:var(--gold)">${odd.toFixed(2)}x</td>
+      <td class="num" style="color:var(--info)">${(tp*100).toFixed(1)}%</td>
+      <td class="num muted">${fair<50?fair.toFixed(2)+'x':'–'}</td>
+      <td class="num ${ev>=0?'pos':'neg'}">${ev>=0?'+':''}${ev.toFixed(0)}</td>
+      <td class="l"><span class="val-tag ${tag}">${tag==='value'?'역전밸류':tag==='trap'?'함정':'FAIR'}</span></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',()=>{S.selChar=tr.dataset.id;
+    document.getElementById('evChar').value=S.selChar;renderField();renderLive();renderOddsChart();renderEV();}));
+  renderOddsChart();
+}
+document.querySelectorAll('#cpSeg .s').forEach(s=>s.addEventListener('click',()=>{
+  document.querySelectorAll('#cpSeg .s').forEach(x=>x.classList.remove('on'));s.classList.add('on');
+  S.cp=+s.dataset.cp;renderLive();renderEV();}));
+
+/* ============ RENDER: ODDS CURVE ============ */
+function renderOddsChart(){
+  const cv=document.getElementById('oddsChart'),g=cv.getContext('2d');
+  const W=cv.width,H=cv.height,padL=54,padR=20,padT=20,padB=40;
+  g.clearRect(0,0,W,H);g.fillStyle='#050410';g.fillRect(0,0,W,H);
+  const ci=CHARS.findIndex(c=>c.id===S.selChar);
+  const cps=[1,2,3];const mkt=[],fair=[];
+  cps.forEach(cp=>{const L=getLive(cp);mkt.push(oddsFromP(L.naiveP[ci]));const tp=L.trueP[ci];fair.push(tp>0?1/tp*(1-S.margin/100):null);});
+  const allv=[...mkt,...fair.filter(v=>v!=null)];const ymax=Math.max(6,Math.ceil(Math.max(...allv)/2)*2);
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const x=idx=>padL+plotW*(idx/2);const y=v=>padT+plotH*(1-(v/ymax));
+  g.strokeStyle='#1d1a3a';g.fillStyle='#6f679a';g.font="10px 'Press Start 2P',monospace";g.textAlign='right';
+  for(let v=0;v<=ymax;v+=Math.max(1,ymax/5)){g.beginPath();g.moveTo(padL,y(v));g.lineTo(padL+plotW,y(v));g.stroke();g.fillText(v.toFixed(0)+'x',padL-6,y(v)+4);}
+  g.textAlign='center';g.fillStyle='#9a92c4';['CP1','CP2','CP3'].forEach((l,idx)=>g.fillText(l,x(idx),H-16));
+  function line(arr,color){g.strokeStyle=color;g.lineWidth=4;g.beginPath();let started=false;
+    arr.forEach((v,idx)=>{if(v==null)return;const px=x(idx),py=y(v);started?g.lineTo(px,py):g.moveTo(px,py);started=true;});g.stroke();
+    arr.forEach((v,idx)=>{if(v==null)return;g.fillStyle=color;g.beginPath();g.arc(x(idx),y(v),5,0,7);g.fill();});}
+  line(mkt,'#f5c542');line(fair,'#57c7ff');
+  const ch=CHARS[ci];g.fillStyle=ch.c;g.textAlign='left';g.font="13px 'VT323',monospace";
+  g.fillText(ch.e+' '+ch.n+' 라이브 배당 추이',padL+4,padT+2);
+}
+
+/* ============ RENDER: EV CALC ============ */
+function renderEV(){
+  const id=document.getElementById('evChar').value;S.selChar=id;
+  const ci=CHARS.findIndex(c=>c.id===id);const ch=CHARS[ci];
+  const type=document.getElementById('evType').value;const amt=+document.getElementById('evAmt').value;
+  document.getElementById('evCpWrap').style.display=type==='live'?'':'none';
+  let prob,odds,label;
+  if(type==='win'){prob=PRE[ci].winP;odds=oddsFromP(marketProbs()[ci]);label='단승 1위';}
+  else if(type==='place'){prob=PRE[ci].placeP;const po=oddsFromP(Math.min(0.95,marketProbs()[ci]*2.4));odds=Math.max(1.05,po);label='복승 3위 내';}
+  else{const cp=+document.getElementById('evCp').value;const L=getLive(cp);prob=L.trueP[ci];odds=oddsFromP(L.naiveP[ci]);label='라이브 CP'+cp;}
+  const pay=amt*odds;const ev=amt*(prob*odds-1);const roi=(prob*odds-1)*100;
+  document.getElementById('kProb').textContent=(prob*100).toFixed(1)+'%';
+  document.getElementById('kOdds').textContent=odds.toFixed(2)+'x';
+  document.getElementById('kPay').textContent=Math.round(pay)+' Chip';
+  const kev=document.getElementById('kEv');kev.textContent=(ev>=0?'+':'')+ev.toFixed(0)+' Chip';kev.className='v '+(ev>=0?'pos':'neg');
+  const kv=document.getElementById('kVerdict');
+  if(ev>3){kv.textContent='+EV ▲';kv.className='v pos';}else if(ev<-3){kv.textContent='-EV ▼';kv.className='v neg';}else{kv.textContent='FAIR';kv.className='v';}
+  document.getElementById('evExplain').innerHTML=
+    `<b>${ch.n}</b> · ${label} · ${amt} Chip → 실제 적중확률 <b style="color:var(--info)">${(prob*100).toFixed(1)}%</b>, 배당 <b style="color:var(--gold)">${odds.toFixed(2)}x</b>. `+
+    `기대 ROI <b class="${roi>=0?'pos':'neg'}">${roi>=0?'+':''}${roi.toFixed(1)}%</b> — ${ev>=0?'장기적으로 이득인 베팅입니다.':'하우스 라인이 이 캐릭터를 정확/고평가해 손해 구간입니다.'}`;
+}
+['evChar','evType','evAmt','evCp'].forEach(idv=>document.getElementById(idv).addEventListener('input',()=>{
+  document.getElementById('evAmtV').textContent=document.getElementById('evAmt').value;renderEV();}));
+
+/* ============ INIT / BINDINGS ============ */
+function fillSelect(el,arr,valk,txtk){el.innerHTML=arr.map(o=>`<option value="${o[valk]}">${o[txtk]}</option>`).join('');}
+fillSelect(document.getElementById('track'),TRACKS,'k','n');
+fillSelect(document.getElementById('weather'),WX,'k','n');
+document.getElementById('evChar').innerHTML=CHARS.map(c=>`<option value="${c.id}">${c.e} ${c.n}</option>`).join('');
+
+function readSetup(){S.track=document.getElementById('track').value;S.weather=document.getElementById('weather').value;
+  S.dist=+document.getElementById('dist').value;S.seed=+document.getElementById('seed').value||1;
+  S.margin=+document.getElementById('margin').value;S.noise=+document.getElementById('noise').value;
+  S.event=+document.getElementById('event').value;S.n=+document.getElementById('nsamp').value;}
+function updateLabels(){
+  document.getElementById('distV').textContent=(+document.getElementById('dist').value).toFixed(1)+' km';
+  document.getElementById('marginV').textContent=document.getElementById('margin').value+'%';
+  document.getElementById('noiseV').textContent=document.getElementById('noise').value+'%';
+  document.getElementById('eventV').textContent=document.getElementById('event').value+'%';
+  document.getElementById('nV').textContent=document.getElementById('nsamp').value;
+  const t=TRACKS.find(x=>x.k===document.getElementById('track').value);document.getElementById('trackInfo').textContent=t?t.d+'km 기준':'';
+}
+['track','weather','dist','margin','noise','event','nsamp','seed'].forEach(idv=>{
+  document.getElementById(idv).addEventListener('input',()=>{updateLabels();});
+});
+document.getElementById('dist').addEventListener('change',()=>{});
+document.getElementById('run').addEventListener('click',()=>{readSetup();recompute();});
+document.getElementById('reseed').addEventListener('click',()=>{const s=Math.floor(Math.random()*99999);
+  document.getElementById('seed').value=s;readSetup();recompute();});
+// track change sets suggested distance
+document.getElementById('track').addEventListener('change',()=>{const t=TRACKS.find(x=>x.k===document.getElementById('track').value);
+  if(t){document.getElementById('dist').value=t.d;}updateLabels();});
+
+updateLabels();readSetup();recompute();
+</script>
+</body>
+</html>

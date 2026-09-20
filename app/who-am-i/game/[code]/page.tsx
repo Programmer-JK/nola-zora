@@ -63,6 +63,17 @@ export default function WhoAmIGame() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // 키보드 올라올 때 채팅 스크롤 유지
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [])
+
   // 전원 정답 시 자동 결과 화면 전환
   useEffect(() => {
     if (room?.status !== 'playing') return
