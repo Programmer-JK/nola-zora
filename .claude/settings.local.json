@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/usr/local/bin/node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(node ./node_modules/.bin/tsc --noEmit)",
+      "Bash(tee /tmp/tsc-output.txt)",
+      "Bash(/Users/jk/.nvm/versions/node/v22.11.0/bin/npx tsc --noEmit)",
+      "Bash(ls /usr/local/bin/node*)",
+      "Bash(ls /opt/homebrew/bin/node*)",
+      "Bash(ls ~/.nvm/versions/node/*/bin/node)",
+      "Bash(/Users/jk/.nvm/versions/node/v24.11.1/bin/npx tsc --noEmit)",
+      "Bash(export PATH=\"/Users/jk/.nvm/versions/node/v24.11.1/bin:$PATH\")"
+    ],
+    "additionalDirectories": [
+      "/Users/jk/develop/Z-boardgame/app/modern-art",
+      "/Users/jk/develop/Z-boardgame/lib",
+      "/Users/jk/develop/Z-boardgame/app/cursed-auction/room"
+    ]
+  }
+}

@@ -7,6 +7,32 @@ import { logoutGuest } from '@/lib/auth'
 
 const GAMES = [
   {
+    id: 'cursed-auction',
+    kr: '저주받은 경매장',
+    latin: 'CURSED AUCTION',
+    tag: 'AUCTION GAME',
+    emoji: '🏺',
+    accent: '#f59e0b',
+    accentHex: '#f59e0b',
+    players: '4–6인',
+    kind: '비밀 입찰',
+    desc: '보물의 저주를 예측하고 금화를 걸어라!\n심리전과 전략이 교차하는 경매 게임',
+    href: '/cursed-auction',
+  },
+  {
+    id: 'ghost-funeral',
+    kr: '유령의 장례식',
+    latin: "GHOST'S FUNERAL",
+    tag: 'MYSTERY GAME',
+    emoji: '👻',
+    accent: '#a274ff',
+    accentHex: '#a274ff',
+    players: '4–8인',
+    kind: '추리 심리전',
+    desc: '범인은 탐정인 척 위장하고\n탐정들은 단서로 범인을 찾아라',
+    href: '/ghost-funeral',
+  },
+  {
     id: 'liar',
     kr: '라이어 게임',
     latin: 'LIAR GAME',
@@ -84,32 +110,6 @@ const GAMES = [
     kind: '마법 블러핑',
     desc: '숨겨진 타일을 추리하며 주문을 선언하고\n라이벌 마법사를 쓰러뜨려라',
     href: '/abra',
-  },
-  {
-    id: 'modern-art',
-    kr: '모던 아트',
-    latin: 'MODERN ART',
-    tag: 'AUCTION GAME',
-    emoji: '🎨',
-    accent: 'var(--cyan)',
-    accentHex: '#36e0cf',
-    players: '2–5인',
-    kind: '경매 전략',
-    desc: '작가의 작품을 경매로 사고팔아\n최고의 자산가가 되어라',
-    href: '/modern-art',
-  },
-  {
-    id: 'race-game',
-    kr: '레이스 베팅',
-    latin: 'RACE BETTING',
-    tag: 'BETTING GAME',
-    emoji: '🏁',
-    accent: '#f5c542',
-    accentHex: '#f5c542',
-    players: '2–6인',
-    kind: '레이스 베팅',
-    desc: '캐릭터를 분석하고 배당률을 계산해\n라이브 베팅으로 최고 수익을 거둬라',
-    href: '/race-game',
   },
   {
     id: 'guryongtu',
@@ -249,7 +249,7 @@ export default function LobbyPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span className="arc-lbl" style={{ color: 'var(--gold)' }}>SELECT GAME</span>
           <div style={{ flex: 1, height: 2, background: 'repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px)' }} />
-          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>08</span>
+          <span className="pix" style={{ fontSize: 8, color: 'var(--faint)' }}>{String(GAMES.length).padStart(2, '0')}</span>
         </div>
 
         {/* 게임 카드 */}
