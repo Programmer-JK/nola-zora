@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>놀아조라 ARCADE — 소개</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Do+Hyeon&family=Press+Start+2P&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-snap-type:y mandatory}
+body{background:#F2EDE1;font-family:'Gowun Dodum',sans-serif;color:#2F2B25;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* ── SLIDE ── */
+.slide{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;scroll-snap-align:start;position:relative;overflow:hidden}
+
+/* ── HERO ── */
+.hero{background:#F2EDE1;text-align:center;gap:0}
+.hero-title{font-family:'Gowun Batang',serif;font-size:clamp(36px,9vw,60px);line-height:1;margin-bottom:4px;letter-spacing:-.01em}
+.hero-en{font-family:'Instrument Serif',serif;font-style:italic;font-size:clamp(18px,4vw,28px);color:#9A9182;margin-bottom:32px}
+.hero-desc{font-size:15px;line-height:1.85;color:#6E665A;max-width:360px;margin:0 auto 32px;word-break:keep-all}
+.hero-scroll{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:#9A9182;cursor:pointer}
+.hero-arrow{width:18px;height:18px;border-right:1.5px solid #B5AA98;border-bottom:1.5px solid #B5AA98;transform:rotate(45deg);animation:bounce 1.8s ease-in-out infinite}
+@keyframes bounce{0%,100%{opacity:.3;transform:rotate(45deg) translate(0,0)}60%{opacity:1;transform:rotate(45deg) translate(3px,3px)}}
+
+/* ── TECH BADGES ── */
+.tech-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-bottom:40px}
+.tech-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;border:1px solid #D9CFBE;background:#FBF8F1;font-size:11px;color:#6E665A;font-family:'Gowun Dodum',sans-serif}
+.tbdot{width:5px;height:5px;border-radius:50%;flex:none}
+
+/* ── FEATURE SLIDES ── */
+.slide-left{background:#FBF8F1}
+.slide-right{background:#F2EDE1}
+.slide-inner{display:flex;flex-direction:column;align-items:center;gap:40px;max-width:580px;width:100%}
+@media(min-width:720px){
+  .slide-inner{flex-direction:row;align-items:center;gap:56px}
+  .slide-right .slide-inner{flex-direction:row-reverse}
+}
+
+.feature-text{flex:1;min-width:0}
+.f-num{font-family:'Instrument Serif',serif;font-size:48px;line-height:1;color:#E3DACB;margin-bottom:4px}
+.f-title{font-family:'Gowun Batang',serif;font-size:clamp(22px,4vw,28px);line-height:1.3;margin-bottom:14px;word-break:keep-all}
+.f-desc{font-size:15px;line-height:1.8;color:#6E665A;word-break:keep-all;max-width:320px}
+.f-detail{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.f-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#6E665A;line-height:1.5}
+.f-dot{width:5px;height:5px;border-radius:50%;background:#7D9276;flex:none;margin-top:6px}
+
+/* ── PHONE MOCKUP ── */
+.phone-wrap{flex:none}
+.phone{width:200px;height:410px;background:#F2EDE1;border-radius:30px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.07),0 20px 40px -10px rgba(0,0,0,.18);border:6px solid #1a1a1a;position:relative}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:70px;height:20px;background:#1a1a1a;border-radius:0 0 11px 11px;z-index:10}
+.phone-body{padding:28px 12px 12px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── MINI PHONE (game gallery) ── */
+.mini-phone{width:148px;height:290px;background:#111;border-radius:24px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.08),0 16px 32px -8px rgba(0,0,0,.2);border:5px solid #1a1a1a;position:relative;flex:none}
+.mini-phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:52px;height:14px;background:#1a1a1a;border-radius:0 0 8px 8px;z-index:10}
+.mini-phone-body{padding:22px 10px 10px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.game-label{font-family:'Gowun Batang',serif;font-size:11px;color:#9A9182;text-align:center;margin-top:10px}
+
+/* ── JSON / CODE BLOCK ── */
+.json-wrap{flex:none;width:210px;background:#1A1A1A;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.18)}
+.json-head{display:flex;align-items:center;gap:5px;padding:9px 14px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07)}
+.wdot{width:8px;height:8px;border-radius:50%;flex:none}
+.json-fname{font-family:ui-monospace,Menlo,monospace;font-size:9px;color:rgba(255,255,255,.3);margin-left:6px}
+.json-body{padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:8.5px;line-height:1.9;color:#D4D4D4}
+.jk{color:#9CDCFE}.js{color:#CE9178}.jn{color:#B5CEA8}.jb{color:#569CD6}.jd{color:#D4D4D4;opacity:.3}
+
+.code-block{background:#1A1A1A;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.18);margin-top:20px}
+.code-head{display:flex;align-items:center;gap:5px;padding:9px 14px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07)}
+.code-fname{font-family:ui-monospace,Menlo,monospace;font-size:9px;color:rgba(255,255,255,.3);margin-left:6px}
+.code-body{padding:14px 16px;overflow-x:auto}
+.code-body pre{font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.75;color:#D4D4D4;white-space:pre}
+.ckw{color:#C792EA}.cfn{color:#82AAFF}.cst{color:#C3E88D}.ccm{color:#546E7A;font-style:italic}.cty{color:#FFCB6B}
+
+/* ── FINAL SLIDE ── */
+.final{background:#2F2B25;color:#FBF8F1;text-align:center;gap:0}
+.final-title{font-family:'Gowun Batang',serif;font-size:clamp(32px,7vw,52px);line-height:1;margin-bottom:4px;color:#FBF8F1}
+.final-en{font-family:'Instrument Serif',serif;font-style:italic;font-size:clamp(18px,4vw,28px);color:rgba(251,248,241,.35);margin-bottom:40px}
+.final-desc{font-size:15px;line-height:1.85;color:rgba(251,248,241,.7);max-width:360px;margin:0 auto 40px;word-break:keep-all}
+.final-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;border:1px solid rgba(251,248,241,.15);font-size:12px;color:rgba(251,248,241,.5);margin-bottom:40px}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:#7D9276}
+.final-link{font-size:13px;color:rgba(251,248,241,.3);margin-top:24px}
+
+/* ── PROGRESS DOTS ── */
+.progress{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100}
+.prog-dot{width:6px;height:6px;border-radius:50%;background:#B5AA98;transition:all .3s;cursor:pointer}
+.prog-dot.active{background:#2F2B25;transform:scale(1.3)}
+
+/* ── NOISE ── */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");background-repeat:repeat;mix-blend-mode:multiply}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS -->
+<nav class="progress" id="progress">
+  <div class="prog-dot active" onclick="goSlide(0)"></div>
+  <div class="prog-dot" onclick="goSlide(1)"></div>
+  <div class="prog-dot" onclick="goSlide(2)"></div>
+  <div class="prog-dot" onclick="goSlide(3)"></div>
+  <div class="prog-dot" onclick="goSlide(4)"></div>
+  <div class="prog-dot" onclick="goSlide(5)"></div>
+  <div class="prog-dot" onclick="goSlide(6)"></div>
+  <div class="prog-dot" onclick="goSlide(7)"></div>
+  <div class="prog-dot" onclick="goSlide(8)"></div>
+  <div class="prog-dot" onclick="goSlide(9)"></div>
+</nav>
+
+<!-- 0. HERO -->
+<section class="slide hero" id="slide-0">
+  <div style="text-align:center">
+    <div class="hero-title">놀아조라</div>
+    <div class="hero-en">ARCADE</div>
+    <p class="hero-desc">
+      설치 없이 브라우저에서 바로.<br>
+      닉네임만 입력하고, 방 코드를 공유해서<br>
+      친구들과 함께 즐기는 보드게임 아케이드.
+    </p>
+    <div class="tech-badges">
+      <span class="tech-badge"><span class="tbdot" style="background:#3E5B85"></span>Next.js 15</span>
+      <span class="tech-badge"><span class="tbdot" style="background:#3178C6"></span>TypeScript</span>
+      <span class="tech-badge"><span class="tbdot" style="background:#FFCA28"></span>Firebase</span>
+      <span class="tech-badge"><span class="tbdot" style="background:#38B2AC"></span>Tailwind v4</span>
+      <span class="tech-badge"><span class="tbdot" style="background:#2F2B25"></span>Vercel</span>
+    </div>
+    <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:999px;border:1px solid #D9CFBE;background:#FBF8F1;font-size:12px;color:#9A9182;margin-bottom:56px">
+      <span style="width:6px;height:6px;border-radius:50%;background:#7D9276;display:inline-block"></span>
+      9가지 게임 · 모두 무료
+    </div>
+    <div class="hero-scroll" onclick="goSlide(1)">
+      스크롤해서 둘러보기
+      <div class="hero-arrow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 1. GAME GALLERY -->
+<section class="slide slide-left" id="slide-1">
+  <div style="text-align:center;width:100%;max-width:720px">
+    <div style="font-size:11px;color:#B5AA98;letter-spacing:.12em;margin-bottom:8px">9 GAMES</div>
+    <div style="font-family:'Gowun Batang',serif;font-size:clamp(22px,4vw,30px);margin-bottom:6px">지금 바로 플레이</div>
+    <p style="font-size:14px;color:#6E665A;margin-bottom:32px;word-break:keep-all">설치 없이, 방 코드 하나로 시작하는 멀티플레이</p>
+
+    <!-- horizontal phone gallery -->
+    <div style="display:flex;gap:18px;overflow-x:auto;padding:4px 4px 4px;scrollbar-width:none;-ms-overflow-style:none;justify-content:center">
+
+      <!-- ── 야추 (Yacht) ── -->
+      <div>
+        <div class="mini-phone">
+          <div class="mini-phone-body" style="background:#0F1117;gap:5px">
+            <!-- header -->
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:ui-monospace,Menlo,monospace;font-size:7px;color:#7ED957;letter-spacing:.08em">야추</div>
+              <div style="font-size:7px;color:#444">라운드 1</div>
+            </div>
+            <div style="font-size:7px;color:#555;margin-bottom:2px">재현의 턴 · 2/3 굴림</div>
+
+            <!-- 5 dice row -->
+            <div style="display:flex;gap:4px;justify-content:center;padding:4px 0 2px">
+              <!-- Die 3 held -->
+              <svg width="22" height="22" viewBox="0 0 22 22" style="flex:none">
+                <rect width="22" height="22" rx="4" fill="#1a2a1a" stroke="#7ed957" stroke-width="1.5"/>
+                <circle cx="16" cy="6" r="1.8" fill="#7ed957"/>
+                <circle cx="11" cy="11" r="1.8" fill="#7ed957"/>
+                <circle cx="6" cy="16" r="1.8" fill="#7ed957"/>
+              </svg>
+              <!-- Die 3 held -->
+              <svg width="22" height="22" viewBox="0 0 22 22" style="flex:none">
+                <rect width="22" height="22" rx="4" fill="#1a2a1a" stroke="#7ed957" stroke-width="1.5"/>
+                <circle cx="16" cy="6" r="1.8" fill="#7ed957"/>
+                <circle cx="11" cy="11" r="1.8" fill="#7ed957"/>
+                <circle cx="6" cy="16" r="1.8" fill="#7ed957"/>
+              </svg>
+              <!-- Die 3 held -->
+              <svg width="22" height="22" viewBox="0 0 22 22" style="flex:none">
+                <rect width="22" height="22" rx="4" fill="#1a2a1a" stroke="#7ed957" stroke-width="1.5"/>
+                <circle cx="16" cy="6" r="1.8" fill="#7ed957"/>
+                <circle cx="11" cy="11" r="1.8" fill="#7ed957"/>
+                <circle cx="6" cy="16" r="1.8" fill="#7ed957"/>
+              </svg>
+              <!-- Die 1 (not held) -->
+              <svg width="22" height="22" viewBox="0 0 22 22" style="flex:none">
+                <rect width="22" height="22" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1.5"/>
+                <circle cx="11" cy="11" r="1.8" fill="#888"/>
+              </svg>
+              <!-- Die 5 (not held) -->
+              <svg width="22" height="22" viewBox="0 0 22 22" style="flex:none">
+                <rect width="22" height="22" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1.5"/>
+                <circle cx="6" cy="6" r="1.8" fill="#888"/>
+                <circle cx="16" cy="6" r="1.8" fill="#888"/>
+                <circle cx="11" cy="11" r="1.8" fill="#888"/>
+                <circle cx="6" cy="16" r="1.8" fill="#888"/>
+                <circle cx="16" cy="16" r="1.8" fill="#888"/>
+              </svg>
+            </div>
+            <div style="font-size:7px;color:#7ed957;text-align:center">3개 고정</div>
+
+            <!-- score snippet -->
+            <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px">
+              <div style="display:flex;justify-content:space-between;padding:3px 6px;background:#1a2a1a;border-radius:3px;border:1px solid #2a3a2a">
+                <span style="font-size:7px;color:#7ed957">Threes</span>
+                <span style="font-size:7px;color:#7ed957">▶ 9</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:3px 6px;background:#0d1117;border-radius:3px;border:1px solid #1a1a1a">
+                <span style="font-size:7px;color:#444">Full House</span>
+                <span style="font-size:7px;color:#D4D4D4">25 ✓</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:3px 6px;background:#0d1117;border-radius:3px;border:1px solid #1a1a1a">
+                <span style="font-size:7px;color:#444">야추</span>
+                <span style="font-size:7px;color:#333">—</span>
+              </div>
+            </div>
+
+            <!-- roll button -->
+            <button style="margin-top:auto;width:100%;height:28px;border:none;border-radius:5px;background:#7ED957;color:#0F1117;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.03em">굴리기 🎲</button>
+          </div>
+        </div>
+        <div class="game-label">야추</div>
+      </div>
+
+      <!-- ── 라스베가스 (Las Vegas) ── -->
+      <div>
+        <div class="mini-phone">
+          <div class="mini-phone-body" style="background:#0A0A07;gap:5px">
+            <!-- header -->
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:ui-monospace,Menlo,monospace;font-size:7px;color:#FFCA28;letter-spacing:.06em">LAS VEGAS</div>
+              <div style="font-size:7px;color:#444">라운드 2</div>
+            </div>
+            <div style="font-size:7px;color:#555;margin-bottom:2px">재현의 차례 · 주사위 4개</div>
+
+            <!-- casino card grid 2×3 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;flex:1">
+              <!-- Card 1 (highlighted) -->
+              <div style="background:#1a1507;border:1px solid #FFCA28;border-radius:5px;padding:4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#FFCA28;line-height:1">1</div>
+                <div style="font-size:6px;color:#9A9182">₩8만</div>
+                <div style="display:flex;gap:2px;margin-top:2px">
+                  <div style="width:7px;height:7px;border-radius:50%;background:#E84242"></div>
+                  <div style="width:7px;height:7px;border-radius:50%;background:#E84242"></div>
+                </div>
+              </div>
+              <!-- Card 2 -->
+              <div style="background:#111;border:1px solid #222;border-radius:5px;padding:4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#D4D4D4;line-height:1">2</div>
+                <div style="font-size:6px;color:#9A9182">₩5만</div>
+                <div style="display:flex;gap:2px;margin-top:2px">
+                  <div style="width:7px;height:7px;border-radius:50%;background:#3178C6"></div>
+                </div>
+              </div>
+              <!-- Card 3 -->
+              <div style="background:#111;border:1px solid #222;border-radius:5px;padding:4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#D4D4D4;line-height:1">3</div>
+                <div style="font-size:6px;color:#9A9182">₩3만</div>
+                <div style="height:9px"></div>
+              </div>
+              <!-- Card 4 -->
+              <div style="background:#111;border:1px solid #222;border-radius:5px;padding:4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#D4D4D4;line-height:1">4</div>
+                <div style="font-size:6px;color:#9A9182">₩6만</div>
+                <div style="display:flex;gap:2px;margin-top:2px">
+                  <div style="width:7px;height:7px;border-radius:50%;background:#27C93F"></div>
+                  <div style="width:7px;height:7px;border-radius:50%;background:#3178C6"></div>
+                </div>
+              </div>
+              <!-- Card 5 -->
+              <div style="background:#111;border:1px solid #222;border-radius:5px;padding:4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#D4D4D4;line-height:1">5</div>
+                <div style="font-size:6px;color:#9A9182">₩4만</div>
+                <div style="height:9px"></div>
+              </div>
+              <!-- Card 6 (highlighted) -->
+              <div style="background:#1a1507;border:1px solid #FFCA28;border-radius:5px;padding:4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#FFCA28;line-height:1">6</div>
+                <div style="font-size:6px;color:#9A9182">₩8만</div>
+                <div style="display:flex;gap:2px;margin-top:2px">
+                  <div style="width:7px;height:7px;border-radius:50%;background:#FFCA28"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- player status -->
+            <div style="font-size:7px;color:#9A9182">재현: <span style="color:#FFCA28">₩12만</span> · 성은: <span style="color:#3178C6">₩9만</span></div>
+
+            <!-- bet button -->
+            <button style="width:100%;height:28px;border:none;border-radius:5px;background:#FFCA28;color:#0A0A07;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.02em">배팅하기 🎰</button>
+          </div>
+        </div>
+        <div class="game-label">라스베가스</div>
+      </div>
+
+      <!-- ── 라이어 게임 (Liar) ── -->
+      <div>
+        <div class="mini-phone">
+          <div class="mini-phone-body" style="background:#0F0A0A;gap:5px">
+            <!-- header -->
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:ui-monospace,Menlo,monospace;font-size:7px;color:#E84242;letter-spacing:.06em">LIAR GAME</div>
+              <div style="font-size:7px;color:#444">2 / 3라운드</div>
+            </div>
+
+            <!-- keyword card -->
+            <div style="background:#1a0a0a;border:1px solid #E84242;border-radius:7px;padding:12px 8px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+              <div style="font-size:7px;color:#9A9182;letter-spacing:.08em">서울의 명소</div>
+              <div style="font-family:'Gowun Batang',serif;font-size:28px;line-height:1;color:#FBF8F1">한강</div>
+              <div style="font-size:7px;color:#9A9182">당신은 시민입니다</div>
+            </div>
+
+            <!-- players row -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+              <div style="background:#1a0a0a;border:1px solid #2a1515;border-radius:4px;padding:3px 5px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:7px;color:#D4D4D4">재현</span>
+                <span style="font-size:7px;color:#E84242">✓</span>
+              </div>
+              <div style="background:#1a0a0a;border:1px solid #2a1515;border-radius:4px;padding:3px 5px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:7px;color:#D4D4D4">성은</span>
+                <span style="font-size:7px;color:#E84242">✓</span>
+              </div>
+              <div style="background:#1a0a0a;border:1px solid #2a1515;border-radius:4px;padding:3px 5px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:7px;color:#D4D4D4">현아</span>
+                <span style="font-size:7px;color:#444">…</span>
+              </div>
+              <div style="background:#1a0a0a;border:1px solid #2a1515;border-radius:4px;padding:3px 5px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:7px;color:#D4D4D4">민준</span>
+                <span style="font-size:7px;color:#444">…</span>
+              </div>
+            </div>
+
+            <!-- timer bar -->
+            <div style="height:3px;background:#2a1515;border-radius:2px;overflow:hidden">
+              <div style="width:62%;height:100%;background:#E84242;border-radius:2px"></div>
+            </div>
+
+            <!-- vote button -->
+            <button style="width:100%;height:28px;border:none;border-radius:5px;background:#E84242;color:#FBF8F1;font-size:9px;cursor:pointer;letter-spacing:.02em">라이어 지목하기</button>
+          </div>
+        </div>
+        <div class="game-label">라이어 게임</div>
+      </div>
+
+      <!-- ── 유령의 장례식 (Ghost's Funeral) ── -->
+      <div>
+        <div class="mini-phone">
+          <div class="mini-phone-body" style="background:#0A0A12;gap:5px">
+            <!-- header -->
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:ui-monospace,Menlo,monospace;font-size:6.5px;color:#A274FF;letter-spacing:.04em">GHOST'S FUNERAL</div>
+              <div style="font-size:7px;color:#444">추리 중</div>
+            </div>
+
+            <!-- case card -->
+            <div style="background:#14101e;border:1px solid #A274FF;border-radius:7px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;justify-content:center">
+              <div style="font-size:22px;line-height:1">👻</div>
+              <div style="font-family:'Gowun Batang',serif;font-size:10px;color:#FBF8F1;text-align:center;line-height:1.3">서재의 밀실</div>
+              <div style="width:60%;height:1px;background:rgba(162,116,255,.2)"></div>
+              <div style="font-size:7px;color:#9A9182">희생자: <span style="color:#D4D4D4">김현수</span></div>
+              <div style="font-size:7px;color:#9A9182">직업: <span style="color:#D4D4D4">작가</span></div>
+              <div style="font-size:7px;color:#9A9182">사인: <span style="color:#A274FF">불명</span></div>
+            </div>
+
+            <!-- suspect chips -->
+            <div style="font-size:7px;color:#9A9182;margin-top:2px">용의자</div>
+            <div style="display:flex;gap:3px">
+              <div style="flex:1;background:#1e1830;border:1px solid #A274FF;border-radius:4px;padding:4px 2px;text-align:center;font-size:7px;color:#A274FF">박수진</div>
+              <div style="flex:1;background:#14101e;border:1px solid #2a2040;border-radius:4px;padding:4px 2px;text-align:center;font-size:7px;color:#444">이도현</div>
+              <div style="flex:1;background:#14101e;border:1px solid #2a2040;border-radius:4px;padding:4px 2px;text-align:center;font-size:7px;color:#444">최유리</div>
+            </div>
+
+            <!-- accuse button -->
+            <button style="width:100%;height:28px;border:none;border-radius:5px;background:#A274FF;color:#FBF8F1;font-size:9px;cursor:pointer;letter-spacing:.02em">고발하기</button>
+          </div>
+        </div>
+        <div class="game-label">유령의 장례식</div>
+      </div>
+
+    </div><!-- /gallery -->
+
+    <div style="margin-top:24px;font-size:12px;color:#B5AA98">+5가지 게임 더</div>
+  </div>
+</section>
+
+<!-- 2. 로그인 화면 -->
+<section class="slide slide-right" id="slide-2">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <!-- 실제 로그인 화면: 아케이드 캐비닛 스타일 -->
+        <div style="position:relative;width:100%;height:100%;background:#0c0a12;overflow:hidden">
+          <!-- dot grid -->
+          <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);background-size:14px 14px;pointer-events:none"></div>
+          <!-- CRT scanlines -->
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.13) 0,rgba(0,0,0,.13) 1px,transparent 1px,transparent 3px);pointer-events:none;opacity:.5;mix-blend-mode:multiply"></div>
+          <!-- content -->
+          <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:28px 14px 14px;gap:0;text-align:center">
+            <!-- bulbs top -->
+            <div style="display:flex;gap:5px;margin-bottom:12px">
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ff5a4d;box-shadow:0 0 5px #ff5a4d"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#7ed957;box-shadow:0 0 5px #7ed957"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#36e0cf;box-shadow:0 0 5px #36e0cf"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+            </div>
+            <!-- app icon -->
+            <div style="width:56px;height:56px;border-radius:13px;background:radial-gradient(circle at 50% 35%,#fdfcea,#f3edcf);border:2px solid rgba(255,255,255,.8);box-shadow:0 0 0 2.5px rgba(0,0,0,.5),0 8px 20px -4px rgba(0,0,0,.7),0 0 24px -4px rgba(255,183,43,.4);overflow:hidden;margin-bottom:10px">
+              <img src="app/icon.png" alt="놀아조라" style="width:100%;height:100%;object-fit:contain">
+            </div>
+            <!-- Korean title -->
+            <div style="font-family:'Do Hyeon',sans-serif;font-size:30px;color:#f5ede0;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.5);letter-spacing:1px">놀아조라</div>
+            <!-- ARCADE neon -->
+            <div style="font-family:'Bungee',display-swap,sans-serif;font-size:12px;letter-spacing:3px;color:#ffb72b;text-shadow:0 0 10px rgba(255,183,43,.9),0 0 24px rgba(255,183,43,.4);margin-top:5px">ARCADE</div>
+            <!-- pixel subtitle -->
+            <div style="font-family:'Press Start 2P',monospace;font-size:5px;color:#6b6178;letter-spacing:1px;margin-top:8px;line-height:1.6">BOARD GAME ARCADE</div>
+            <!-- bulbs bottom -->
+            <div style="display:flex;gap:5px;margin:10px 0">
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ff5a4d;box-shadow:0 0 5px #ff5a4d"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#7ed957;box-shadow:0 0 5px #7ed957"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#36e0cf;box-shadow:0 0 5px #36e0cf"></div>
+              <div style="width:5px;height:5px;border-radius:50%;background:#ffb72b;box-shadow:0 0 5px #ffb72b"></div>
+            </div>
+            <!-- login panel -->
+            <div style="width:100%;background:#181222;border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 10px">
+              <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:8px">
+                <span style="font-family:'Press Start 2P',monospace;font-size:5px;color:#ffb72b">1P</span>
+                <span style="font-family:'Bungee',sans-serif;font-size:7px;letter-spacing:1px;color:rgba(255,255,255,.3)">ENTER YOUR NAME</span>
+              </div>
+              <div style="background:#0c0a12;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:8px;text-align:center;font-family:'Do Hyeon',sans-serif;font-size:18px;color:#f5ede0;letter-spacing:1px">재현</div>
+              <div style="margin-top:8px;width:100%;height:34px;background:linear-gradient(180deg,#2a1f38,#1d1530);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#ffb72b;font-family:'Bungee',sans-serif;font-size:10px;letter-spacing:1px;display:flex;align-items:center;justify-content:center;text-shadow:0 0 8px rgba(255,183,43,.8)">▶ INSERT COIN</div>
+              <div style="font-family:'Press Start 2P',monospace;font-size:5px;color:#ffd84d;text-align:center;margin-top:8px;letter-spacing:.5px;opacity:.8">PRESS START TO PLAY</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">01</div>
+      <div class="f-title">Firebase Auth로<br>마찰 없는 입장</div>
+      <p class="f-desc">Firebase Anonymous Auth로 계정 없이 uid를 발급해 세션을 유지해요. AuthContext로 닉네임과 uid를 전역 관리하고, 같은 기기 재접속 시 상태가 자동 복원돼요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>Firebase Anonymous Auth — uid 발급</div>
+        <div class="f-item"><span class="f-dot"></span>AuthContext (React Context API) 전역 관리</div>
+        <div class="f-item"><span class="f-dot"></span>모바일 · 태블릿 · PC 반응형 UI</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 로비 화면 (NEW) -->
+<section class="slide slide-left" id="slide-3-lobby">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <!-- 실제 로비 화면: 게임 선택 목록 -->
+        <div style="position:relative;width:100%;height:100%;background:#0c0a12;overflow:hidden">
+          <!-- dot grid -->
+          <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);background-size:14px 14px;pointer-events:none"></div>
+          <!-- CRT -->
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.13) 0,rgba(0,0,0,.13) 1px,transparent 1px,transparent 3px);pointer-events:none;opacity:.5;mix-blend-mode:multiply"></div>
+          <!-- content -->
+          <div style="position:relative;display:flex;flex-direction:column;height:100%;padding:28px 10px 10px;gap:7px">
+            <!-- top bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:26px;height:26px;border-radius:7px;background:radial-gradient(circle at 50% 35%,#fdfcea,#f3edcf);border:1.5px solid rgba(255,255,255,.75);box-shadow:0 0 0 1.5px rgba(0,0,0,.45);overflow:hidden;flex:none">
+                  <img src="app/icon.png" alt="" style="width:100%;height:100%;object-fit:contain">
+                </div>
+                <div>
+                  <div style="font-family:'Do Hyeon',sans-serif;font-size:11px;color:#f5ede0;line-height:1">놀아조라</div>
+                  <div style="font-family:'Bungee',sans-serif;font-size:5px;letter-spacing:1.5px;color:#ffb72b;text-shadow:0 0 8px rgba(255,183,43,.5)">ARCADE</div>
+                </div>
+              </div>
+              <div style="font-family:'Do Hyeon',sans-serif;font-size:9px;color:#95899f">재현</div>
+            </div>
+            <!-- SELECT GAME label -->
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-family:'Bungee',sans-serif;font-size:7px;letter-spacing:1px;color:#ffb72b">SELECT GAME</span>
+              <div style="flex:1;height:1px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 4px,transparent 4px 7px)"></div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:4px;color:#6b6178">09</span>
+            </div>
+            <!-- game card list -->
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;overflow:hidden">
+              <!-- 저주받은 경매장 (amber) -->
+              <div style="background:#181222;border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;flex:none">
+                <div style="height:3px;background:linear-gradient(90deg,#f59e0b,transparent)"></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:7px 8px">
+                  <div style="width:30px;height:30px;border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(245,158,11,.22) 0%,#181222 100%);border:1.5px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">🏺</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:'Do Hyeon',sans-serif;font-size:10px;color:#f5ede0;line-height:1.3">저주받은 경매장</div>
+                    <div style="font-family:'Bungee',sans-serif;font-size:5px;letter-spacing:.5px;color:#f59e0b;margin-top:1px">CURSED AUCTION</div>
+                  </div>
+                  <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:#f59e0b;text-shadow:0 0 8px rgba(245,158,11,.5);flex:none">▶</div>
+                </div>
+              </div>
+              <!-- 유령의 장례식 (purple) -->
+              <div style="background:#181222;border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;flex:none">
+                <div style="height:3px;background:linear-gradient(90deg,#a274ff,transparent)"></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:7px 8px">
+                  <div style="width:30px;height:30px;border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(162,116,255,.22) 0%,#181222 100%);border:1.5px solid rgba(162,116,255,.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">👻</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:'Do Hyeon',sans-serif;font-size:10px;color:#f5ede0;line-height:1.3">유령의 장례식</div>
+                    <div style="font-family:'Bungee',sans-serif;font-size:5px;letter-spacing:.5px;color:#a274ff;margin-top:1px">GHOST'S FUNERAL</div>
+                  </div>
+                  <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:#a274ff;text-shadow:0 0 8px rgba(162,116,255,.5);flex:none">▶</div>
+                </div>
+              </div>
+              <!-- 라이어 게임 (red, highlighted) -->
+              <div style="background:#1e1222;border:1px solid rgba(232,66,66,.22);border-radius:8px;overflow:hidden;flex:none">
+                <div style="height:3px;background:linear-gradient(90deg,#e84242,transparent)"></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:7px 8px">
+                  <div style="width:30px;height:30px;border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(232,66,66,.22) 0%,#181222 100%);border:1.5px solid rgba(232,66,66,.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">🕵️</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:'Do Hyeon',sans-serif;font-size:10px;color:#f5ede0;line-height:1.3">라이어 게임</div>
+                    <div style="font-family:'Bungee',sans-serif;font-size:5px;letter-spacing:.5px;color:#e84242;margin-top:1px">LIAR GAME</div>
+                  </div>
+                  <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:#e84242;text-shadow:0 0 8px rgba(232,66,66,.5);flex:none">▶</div>
+                </div>
+              </div>
+              <!-- 요트 (green) -->
+              <div style="background:#181222;border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;flex:none">
+                <div style="height:3px;background:linear-gradient(90deg,#7ed957,transparent)"></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:7px 8px">
+                  <div style="width:30px;height:30px;border-radius:8px;background:radial-gradient(circle at 50% 35%,rgba(126,217,87,.22) 0%,#181222 100%);border:1.5px solid rgba(126,217,87,.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">⛵</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:'Do Hyeon',sans-serif;font-size:10px;color:#f5ede0;line-height:1.3">요트</div>
+                    <div style="font-family:'Bungee',sans-serif;font-size:5px;letter-spacing:.5px;color:#7ed957;margin-top:1px">YACHT</div>
+                  </div>
+                  <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:#7ed957;text-shadow:0 0 8px rgba(126,217,87,.5);flex:none">▶</div>
+                </div>
+              </div>
+              <!-- 라스베가스 (gold, partially visible) -->
+              <div style="background:#181222;border:1px solid rgba(255,255,255,.05);border-radius:8px;overflow:hidden;opacity:.45;flex:none">
+                <div style="height:3px;background:linear-gradient(90deg,#ffb72b,transparent)"></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:7px 8px">
+                  <div style="width:30px;height:30px;border-radius:8px;background:#181222;border:1.5px solid rgba(255,183,43,.2);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">🎲</div>
+                  <div style="font-family:'Do Hyeon',sans-serif;font-size:10px;color:#f5ede0">라스베가스</div>
+                </div>
+              </div>
+            </div>
+            <!-- bottom pixel -->
+            <div style="font-family:'Press Start 2P',monospace;font-size:4px;color:#6b6178;text-align:center;letter-spacing:.3px">INSERT COIN · CHOOSE YOUR GAME</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">02</div>
+      <div class="f-title">9가지 게임,<br>한 로비에서</div>
+      <p class="f-desc">로그인하면 아케이드 캐비닛 스타일의 게임 선택 로비로 이동해요. 9가지 게임이 카드 목록으로 나열되고, 선택하면 게임별 방 생성 화면으로 이어져요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>게임별 고유 테마 색상 · 아이콘 · 태그</div>
+        <div class="f-item"><span class="f-dot"></span>로컬 / 온라인 멀티플레이 모드 선택</div>
+        <div class="f-item"><span class="f-dot"></span>방 만들기 또는 6자리 코드로 참가</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 9가지 게임 -->
+<section class="slide slide-left" id="slide-4">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body" style="background:#1A1A1A;gap:0;padding:28px 0 12px">
+          <!-- editor titlebar -->
+          <div style="padding:0 12px;margin-bottom:10px;display:flex;align-items:center;gap:5px">
+            <div style="width:7px;height:7px;border-radius:50%;background:#FF5F56"></div>
+            <div style="width:7px;height:7px;border-radius:50%;background:#FFBD2E"></div>
+            <div style="width:7px;height:7px;border-radius:50%;background:#27C93F"></div>
+            <span style="font-family:ui-monospace,Menlo,monospace;font-size:8px;color:#6B7280;margin-left:8px">explorer</span>
+          </div>
+          <!-- directory tree -->
+          <div style="padding:0 12px;font-family:ui-monospace,Menlo,monospace;font-size:9px;line-height:2;color:#D4D4D4;overflow:hidden">
+            <div><span style="color:#9CDCFE">app/</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">├─ </span><span style="color:#CE9178">liar/</span></div>
+            <div style="padding-left:20px"><span style="color:#D4D4D4;opacity:.4">│ ├─ </span><span style="color:#D4D4D4">page.tsx</span></div>
+            <div style="padding-left:20px"><span style="color:#D4D4D4;opacity:.4">│ ├─ </span><span style="color:#9CDCFE">room/[code]/</span></div>
+            <div style="padding-left:20px"><span style="color:#D4D4D4;opacity:.4">│ └─ </span><span style="color:#9CDCFE">game/[code]/</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">├─ </span><span style="color:#CE9178">yacht/</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">├─ </span><span style="color:#CE9178">las-vegas/</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.3">└─ ··· +6 more</span></div>
+            <div style="margin-top:4px"><span style="color:#9CDCFE">lib/</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">├─ </span><span style="color:#CE9178">liar/</span><span style="color:#6A9955">  // 단어·로직</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">├─ </span><span style="color:#CE9178">yacht/</span><span style="color:#6A9955"> // 점수 계산</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">└─ </span><span style="color:#D4D4D4">firebase.ts</span></div>
+            <div style="margin-top:4px"><span style="color:#9CDCFE">context/</span></div>
+            <div style="padding-left:10px"><span style="color:#D4D4D4;opacity:.4">└─ </span><span style="color:#D4D4D4">AuthContext.tsx</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">03</div>
+      <div class="f-title">9개 게임,<br>공통 모듈 패턴</div>
+      <p class="f-desc">각 게임은 app/[game]/ · lib/[game]/ · components/[game]/으로 완전히 분리돼요. 방 생성·입장·종료는 공통 패턴을 재사용해 반복 없이 게임을 추가할 수 있어요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>게임별 app / lib / components 삼중 분리</div>
+        <div class="f-item"><span class="f-dot"></span>공통 방 코드 시스템 재사용</div>
+        <div class="f-item"><span class="f-dot"></span>Next.js Dynamic Route [code] 활용</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 방 코드 & QR 초대 -->
+<section class="slide slide-right" id="slide-5">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body" style="background:#F2EDE1;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-family:'Gowun Batang',serif;font-size:14px">라이어 게임</div>
+            <span style="font-size:8px;color:#9A9182">대기 중</span>
+          </div>
+          <div style="font-size:8px;color:#9A9182;margin-top:-4px">3 / 6명 모였어요</div>
+
+          <!-- room code -->
+          <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:8px;color:#9A9182;margin-bottom:8px">방 코드</div>
+            <div style="display:flex;justify-content:center;gap:4px">
+              <div style="width:22px;height:28px;border-radius:4px;background:#2F2B25;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#FBF8F1;font-weight:700">4</div>
+              <div style="width:22px;height:28px;border-radius:4px;background:#2F2B25;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#FBF8F1;font-weight:700">8</div>
+              <div style="width:22px;height:28px;border-radius:4px;background:#2F2B25;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#FBF8F1;font-weight:700">2</div>
+              <div style="width:22px;height:28px;border-radius:4px;background:#2F2B25;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#FBF8F1;font-weight:700">9</div>
+              <div style="width:22px;height:28px;border-radius:4px;background:#2F2B25;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#FBF8F1;font-weight:700">1</div>
+              <div style="width:22px;height:28px;border-radius:4px;background:#2F2B25;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#FBF8F1;font-weight:700">7</div>
+            </div>
+          </div>
+
+          <!-- QR code row -->
+          <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <div style="flex:none;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#FBF8F1;border:1px solid #EAE2D4;border-radius:3px;padding:3px">
+              <svg width="42" height="42" viewBox="0 0 7 7">
+                <rect x="0" y="0" width="3" height="3" fill="#2F2B25" rx=".3"/>
+                <rect x=".5" y=".5" width="2" height="2" fill="#FBF8F1" rx=".2"/>
+                <rect x="1" y="1" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="4" y="0" width="3" height="3" fill="#2F2B25" rx=".3"/>
+                <rect x="4.5" y=".5" width="2" height="2" fill="#FBF8F1" rx=".2"/>
+                <rect x="5" y="1" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="0" y="4" width="3" height="3" fill="#2F2B25" rx=".3"/>
+                <rect x=".5" y="4.5" width="2" height="2" fill="#FBF8F1" rx=".2"/>
+                <rect x="1" y="5" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="4" y="4" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="6" y="4" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="5" y="5" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="4" y="6" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="6" y="6" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="3" y="4" width="1" height="1" fill="#2F2B25" rx=".1"/>
+                <rect x="3" y="6" width="1" height="1" fill="#2F2B25" rx=".1"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-family:'Gowun Batang',serif;font-size:10px;margin-bottom:3px">QR 스캔으로 입장</div>
+              <div style="font-size:8px;color:#9A9182;line-height:1.6">카메라로 찍으면<br>바로 들어와요</div>
+            </div>
+          </div>
+
+          <!-- player list -->
+          <div style="font-family:'Gowun Batang',serif;font-size:10px;margin-bottom:2px">참여 중</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:6px;background:#FBF8F1;border-radius:5px;padding:5px 8px;border:1px solid #EAE2D4">
+              <div style="width:18px;height:18px;border-radius:50%;background:#C5CDB6;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">재</div>
+              <span style="font-size:10px">재현</span>
+              <span style="font-size:8px;color:#50634A;margin-left:auto">방장</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:#FBF8F1;border-radius:5px;padding:5px 8px;border:1px solid #EAE2D4">
+              <div style="width:18px;height:18px;border-radius:50%;background:#E2C6B2;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">성</div>
+              <span style="font-size:10px">성은</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:#FBF8F1;border-radius:5px;padding:5px 8px;border:1px solid #EAE2D4">
+              <div style="width:18px;height:18px;border-radius:50%;background:#D4C8E0;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">현</div>
+              <span style="font-size:10px">현아</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">04</div>
+      <div class="f-title">방 코드 =<br>DB 경로로 설계</div>
+      <p class="f-desc">6자리 방 코드를 그대로 Realtime DB 경로로 사용해요. <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#EAE2D4;padding:1px 5px;border-radius:3px">rooms/{code}/</code> 아래 플레이어 · 상태 · 게임 데이터가 모여요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>rooms/{code}/ — 방 코드 = DB 노드</div>
+        <div class="f-item"><span class="f-dot"></span>onValue 리스너 단방향 데이터 흐름</div>
+        <div class="f-item"><span class="f-dot"></span>qrcode.react 클라이언트 사이드 생성</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 실시간 멀티플레이 -->
+<section class="slide slide-left" id="slide-5">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body" style="background:#F2EDE1;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-family:'Gowun Batang',serif;font-size:13px">라이어 게임</div>
+            <div style="font-size:8px;color:#9A9182">라운드 2 / 3</div>
+          </div>
+
+          <!-- my keyword card -->
+          <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:8px;padding:14px;text-align:center">
+            <div style="font-size:8px;color:#9A9182;margin-bottom:6px">나의 단어</div>
+            <div style="font-family:'Gowun Batang',serif;font-size:24px;line-height:1;margin-bottom:5px">한강</div>
+            <div style="font-size:8px;color:#50634A">주제: 서울의 명소</div>
+          </div>
+
+          <!-- progress bar -->
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:4px;background:#EAE2D4;border-radius:2px;overflow:hidden">
+              <div style="width:62%;height:100%;background:#50634A;border-radius:2px"></div>
+            </div>
+            <span style="font-size:9px;color:#9A9182;flex:none">0:42</span>
+          </div>
+
+          <!-- players grid -->
+          <div style="font-family:'Gowun Batang',serif;font-size:10px">참여자</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:5px;padding:5px 7px;display:flex;align-items:center;gap:5px">
+              <div style="width:16px;height:16px;border-radius:50%;background:#C5CDB6;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">재</div>
+              <span style="font-size:9px">재현</span>
+              <span style="font-size:8px;color:#50634A;margin-left:auto">✓</span>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:5px;padding:5px 7px;display:flex;align-items:center;gap:5px">
+              <div style="width:16px;height:16px;border-radius:50%;background:#E2C6B2;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">성</div>
+              <span style="font-size:9px">성은</span>
+              <span style="font-size:8px;color:#50634A;margin-left:auto">✓</span>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:5px;padding:5px 7px;display:flex;align-items:center;gap:5px">
+              <div style="width:16px;height:16px;border-radius:50%;background:#D4C8E0;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">현</div>
+              <span style="font-size:9px">현아</span>
+              <span style="font-size:8px;color:#9A9182;margin-left:auto">…</span>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:5px;padding:5px 7px;display:flex;align-items:center;gap:5px">
+              <div style="width:16px;height:16px;border-radius:50%;background:#C5DACD;flex:none;display:flex;align-items:center;justify-content:center;font-size:7px;font-family:'Gowun Batang',serif">민</div>
+              <span style="font-size:9px">민준</span>
+              <span style="font-size:8px;color:#9A9182;margin-left:auto">…</span>
+            </div>
+          </div>
+
+          <!-- vote button -->
+          <button style="width:100%;height:38px;border-radius:8px;background:#2F2B25;color:#FBF8F1;border:none;font-family:'Gowun Batang',serif;font-size:12px;cursor:pointer;margin-top:auto">라이어 지목하기</button>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">05</div>
+      <div class="f-title">서버 없는<br>실시간 동기화</div>
+      <p class="f-desc">별도 서버 없이 클라이언트가 Firebase에 직접 읽고 써요. 게임 단계(대기 → 진행 → 결과)를 상태 머신으로 모델링해 모든 플레이어가 동시에 전환해요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>서버리스 클라이언트 합의 구조</div>
+        <div class="f-item"><span class="f-dot"></span>게임 상태 머신 (대기 → 진행 → 결과)</div>
+        <div class="f-item"><span class="f-dot"></span>Howler.js BGM · Three.js 카드 이펙트</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. DB 구조 -->
+<section class="slide slide-right" id="slide-6">
+  <div class="slide-inner">
+    <!-- JSON tree visual -->
+    <div class="json-wrap">
+      <div class="json-head">
+        <div class="wdot" style="background:#FF5F56"></div>
+        <div class="wdot" style="background:#FFBD2E"></div>
+        <div class="wdot" style="background:#27C93F"></div>
+        <span class="json-fname">Firebase Realtime DB</span>
+      </div>
+      <div class="json-body">
+        <div><span class="jk">rooms/</span></div>
+        <div style="padding-left:10px"><span class="jd">└─ </span><span class="jk">{code}/</span></div>
+        <div style="padding-left:22px"><span class="jd">├─ </span><span class="jk">status</span>: <span class="js">"waiting"</span></div>
+        <div style="padding-left:22px"><span class="jd">├─ </span><span class="jk">gameType</span>: <span class="js">"liar"</span></div>
+        <div style="padding-left:22px"><span class="jd">├─ </span><span class="jk">hostId</span>: <span class="js">"{uid}"</span></div>
+        <div style="padding-left:22px"><span class="jd">├─ </span><span class="jk">players/</span></div>
+        <div style="padding-left:36px"><span class="jd">└─ </span><span class="jk">{uid}/</span></div>
+        <div style="padding-left:50px"><span class="jk">nickname</span>: <span class="js">"재현"</span></div>
+        <div style="padding-left:50px"><span class="jk">isReady</span>: <span class="jb">true</span></div>
+        <div style="padding-left:22px"><span class="jd">└─ </span><span class="jk">gameData/</span></div>
+        <div style="padding-left:36px"><span class="jk">round</span>: <span class="jn">2</span></div>
+        <div style="padding-left:36px"><span class="jk">keyword</span>: <span class="js">"한강"</span></div>
+        <div style="padding-left:36px"><span class="jk">liarId</span>: <span class="js">"{uid}"</span></div>
+        <div style="padding-left:36px"><span class="jk">votes/</span></div>
+        <div style="padding-left:50px"><span class="jk">{uid}</span>: <span class="js">"{targetUid}"</span></div>
+      </div>
+    </div>
+
+    <div class="feature-text">
+      <div class="f-num">06</div>
+      <div class="f-title">DB 스키마를<br>게임 흐름으로</div>
+      <p class="f-desc">방 코드가 곧 DB 경로예요. <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#EAE2D4;padding:1px 5px;border-radius:3px">rooms/{code}/</code> 아래 모든 게임 상태가 단일 트리로 모여요. 플레이어 입장부터 투표 결과까지 구조가 그대로 데이터가 돼요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>players/{uid}/ — 접속자 실시간 추적</div>
+        <div class="f-item"><span class="f-dot"></span>gameData/ — 라운드·키워드·라이어 ID</div>
+        <div class="f-item"><span class="f-dot"></span>votes/{uid} — 투표 집계, 과반 자동 처리</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 기술 스택 -->
+<section class="slide slide-left" id="slide-7">
+  <div class="slide-inner">
+    <!-- tech stack visual -->
+    <div style="flex:none;width:200px;display:flex;flex-direction:column;gap:6px">
+
+      <div style="font-size:9px;color:#B5AA98;letter-spacing:.12em;padding:0 2px">FRONTEND</div>
+      <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#3E5B85;flex:none"></div>
+          <span style="font-family:'Gowun Batang',serif;font-size:11px;flex:1">Next.js 15</span>
+          <span style="font-size:8px;color:#9A9182">App Router</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#3178C6;flex:none"></div>
+          <span style="font-family:'Gowun Batang',serif;font-size:11px;flex:1">TypeScript</span>
+          <span style="font-size:8px;color:#9A9182">타입 안전성</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#38B2AC;flex:none"></div>
+          <span style="font-family:'Gowun Batang',serif;font-size:11px;flex:1">Tailwind CSS v4</span>
+          <span style="font-size:8px;color:#9A9182">스타일링</span>
+        </div>
+      </div>
+
+      <div style="font-size:9px;color:#B5AA98;letter-spacing:.12em;padding:4px 2px 0">BACKEND</div>
+      <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#FFCA28;flex:none"></div>
+          <span style="font-family:'Gowun Batang',serif;font-size:11px;flex:1">Firebase</span>
+          <span style="font-size:8px;color:#9A9182">Realtime DB · Auth</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#2F2B25;flex:none"></div>
+          <span style="font-family:'Gowun Batang',serif;font-size:11px;flex:1">Vercel</span>
+          <span style="font-size:8px;color:#9A9182">배포 · 호스팅</span>
+        </div>
+      </div>
+
+      <div style="font-size:9px;color:#B5AA98;letter-spacing:.12em;padding:4px 2px 0">LIBRARIES</div>
+      <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:8px;padding:10px 12px">
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <span style="padding:3px 8px;border-radius:999px;background:#E3DACB;font-size:8px;color:#6E665A;border:1px solid #D9CFBE">Howler.js</span>
+          <span style="padding:3px 8px;border-radius:999px;background:#E3DACB;font-size:8px;color:#6E665A;border:1px solid #D9CFBE">Three.js</span>
+          <span style="padding:3px 8px;border-radius:999px;background:#E3DACB;font-size:8px;color:#6E665A;border:1px solid #D9CFBE">qrcode.react</span>
+          <span style="padding:3px 8px;border-radius:999px;background:#E3DACB;font-size:8px;color:#6E665A;border:1px solid #D9CFBE">Lucide React</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-text">
+      <div class="f-num">07</div>
+      <div class="f-title">견고한<br>기술 스택</div>
+      <p class="f-desc">Next.js App Router로 빠른 렌더링, Firebase로 실시간 동기화. 타입 안전한 TypeScript로 모든 게임 로직을 작성했어요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>Firebase 익명 인증 · Realtime DB 동기화</div>
+        <div class="f-item"><span class="f-dot"></span>게임별 독립적인 상태 관리</div>
+        <div class="f-item"><span class="f-dot"></span>Howler.js BGM · Three.js 이펙트</div>
+      </div>
+      <!-- code snippet -->
+      <div class="code-block">
+        <div class="code-head">
+          <div class="wdot" style="background:#FF5F56"></div>
+          <div class="wdot" style="background:#FFBD2E"></div>
+          <div class="wdot" style="background:#27C93F"></div>
+          <span class="code-fname">hooks/useGameSync.ts</span>
+        </div>
+        <div class="code-body"><pre><span class="ckw">useEffect</span>(() => {
+  <span class="ckw">const</span> roomRef = <span class="cfn">ref</span>(db, <span class="cst">`rooms/<span class="ckw">${</span>code<span class="ckw">}</span>`</span>)
+  <span class="ckw">const</span> unsub = <span class="cfn">onValue</span>(roomRef, (snap) => {
+    <span class="ckw">if</span> (!snap.<span class="cfn">exists</span>()) <span class="ckw">return</span>
+    <span class="cfn">setGameState</span>(snap.<span class="cfn">val</span>() <span class="ckw">as</span> <span class="cty">GameState</span>)
+  })
+  <span class="ckw">return</span> () => <span class="cfn">off</span>(roomRef)
+}, [code])
+
+<span class="ccm">// 투표 — DB 직접 쓰기</span>
+<span class="ckw">const</span> vote = (targetId: <span class="cty">string</span>) =>
+  <span class="cfn">set</span>(<span class="cfn">ref</span>(db, <span class="cst">`rooms/<span class="ckw">${</span>code<span class="ckw">}</span>/votes/<span class="ckw">${</span>uid<span class="ckw">}</span>`</span>), targetId)</pre></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. FINAL -->
+<section class="slide final" id="slide-8">
+  <div style="text-align:center">
+    <div class="final-title">놀아조라</div>
+    <div class="final-en">ARCADE</div>
+    <p class="final-desc">
+      기획, 설계, 구현, 배포까지 혼자 진행한<br>
+      사이드 프로젝트예요. 실시간 멀티플레이어<br>
+      아키텍처와 모듈 설계를 직접 풀어봤어요.
+    </p>
+    <div class="final-badge">
+      <span class="badge-dot"></span>
+      9개 게임 · 1인 개발 · 2025–2026
+    </div>
+    <div class="final-link">Next.js 15 · Firebase · TypeScript · Tailwind CSS v4 · Vercel</div>
+  </div>
+</section>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.prog-dot');
+
+  function updateDots() {
+    let active = 0;
+    slides.forEach((sl, i) => {
+      const r = sl.getBoundingClientRect();
+      if (r.top >= -r.height/2 && r.top < r.height/2) active = i;
+    });
+    dots.forEach((d,i) => d.classList.toggle('active', i === active));
+  }
+
+  window.addEventListener('scroll', updateDots, {passive:true});
+  updateDots();
+
+  function goSlide(i) {
+    slides[i].scrollIntoView({behavior:'smooth'});
+  }
+</script>
+</body>
+</html>

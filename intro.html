@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our Little Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-snap-type:y mandatory}
+body{background:#F2EDE1;font-family:'Gowun Dodum',sans-serif;color:#2F2B25;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* ── SLIDE ── */
+.slide{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;scroll-snap-align:start;position:relative;overflow:hidden}
+
+/* ── HERO ── */
+.hero{background:#F2EDE1;text-align:center;gap:0}
+.hero-logo{font-family:'Instrument Serif',serif;font-style:italic;font-size:clamp(38px,9vw,64px);line-height:1;margin-bottom:10px}
+.hero-sub{font-family:'Gowun Batang',serif;font-size:15px;color:#6E665A;margin-bottom:48px}
+.hero-desc{font-size:15px;line-height:1.85;color:#6E665A;max-width:360px;margin:0 auto 56px;word-break:keep-all}
+.hero-scroll{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:#9A9182;cursor:pointer}
+.hero-arrow{width:18px;height:18px;border-right:1.5px solid #B5AA98;border-bottom:1.5px solid #B5AA98;transform:rotate(45deg);animation:bounce 1.8s ease-in-out infinite}
+@keyframes bounce{0%,100%{opacity:.3;transform:rotate(45deg) translate(0,0)}60%{opacity:1;transform:rotate(45deg) translate(3px,3px)}}
+
+/* ── FEATURE SLIDES ── */
+.slide-left{background:#FBF8F1}
+.slide-right{background:#F2EDE1}
+.slide-inner{display:flex;flex-direction:column;align-items:center;gap:40px;max-width:560px;width:100%}
+@media(min-width:720px){
+  .slide-inner{flex-direction:row;align-items:center;gap:56px}
+  .slide-right .slide-inner{flex-direction:row-reverse}
+}
+
+.feature-text{flex:1;min-width:0}
+.f-num{font-family:'Instrument Serif',serif;font-size:48px;line-height:1;color:#E3DACB;margin-bottom:4px}
+.f-title{font-family:'Gowun Batang',serif;font-size:clamp(22px,4vw,28px);line-height:1.3;margin-bottom:14px;word-break:keep-all}
+.f-desc{font-size:15px;line-height:1.8;color:#6E665A;word-break:keep-all;max-width:320px}
+.f-detail{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.f-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#6E665A;line-height:1.5}
+.f-dot{width:5px;height:5px;border-radius:50%;background:#7D9276;flex:none;margin-top:6px}
+
+/* ── PHONE MOCKUP ── */
+.phone-wrap{flex:none}
+.phone{width:200px;height:410px;background:#F2EDE1;border-radius:30px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.07),0 20px 40px -10px rgba(0,0,0,.18);border:6px solid #1a1a1a;position:relative}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:70px;height:20px;background:#1a1a1a;border-radius:0 0 11px 11px;z-index:10}
+.phone-body{padding:28px 12px 12px;height:100%;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+
+/* phone UI snippets */
+.ph-logo{font-family:'Instrument Serif',serif;font-style:italic;font-size:17px;line-height:1}
+.ph-label{font-size:8px;color:#9A9182}
+
+.ph-dday{background:#FBF8F1;border:1px solid #EAE2D4;border-radius:4px;padding:12px 12px 10px;position:relative}
+.ph-tape{position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(-2deg);width:48px;height:14px;background:rgba(222,208,170,.8)}
+.ph-dday-num{font-family:'Instrument Serif',serif;font-size:48px;line-height:.9}
+.ph-dday-unit{font-family:'Gowun Batang',serif;font-size:12px}
+.ph-dday-since{font-size:8px;color:#9A9182;margin-top:4px}
+.ph-divider{border-top:1px dashed #D9CFBE;margin:8px 0 4px}
+.ph-upcoming-row{display:flex;align-items:center;gap:4px;min-height:22px}
+.ph-upcoming-title{flex:1;font-family:'Gowun Batang',serif;font-size:9px}
+.ph-upcoming-date{font-size:8px;color:#9A9182}
+.ph-pill{padding:2px 6px;border-radius:999px;font-size:8px;background:#E4E9DB;color:#3F5139;border:1px solid #B9C3AC}
+
+.ph-sect{font-family:'Gowun Batang',serif;font-size:11px;margin-top:4px;margin-bottom:4px}
+.ph-polar-row{display:flex;gap:6px;overflow:hidden}
+.ph-polar{width:66px;flex:none;background:#FFFDF8;padding:4px 4px 7px;box-shadow:0 4px 10px -6px rgba(60,40,20,.4)}
+.ph-polar:nth-child(odd){transform:rotate(-1.2deg)}
+.ph-polar:nth-child(even){transform:rotate(.9deg)}
+.ph-photo{width:100%;aspect-ratio:1;display:block}
+.ph-caption{font-size:7px;color:#9A9182;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.ph-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 6px}
+.ph-grid-item{background:#FFFDF8;padding:4px 4px 7px;box-shadow:0 6px 12px -8px rgba(60,40,20,.38)}
+.ph-grid-item:nth-child(odd){transform:rotate(-1deg)}
+.ph-grid-item:nth-child(even){transform:rotate(.7deg)}
+
+.ph-wish-item{background:#FBF8F1;border:1px solid #EAE2D4;border-radius:6px;padding:8px 10px;margin-bottom:6px}
+.ph-wish-chip{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7px;margin-bottom:3px}
+.ph-wish-title{font-family:'Gowun Batang',serif;font-size:11px;margin-bottom:2px}
+.ph-wish-meta{font-size:8px;color:#9A9182}
+.ph-wish-btn{margin-top:5px;height:22px;border-radius:4px;border:none;background:#50634A;color:#FBF8F1;font-size:8px;padding:0 8px;cursor:pointer;font-family:'Gowun Dodum',sans-serif}
+
+.ph-note-item{display:flex;flex-direction:column;margin-bottom:8px}
+.ph-note-item.sent{align-items:flex-end}
+.ph-note-item.recv{align-items:flex-start}
+.ph-note-card{width:62%;background:#FFFDF8;padding:4px 4px 8px;box-shadow:0 4px 10px -6px rgba(60,40,20,.35)}
+.ph-note-photo{width:100%;aspect-ratio:4/5;display:block}
+.ph-note-msg{font-size:8px;color:#3A352E;margin-top:3px;line-height:1.4}
+.ph-note-meta{font-size:7px;color:#9A9182;margin-top:2px}
+.ph-note-seen{color:#7D9276}
+
+.ph-tl-row{display:flex;gap:6px;margin-bottom:8px}
+.ph-tl-date{width:26px;text-align:center;flex:none}
+.ph-tl-day{font-family:'Instrument Serif',serif;font-size:16px;line-height:1}
+.ph-tl-dow{font-size:7px;color:#9A9182}
+.ph-tl-line{display:flex;flex-direction:column;align-items:center;flex:none;width:12px}
+.ph-tl-vline{width:1px;flex:1;background:#E3DACB}
+.ph-tl-dot{width:6px;height:6px;border-radius:50%;background:#7D9276;flex:none;margin:2px 0}
+.ph-tl-content{flex:1;min-width:0}
+.ph-tl-title{font-family:'Gowun Batang',serif;font-size:10px;margin-bottom:2px}
+.ph-tl-sub{font-size:8px;color:#9A9182;margin-bottom:4px}
+.ph-thumbs{display:flex;gap:3px}
+.ph-thumb{width:28px;height:28px;border-radius:2px}
+
+/* gradients */
+.g-sage{background:linear-gradient(160deg,#C5CDB6,#A4B096)}
+.g-clay{background:linear-gradient(160deg,#E2C6B2,#C9A086)}
+.g-sky{background:linear-gradient(160deg,#C7D1D4,#A3B3B8)}
+.g-butter{background:linear-gradient(160deg,#EDE0BA,#D6C18E)}
+.g-rose{background:linear-gradient(160deg,#E3C3BE,#C99D97)}
+.g-stone{background:linear-gradient(160deg,#D6CEC1,#B5AA98)}
+
+/* ── FINAL SLIDE ── */
+.final{background:#50634A;color:#FBF8F1;text-align:center;gap:0}
+.final-logo{font-family:'Instrument Serif',serif;font-style:italic;font-size:clamp(32px,7vw,52px);line-height:1;margin-bottom:10px;color:#FBF8F1}
+.final-sub{font-family:'Gowun Batang',serif;font-size:15px;color:rgba(251,248,241,.6);margin-bottom:40px}
+.final-desc{font-size:15px;line-height:1.85;color:rgba(251,248,241,.75);max-width:360px;margin:0 auto 48px;word-break:keep-all}
+.final-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;border:1px solid rgba(251,248,241,.2);font-size:12px;color:rgba(251,248,241,.6);margin-bottom:40px}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:#E4E9DB}
+.final-link{font-size:13px;color:rgba(251,248,241,.45);margin-top:24px}
+
+/* ── PROGRESS DOTS ── */
+.progress{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100}
+.prog-dot{width:6px;height:6px;border-radius:50%;background:#B5AA98;transition:all .3s;cursor:pointer}
+.prog-dot.active{background:#50634A;transform:scale(1.3)}
+
+/* ── NOISE ── */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.022;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");background-repeat:repeat;mix-blend-mode:multiply}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS -->
+<nav class="progress" id="progress">
+  <div class="prog-dot active" onclick="goSlide(0)"></div>
+  <div class="prog-dot" onclick="goSlide(1)"></div>
+  <div class="prog-dot" onclick="goSlide(2)"></div>
+  <div class="prog-dot" onclick="goSlide(3)"></div>
+  <div class="prog-dot" onclick="goSlide(4)"></div>
+  <div class="prog-dot" onclick="goSlide(5)"></div>
+</nav>
+
+<!-- 0. HERO -->
+<section class="slide hero" id="slide-0">
+  <div style="text-align:center">
+    <div class="hero-logo">Our Little Archive</div>
+    <div class="hero-sub">우리의 작은 기록 보관함</div>
+    <p class="hero-desc">
+      둘이서만 쓰는 디지털 다이어리.<br>
+      추억을 남기고, 하고 싶은 것을 모으고,<br>
+      서로 사진을 주고받는 우리만의 공간.
+    </p>
+    <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:999px;border:1px solid #D9CFBE;background:#FBF8F1;font-size:12px;color:#9A9182;margin-bottom:56px">
+      <span style="width:6px;height:6px;border-radius:50%;background:#7D9276;display:inline-block"></span>
+      초대된 두 계정만 사용할 수 있어요
+    </div>
+    <div class="hero-scroll" onclick="goSlide(1)">
+      스크롤해서 둘러보기
+      <div class="hero-arrow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 1. D-DAY & 기념일 -->
+<section class="slide slide-left" id="slide-1">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div class="ph-logo">Our Little Archive</div>
+            <div style="display:flex">
+              <div style="width:22px;height:22px;border-radius:50%;background:#C5CDB6;border:1.5px solid #F2EDE1;display:flex;align-items:center;justify-content:center;font-family:'Gowun Batang',serif;font-size:9px;margin-right:-6px;z-index:1">성</div>
+              <div style="width:22px;height:22px;border-radius:50%;background:#E2C6B2;border:1.5px solid #F2EDE1;display:flex;align-items:center;justify-content:center;font-family:'Gowun Batang',serif;font-size:9px">나</div>
+            </div>
+          </div>
+          <div class="ph-dday">
+            <div class="ph-tape"></div>
+            <div class="ph-label">함께한 지</div>
+            <div style="display:flex;align-items:baseline;gap:3px;margin-top:1px">
+              <span class="ph-dday-num" id="ph-dd-num">591</span>
+              <span class="ph-dday-unit">일째</span>
+            </div>
+            <div class="ph-dday-since" id="ph-dd-since">2025년 3월 14일부터</div>
+            <div class="ph-divider"></div>
+            <div class="ph-upcoming-row">
+              <span class="ph-upcoming-title">600일</span>
+              <span class="ph-upcoming-date">11월 3일</span>
+              <span class="ph-pill">D-8</span>
+            </div>
+            <div class="ph-upcoming-row">
+              <span class="ph-upcoming-title">크리스마스 🎄</span>
+              <span class="ph-upcoming-date">12월 25일</span>
+              <span class="ph-pill">D-60</span>
+            </div>
+            <div class="ph-upcoming-row">
+              <span class="ph-upcoming-title">2주년 ✨</span>
+              <span class="ph-upcoming-date">2027년 3월</span>
+              <span class="ph-pill">D-138</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="height:34px;border-radius:8px;background:#50634A;display:flex;align-items:center;justify-content:center;font-size:9px;color:#FBF8F1">+ 추억 남기기</div>
+            <div style="height:34px;border-radius:8px;border:1px solid #CFC5B3;display:flex;align-items:center;justify-content:center;font-size:9px;color:#2F2B25">+ 하고 싶은 것</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">01</div>
+      <div class="f-title">D-Day &amp;<br>다가오는 날</div>
+      <p class="f-desc">사귀기 시작한 날부터 오늘까지 자동으로 세요. 100일 단위와 기념일이 가까워지면 홈에서 바로 보여요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>100일·200일 자동 계산</div>
+        <div class="f-item"><span class="f-dot"></span>크리스마스, N주년 기념일 추가</div>
+        <div class="f-item"><span class="f-dot"></span>D-DAY · D-n 형태로 표시</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 추억 & 사진첩 -->
+<section class="slide slide-right" id="slide-2">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body" style="padding:28px 0 0;overflow:hidden">
+
+          <!-- 헤더 -->
+          <div style="padding:0 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <div style="font-family:'Gowun Batang',serif;font-size:16px;line-height:1">우리의 순간들</div>
+              <div style="font-size:8px;color:#9A9182;margin-top:1px">2026년 10월</div>
+            </div>
+            <div style="height:22px;padding:0 8px;border-radius:999px;background:rgba(125,146,118,.12);display:flex;align-items:center;gap:3px;font-size:8px;color:#50634A">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/></svg>
+              타임라인
+            </div>
+          </div>
+
+          <!-- 책장 -->
+          <div style="position:relative;height:88px;margin:0 0 10px">
+            <!-- 선반 -->
+            <div style="position:absolute;left:10px;right:10px;top:56px;height:5px;background:#CDBFA6;border-radius:1px;box-shadow:0 3px 5px -2px rgba(35,32,28,.3)"></div>
+            <!-- 책들 -->
+            <div style="position:absolute;bottom:18px;left:14px;display:flex;align-items:flex-end;gap:2px">
+              <!-- 3월 -->
+              <div style="width:22px;height:56px;background:#6E7F63;border-radius:2px 2px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 0 5px;box-shadow:inset -2px 0 0 rgba(0,0,0,.14),inset 1.5px 0 0 rgba(255,255,255,.14)">
+                <div style="width:60%;height:1px;background:#F2EDE1;opacity:.5"></div>
+                <div style="writing-mode:vertical-rl;font-family:'Gowun Batang',serif;font-size:8px;color:#F2EDE1;letter-spacing:.05em">3월</div>
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:6px;color:#F2EDE1;opacity:.8">3</div>
+              </div>
+              <!-- 4월 -->
+              <div style="width:22px;height:50px;background:#C9A86A;border-radius:2px 2px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 0 5px;box-shadow:inset -2px 0 0 rgba(0,0,0,.14),inset 1.5px 0 0 rgba(255,255,255,.14)">
+                <div style="width:60%;height:1px;background:#23201C;opacity:.5"></div>
+                <div style="writing-mode:vertical-rl;font-family:'Gowun Batang',serif;font-size:8px;color:#23201C;letter-spacing:.05em">4월</div>
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:6px;color:#23201C;opacity:.8">2</div>
+              </div>
+              <!-- 5월 -->
+              <div style="width:22px;height:60px;background:#3E4A5C;border-radius:2px 2px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 0 5px;box-shadow:inset -2px 0 0 rgba(0,0,0,.14),inset 1.5px 0 0 rgba(255,255,255,.14)">
+                <div style="width:60%;height:1px;background:#EFE7D8;opacity:.5"></div>
+                <div style="writing-mode:vertical-rl;font-family:'Gowun Batang',serif;font-size:8px;color:#EFE7D8;letter-spacing:.05em">5월</div>
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:6px;color:#EFE7D8;opacity:.8">4</div>
+              </div>
+              <!-- 연도 구분 칸 -->
+              <div style="width:4px;height:30px;background:#8C7B60;border-radius:1px;margin:0 2px"></div>
+              <!-- 9월 -->
+              <div style="width:22px;height:52px;background:#7A5C4E;border-radius:2px 2px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 0 5px;box-shadow:inset -2px 0 0 rgba(0,0,0,.14),inset 1.5px 0 0 rgba(255,255,255,.14)">
+                <div style="width:60%;height:1px;background:#F2EDE1;opacity:.5"></div>
+                <div style="writing-mode:vertical-rl;font-family:'Gowun Batang',serif;font-size:8px;color:#F2EDE1;letter-spacing:.05em">9월</div>
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:6px;color:#F2EDE1;opacity:.8">2</div>
+              </div>
+              <!-- 10월 (활성) — 위로 솟아있음 -->
+              <div style="width:22px;height:62px;background:#A4583C;border-radius:2px 2px 0 0;transform:translateY(-12px);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 0 5px;box-shadow:inset -2px 0 0 rgba(0,0,0,.14),inset 1.5px 0 0 rgba(255,255,255,.14)">
+                <div style="width:60%;height:1px;background:#F7EFDD;opacity:.5"></div>
+                <div style="writing-mode:vertical-rl;font-family:'Gowun Batang',serif;font-size:8px;color:#F7EFDD;letter-spacing:.05em">10월</div>
+                <div style="font-family:ui-monospace,Menlo,monospace;font-size:6px;color:#F7EFDD;opacity:.8">3</div>
+              </div>
+            </div>
+            <!-- 연도 라벨 -->
+            <div style="position:absolute;bottom:4px;left:14px;display:flex;gap:50px;font-size:7px;color:#8C7B60">
+              <span>2025</span><span style="color:#23201C;font-weight:600">2026</span>
+            </div>
+          </div>
+
+          <!-- 책 페이지 (열린 상태) -->
+          <div style="margin:0 12px;background:#FFFFFF;border-radius:0 3px 3px 0;box-shadow:0 1px 2px rgba(35,32,28,.12);padding:12px 14px;position:relative;height:220px;overflow:hidden">
+            <!-- 바인딩 그림자 -->
+            <div style="position:absolute;top:0;bottom:0;left:0;width:14px;background:linear-gradient(90deg,rgba(35,32,28,.10),transparent);pointer-events:none"></div>
+            <!-- 페이지 헤더 -->
+            <div style="display:flex;justify-content:space-between;font-size:7px;letter-spacing:.1em;color:#6B6152;font-variant-numeric:tabular-nums;margin-bottom:10px">
+              <span>2026.10</span><span>p. 01 / 03</span>
+            </div>
+            <!-- 차례 -->
+            <div style="font-family:'Gowun Batang',serif;font-weight:600;font-size:16px;line-height:1.3;margin-bottom:4px;color:#23201C">10월의 순간들</div>
+            <div style="font-size:10px;color:#6B6152;margin-bottom:10px">둘이서 · 세 번의 날</div>
+            <div style="font-size:7px;letter-spacing:.2em;color:#6B6152;padding-bottom:5px;border-bottom:1px solid #23201C;margin-bottom:6px">차례</div>
+            <!-- 목차 항목들 -->
+            <div style="display:flex;align-items:center;gap:6px;height:26px;border-bottom:1px solid #DACCB8">
+              <span style="width:14px;flex-shrink:0;font-size:8px;color:#6B6152">01</span>
+              <span style="font-family:'Gowun Batang',serif;font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">경복궁 야간개장</span>
+              <span style="flex-shrink:0;margin-bottom:2px;border-bottom:1px dotted #A8977A;width:10px"></span>
+              <span style="flex-shrink:0;font-size:9px;color:#6B6152">10.18</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;height:26px;border-bottom:1px solid #DACCB8">
+              <span style="width:14px;flex-shrink:0;font-size:8px;color:#6B6152">02</span>
+              <span style="font-family:'Gowun Batang',serif;font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">북촌 한옥마을 산책</span>
+              <span style="flex-shrink:0;margin-bottom:2px;border-bottom:1px dotted #A8977A;width:10px"></span>
+              <span style="flex-shrink:0;font-size:9px;color:#6B6152">10.11</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;height:26px">
+              <span style="width:14px;flex-shrink:0;font-size:8px;color:#6B6152">03</span>
+              <span style="font-family:'Gowun Batang',serif;font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">카페 투어</span>
+              <span style="flex-shrink:0;margin-bottom:2px;border-bottom:1px dotted #A8977A;width:10px"></span>
+              <span style="flex-shrink:0;font-size:9px;color:#6B6152">10.04</span>
+            </div>
+            <div style="position:absolute;bottom:10px;right:14px;font-size:8px;color:#6B6152">넘겨서 보기 →</div>
+          </div>
+
+          <!-- 페이지 내비 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px">
+            <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;opacity:.3">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#23201C" stroke-width="1.6" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+            </div>
+            <span style="font-size:9px;color:#6B6152;font-variant-numeric:tabular-nums">목차</span>
+            <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#23201C" stroke-width="1.6" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">02</div>
+      <div class="f-title">추억이<br>책으로 쌓여요</div>
+      <p class="f-desc">함께 한 날을 사진과 글로 기록해요. 월별로 한 권씩 책이 만들어지고, 페이지를 넘기듯 꺼내볼 수 있어요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>월별 책 한 권 — 책장에 꽂혀요</div>
+        <div class="f-item"><span class="f-dot"></span>사진 + 날짜 도장 + 후기</div>
+        <div class="f-item"><span class="f-dot"></span>타임라인으로도 볼 수 있어요</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 하고 싶은 것 -->
+<section class="slide slide-left" id="slide-3">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+            <div>
+              <div style="font-family:'Gowun Batang',serif;font-size:17px">하고 싶은 것</div>
+              <div style="font-size:8px;color:#9A9182;margin-top:1px">남은 표 5장</div>
+            </div>
+            <div style="width:26px;height:26px;border-radius:50%;background:#50634A;display:flex;align-items:center;justify-content:center;color:#FBF8F1;font-size:16px;line-height:1">+</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+
+            <!-- 티켓 1: 계획 중 (검은 밴드) -->
+            <div style="position:relative;border-radius:5px;box-shadow:0 0 0 1px #DDD3BE">
+              <div style="display:flex;height:120px;border-radius:5px;overflow:hidden">
+                <!-- 왼쪽 본문 -->
+                <div style="flex:1;min-width:0;background:#FFFFFF;border-top:2.5px solid #23201C;padding:8px 10px 8px 12px;display:flex;flex-direction:column">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline">
+                    <span style="font-size:6px;letter-spacing:.15em;color:#6B6152">Our Little Archive</span>
+                    <span style="font-size:8px;color:#6B6152">여행</span>
+                  </div>
+                  <div style="font-family:'Gowun Batang',serif;font-size:13px;font-weight:600;margin-top:5px;line-height:1.3;color:#23201C">도쿄 3박 4일</div>
+                  <div style="margin-top:auto;display:grid;grid-template-columns:.9fr 1.3fr 1fr;border-top:1px solid #23201C;padding-top:4px;gap:4px">
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <span style="font-size:7px;color:#6B6152">일자</span>
+                      <span style="font-size:9px">11.15 토</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <span style="font-size:7px;color:#6B6152">장소</span>
+                      <span style="font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">도쿄 신주쿠</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <span style="font-size:7px;color:#6B6152">요금</span>
+                      <span style="font-size:9px">200만원</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- 오른쪽 스텁 -->
+                <div style="width:64px;flex-shrink:0;background:#FFFFFF;border-top:2.5px solid #23201C;border-left:1.5px dashed #B7A586;padding:6px 6px 8px;display:flex;flex-direction:column;align-items:center">
+                  <div style="width:12px;height:12px;margin-top:1px"></div>
+                  <span style="font-family:ui-monospace,Menlo,monospace;font-size:7px;color:#6B6152;margin-top:3px">No.0001</span>
+                  <span style="font-family:ui-monospace,Menlo,monospace;font-size:16px;line-height:1.1;margin-top:1px;color:#23201C">11.15</span>
+                  <span style="font-size:8px;color:#6B6152">토</span>
+                  <button style="margin-top:auto;width:100%;height:26px;border-radius:4px;background:#23201C;color:#EFE7D8;border:none;font-size:9px;cursor:pointer;font-family:'Gowun Dodum',sans-serif">했어요</button>
+                </div>
+              </div>
+              <!-- 반원 절개 (상단) -->
+              <span style="position:absolute;right:55px;top:-7px;width:14px;height:14px;border-radius:50%;background:#F2F0EC;border-bottom:1px solid #DDD3BE;pointer-events:none"></span>
+              <!-- 반원 절개 (하단) -->
+              <span style="position:absolute;right:55px;bottom:-7px;width:14px;height:14px;border-radius:50%;background:#F2F0EC;border-top:1px solid #DDD3BE;pointer-events:none"></span>
+            </div>
+
+            <!-- 티켓 2: 하고 싶은 일 (연한 밴드) -->
+            <div style="position:relative;border-radius:5px;box-shadow:0 0 0 1px #DDD3BE">
+              <div style="display:flex;height:120px;border-radius:5px;overflow:hidden">
+                <div style="flex:1;min-width:0;background:#FFFFFF;border-top:2.5px solid #CDBFA6;padding:8px 10px 8px 12px;display:flex;flex-direction:column">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline">
+                    <span style="font-size:6px;letter-spacing:.15em;color:#6B6152">Our Little Archive</span>
+                    <span style="font-size:8px;color:#6B6152">음식</span>
+                  </div>
+                  <div style="font-family:'Gowun Batang',serif;font-size:13px;font-weight:600;margin-top:5px;line-height:1.3;color:#23201C">오마카세 데이트</div>
+                  <div style="margin-top:auto;display:grid;grid-template-columns:.9fr 1.3fr 1fr;border-top:1px solid #23201C;padding-top:4px;gap:4px">
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <span style="font-size:7px;color:#6B6152">일자</span>
+                      <span style="font-size:9px;color:#A8977A">미정</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <span style="font-size:7px;color:#6B6152">장소</span>
+                      <span style="font-size:9px">강남</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <span style="font-size:7px;color:#6B6152">요금</span>
+                      <span style="font-size:9px">20만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="width:64px;flex-shrink:0;background:#FFFFFF;border-top:2.5px solid #CDBFA6;border-left:1.5px dashed #B7A586;padding:6px 6px 8px;display:flex;flex-direction:column;align-items:center">
+                  <div style="width:12px;height:12px;margin-top:1px"></div>
+                  <span style="font-family:ui-monospace,Menlo,monospace;font-size:7px;color:#6B6152;margin-top:3px">No.0002</span>
+                  <span style="font-family:ui-monospace,Menlo,monospace;font-size:16px;line-height:1.1;margin-top:1px;color:#A8977A">미정</span>
+                  <span style="font-size:8px;color:#6B6152"></span>
+                  <button style="margin-top:auto;width:100%;height:26px;border-radius:4px;background:transparent;color:#23201C;border:1px solid #23201C;font-size:9px;cursor:pointer;font-family:'Gowun Dodum',sans-serif">날짜 정하기</button>
+                </div>
+              </div>
+              <span style="position:absolute;right:55px;top:-7px;width:14px;height:14px;border-radius:50%;background:#F2F0EC;border-bottom:1px solid #DDD3BE;pointer-events:none"></span>
+              <span style="position:absolute;right:55px;bottom:-7px;width:14px;height:14px;border-radius:50%;background:#F2F0EC;border-top:1px solid #DDD3BE;pointer-events:none"></span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">03</div>
+      <div class="f-title">하고 싶은 것을<br>티켓으로 모아요</div>
+      <p class="f-desc">가고 싶은 곳, 먹고 싶은 것을 티켓처럼 담아둬요. 날짜가 잡히면 계획 중으로, 다녀오면 도장을 찍어요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>하고 싶은 일 → 날짜 정하기 → 했어요</div>
+        <div class="f-item"><span class="f-dot"></span>완료하면 "다녀옴" 도장이 찍혀요</div>
+        <div class="f-item"><span class="f-dot"></span>완료 후 추억 기록으로 바로 연결</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 규칙 세우기 -->
+<section class="slide slide-right" id="slide-4">
+  <div class="slide-inner">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+            <div style="font-family:'Gowun Batang',serif;font-size:17px">우리의 규칙</div>
+            <div style="width:26px;height:26px;border-radius:50%;background:#50634A;display:flex;align-items:center;justify-content:center;color:#FBF8F1;font-size:16px;line-height:1">+</div>
+          </div>
+          <div style="font-size:8px;color:#9A9182;margin-bottom:10px">둘이 함께 정한 약속 5개</div>
+
+          <!-- rule items -->
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:6px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
+              <div style="width:16px;height:16px;border-radius:4px;background:#E4E9DB;border:1px solid #B9C3AC;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#50634A" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Gowun Batang',serif;font-size:11px;margin-bottom:1px">매주 데이트 한 번</div>
+                <div style="font-size:8px;color:#9A9182">성은 제안 · 5주째 지키는 중</div>
+              </div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:6px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
+              <div style="width:16px;height:16px;border-radius:4px;background:#E4E9DB;border:1px solid #B9C3AC;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#50634A" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Gowun Batang',serif;font-size:11px;margin-bottom:1px">밥 먹을 땐 폰 내려놓기</div>
+                <div style="font-size:8px;color:#9A9182">둘 다 제안</div>
+              </div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:6px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
+              <div style="width:16px;height:16px;border-radius:4px;background:#FBF8F1;border:1px solid #E3DACB;flex:none;margin-top:1px"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Gowun Batang',serif;font-size:11px;margin-bottom:1px">자기 전에 잘 자 인사</div>
+                <div style="font-size:8px;color:#9A9182">나 제안</div>
+              </div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:6px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
+              <div style="width:16px;height:16px;border-radius:4px;background:#FBF8F1;border:1px solid #E3DACB;flex:none;margin-top:1px"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Gowun Batang',serif;font-size:11px;margin-bottom:1px">화나도 자기 전에 화해하기</div>
+                <div style="font-size:8px;color:#9A9182">성은 제안</div>
+              </div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #EAE2D4;border-radius:6px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
+              <div style="width:16px;height:16px;border-radius:4px;background:#FBF8F1;border:1px solid #E3DACB;flex:none;margin-top:1px"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Gowun Batang',serif;font-size:11px;margin-bottom:1px">한 달에 한 번 새로운 동네</div>
+                <div style="font-size:8px;color:#9A9182">나 제안</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-text">
+      <div class="f-num">04</div>
+      <div class="f-title">우리만의<br>규칙을 세워요</div>
+      <p class="f-desc">둘이 함께 정한 약속들을 한 곳에 모아둬요. 누가 제안했는지, 잘 지키고 있는지 같이 확인할 수 있어요.</p>
+      <div class="f-detail">
+        <div class="f-item"><span class="f-dot"></span>누구든 규칙 제안 가능</div>
+        <div class="f-item"><span class="f-dot"></span>지키는 중 / 아직 표시로 관리</div>
+        <div class="f-item"><span class="f-dot"></span>둘만 보는 우리만의 약속</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. FINAL -->
+<section class="slide final" id="slide-5">
+  <div style="text-align:center">
+    <div class="final-logo">Our Little Archive</div>
+    <div class="final-sub">우리의 작은 기록 보관함</div>
+    <p class="final-desc">
+      추억은 남기지 않으면 흐려져요.<br>
+      작은 순간들을 같이 모아두는 공간,<br>
+      지금 시작해요.
+    </p>
+    <div class="final-badge">
+      <span class="badge-dot"></span>
+      초대된 두 계정만 사용 가능
+    </div>
+    <div class="final-link">Google 계정으로 로그인 · Firebase 기반 · Vercel 배포</div>
+  </div>
+</section>
+
+<script>
+  // D-Day
+  (function() {
+    const start = new Date(2025, 2, 14);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = Math.floor((today - start) / 86400000) + 1;
+    const el = document.getElementById('ph-dd-num');
+    if (el) el.textContent = d;
+    const s = document.getElementById('ph-dd-since');
+    const st = start;
+    if (s) s.textContent = `${st.getFullYear()}년 ${st.getMonth()+1}월 ${st.getDate()}일부터`;
+  })();
+
+  // Progress dots
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.prog-dot');
+
+  function updateDots() {
+    let active = 0;
+    slides.forEach((sl, i) => {
+      const r = sl.getBoundingClientRect();
+      if (r.top >= -r.height/2 && r.top < r.height/2) active = i;
+    });
+    dots.forEach((d,i) => d.classList.toggle('active', i === active));
+  }
+
+  window.addEventListener('scroll', updateDots, {passive:true});
+  updateDots();
+
+  function goSlide(i) {
+    slides[i].scrollIntoView({behavior:'smooth'});
+  }
+</script>
+</body>
+</html>
